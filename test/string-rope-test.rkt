@@ -46,11 +46,10 @@
   ;;   (equal? (apply string-append (string-rope-slice (string->rope s) start len))
   ;;           (substring s start (+ start len))))
 
-  ;; ;; Since raw-width ≡ raw-length for strings, offset-index degenerates to the identity — but the
-  ;; ;; documented off-by-one (see strategy notes) means this is expected to fail on multi-char leaves.
-  ;; (test-case "string-rope-offset-index is the identity when width ≡ count"
-  ;;   (check-equal? (string-rope-offset-index (string->rope "hello") 0) 0)
-  ;;   (check-equal? (string-rope-offset-index (string->rope "hello") 4) 4))
+  ;; Since raw-width ≡ raw-length for strings, offset-index degenerates to the identity.
+  (test-case "string-rope-offset-index is the identity when width ≡ count"
+    (check-equal? (string-rope-offset-index (string->rope "hello") 0) 0)
+    (check-equal? (string-rope-offset-index (string->rope "hello") 4) 4))
 
   ;;; -------------------------------------------------------------------------------------------
   ;;; Leaf-limit boundary: STRING-LEAF-LIMIT = 512

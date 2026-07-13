@@ -128,14 +128,15 @@
      #:when (= ((rope-ops-raw-length ops) raw) 1)
      0]
     [(rope-leaf cnt _ raw)
-     (define ref (rope-ops-raw-ref ops))
      ;; Rope ops do not give a raw's per-element width directly, but we can take the raw width of a
      ;; single-element slice.
      (define (elem-width i)
        ((rope-ops-raw-width ops) ((rope-ops-raw-slice ops) raw i (add1 i))))
      (let loop ([i 0] [acc 0])
-       (define iw (elem-width i))
-       (if (or (= i cnt) (< ofs (+ acc iw))) (sub1 i) (loop (add1 i) (+ acc iw))))]
+       (if (= i cnt)
+           (sub1 i)
+           (let ([iw (elem-width i)])
+             (if (< ofs (+ acc iw)) i (loop (add1 i) (+ acc iw))))))]
     [(rope-node _ _ l r)
      (define lw (rope-width l))
      (if (< ofs lw)
