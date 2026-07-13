@@ -152,7 +152,7 @@
 (define (rope-slice ops rope start len)
   (define-values (_before rest) (rope-split ops rope start))
   (define-values (slice _after) (rope-split ops rest len))
-  (rope-flatten slice))
+  slice)
 
 ;;; ---------------------------------------------------------------------------------------------
 ;;; Conversions
