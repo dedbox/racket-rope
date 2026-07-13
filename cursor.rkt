@@ -75,12 +75,14 @@
 ;;; Cursor-Based Rope Operations
 ;;; ---------------------------------------------------------------------------------------------
 
+(require racket/pretty)
+
 ;; O(n)
 (define (rope-foldl ops proc init rope0 . ropes)
-  ;; All ropes must have the same length.
-  (define len1 (rope-length rope0))
+  ;; All ropes must have the same number of elements.
+  (define len1 (rope-count rope0))
   (for ([rope (in-list ropes)])
-    (define len2 (rope-length rope))
+    (define len2 (rope-count rope))
     (unless (= len1 len2)
       (raise-arguments-error 'rope-foldl
                              "all ropes must have the same length"
@@ -99,10 +101,10 @@
 
 ;; O(n)
 (define (rope-foldr ops proc init rope0 . ropes)
-  ;; All ropes must have the same length.
-  (define len1 (rope-length rope0))
+  ;; All ropes must have the same number of elements.
+  (define len1 (rope-count rope0))
   (for ([rope (in-list ropes)])
-    (define len2 (rope-length rope))
+    (define len2 (rope-count rope))
     (unless (= len1 len2)
       (raise-arguments-error 'rope-foldr
                              "all ropes must have the same length"
