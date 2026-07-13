@@ -3,6 +3,7 @@
 (require (for-syntax racket/base
                      racket/syntax
                      syntax/parse)
+         racket/sequence
          racket/splicing
          racket/struct
          rope/cursor
@@ -33,6 +34,8 @@
   #:with *-cursor-peek       (format-*id "~a-cursor-peek")
   #:with *-cursor-advance    (format-*id "~a-cursor-advance")
   #:with *-cursor-drop       (format-*id "~a-cursor-drop")
+  #:with in-*-rope-runtime   (format-*id "in-~a-rope-runtime")
+  #:with in-*-rope           (format-*id "in-~a-rope")
   (begin
     (struct *-rope-leaf rope-leaf () #:transparent)
     (struct *-rope-node rope-node () #:transparent)
@@ -57,4 +60,52 @@
       (define (*-cursor-at-end?    c)       (cursor-at-end?    ops c))
       (define (*-cursor-peek       c)       (cursor-peek       ops c))
       (define (*-cursor-advance    c)       (cursor-advance    ops c))
-      (define (*-cursor-drop       c k)     (cursor-drop       ops c k)))))
+      (define (*-cursor-drop       c k)     (cursor-drop       ops c k))
+
+      ;; Evaluated when `in-*-rope` is used as a first-class value outside of a `for` loop (e.g.,
+      ;; passed to standard higher-order functions like `sequence-map`).
+      (define (in-*-rope-runtime r)
+        (unless (*-rope? r)
+          (raise-argument-error 'in-*-rope (format "~a-rope?" 'name) r))
+        (make-do-sequence
+         (λ ()
+           (values *-cursor-peek
+                   *-cursor-advance
+                   (*-rope->cursor r)
+                   (λ (c) (not (*-cursor-at-end? c)))
+                   (λ (v) #t)
+                   (λ (c v) #t)))))
+
+      ;; Evaluated when `in-*-rope` is used directly in a `for` comprehension clause. Expands into a
+      ;; specialized `:do-in` form that Racket optimizes heavily.
+      (define-sequence-syntax in-*-rope
+        (λ () #'in-*-rope-runtime)
+        (λ (stx)
+          (syntax-parse stx
+            [[(id:id) (_ rope-expr:expr)]
+             #'[(id)
+                (:do-in
+                 ;; Outer bindings (setup before the loop starts)
+                 ([(r) rope-expr])
+
+                 ;; Outer check (fails early if the provided value isn't a rope
+                 (unless (*-rope? r)
+                   (raise-argument-error 'in-*-rope (format "~a-rope?" 'name) r))
+
+                 ;; Loop bindings (state initialization)
+                 ([c (*-rope->cursor r)])
+
+                 ;; Position guard (condition to continue iterating)
+                 (not (*-cursor-at-end? c))
+
+                 ;; Inner bindings (extracting the current element)
+                 ([(id) (*-cursor-peek c)])
+
+                 ;; Pre-guard (optional condition before body evaluation)
+                 #t
+
+                 ;; Post-guard (optional condition after body evaluation)
+                 #t
+
+                 ;; Loop arguments (state transition for the next iteration)
+                 ((*-cursor-advance c)))]]))))))
