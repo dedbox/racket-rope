@@ -53,8 +53,8 @@
        (check-true (rope-balanced? r+))
        r+)))
 
-  ;; (test-case "rope-append* over an empty list yields the empty rope"
-  ;;   (check-true (rope-empty? (rope-append* ops '()))))
+  (test-case "rope-append* over an empty list yields the empty rope"
+    (check-true (rope-empty? (rope-append* ops '()))))
 
   (check-property #:trials 50
                    ([chunks (for/list ([_ (in-range (add1 (random 12)))])
@@ -91,15 +91,15 @@
   (define (vector-splice v start old-len new)
     (vector-append (vector-copy v 0 start) new (vector-copy v (+ start old-len) (vector-length v))))
 
-  ;; (check-property #:trials 300
-  ;;                  ([raw (random-weighted-raw (add1 (random 100)))])
-  ;;   (define n (vector-length raw))
-  ;;   (define start (random (add1 n)))
-  ;;   (define old-len (random (add1 (- n start))))
-  ;;   (define new (random-weighted-raw (random 20)))
-  ;;   (define r (rope-splice ops (raw->rope ops raw) start old-len new))
-  ;;   (equal? ((rope-ops-raw-append* ops) (rope-flatten r))
-  ;;           (vector-splice raw start old-len new)))
+  (check-property #:trials 300
+                   ([raw (random-weighted-raw (add1 (random 100)))])
+    (define n (vector-length raw))
+    (define start (random (add1 n)))
+    (define old-len (random (add1 (- n start))))
+    (define new (random-weighted-raw (random 20)))
+    (define r (rope-splice ops (raw->rope ops raw) start old-len new))
+    (equal? ((rope-ops-raw-append* ops) (rope-flatten r))
+            (vector-splice raw start old-len new)))
 
   ;; (check-property #:trials 300
   ;;                  ([raw (random-weighted-raw (add1 (random 100)))])
@@ -121,23 +121,23 @@
       (define w (vector-ref raw i))
       (if (< ofs (+ acc w)) i (loop (add1 i) (+ acc w)))))
 
-  ;; (check-property #:trials 200
-  ;;                  ([raw (random-weighted-raw (add1 (random 30)))])
-  ;;   (define r (raw->rope ops raw))
-  ;;   (define width (rope-width r))
-  ;;   (define ofs (random width))
-  ;;   (= (rope-offset-index ops r ofs) (owning-index raw ofs)))
+  (check-property #:trials 200
+                   ([raw (random-weighted-raw (add1 (random 30)))])
+    (define r (raw->rope ops raw))
+    (define width (rope-width r))
+    (define ofs (random width))
+    (= (rope-offset-index ops r ofs) (owning-index raw ofs)))
 
-  ;; (test-case "rope-offset-index at ofs = 0 on a multi-element leaf"
-  ;;   (define raw (vector 3 1 4 1 5))
-  ;;   (define r (make-rope-leaf ops raw))
-  ;;   (check-equal? (rope-offset-index ops r 0) 0))
+  (test-case "rope-offset-index at ofs = 0 on a multi-element leaf"
+    (define raw (vector 3 1 4 1 5))
+    (define r (make-rope-leaf ops raw))
+    (check-equal? (rope-offset-index ops r 0) 0))
 
   ;;; -------------------------------------------------------------------------------------------
   ;;; Conversions: raw->rope / rope->raw round-trip, and balance for large inputs
   ;;; -------------------------------------------------------------------------------------------
   (check-property #:trials 100
-                   ([raw (random-weighted-raw (random 500))])
+      ([raw (random-weighted-raw (random 500))])
     (define r (raw->rope ops raw))
     (and (equal? (weighted->vec r) raw)
          (rope-balanced? r)))
@@ -157,4 +157,25 @@
         (rope-concat ops r (make-rope-leaf ops (vector 1)))))
     (check-equal? (rope-depth deep) 45)
     (check-not-exn (λ () (rope-balanced? deep)))
-    (check-false (rope-balanced? deep))))         ; a 46-leaf left comb is not remotely balanced
+    (check-false (rope-balanced? deep)))         ; a 46-leaf left comb is not remotely balanced
+
+  ;;; -------------------------------------------------------------------------------------------
+  ;;; Regression Tests
+  ;;; -------------------------------------------------------------------------------------------
+
+  (test-case "rope-offset-index no longer crashes at the last valid offset"
+    (define raw (vector 3 1 4 1 5))                     ; width 14
+    (define r (make-rope-leaf ops raw))
+    (check-equal? (rope-offset-index ops r 13) 4)        ; last element, last valid offset
+    (check-equal? (rope-offset-index ops r 0)  0))
+
+  (test-case "rope-offset-index clamps when ofs runs past the end"
+    (define raw (vector 3 1 4 1 5))
+    (define r (make-rope-leaf ops raw))
+    (check-not-exn (λ () (rope-offset-index ops r 14)))  ; previously crashed
+    (check-equal?  (rope-offset-index ops r 14) 4))
+
+  (test-case "raw->rope balance for empty input"
+    (define raw #())
+    (define r (raw->rope ops raw))
+    (check-true (and (equal? (weighted->vec r) raw) (rope-balanced? r)))))

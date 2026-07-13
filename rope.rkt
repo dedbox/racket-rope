@@ -61,7 +61,8 @@
 
 ;;; O(1).
 (define (rope-balanced? rope)
-  (>= (rope-count rope) (fib-bound (rope-depth rope))))
+  (or (rope-empty? rope)
+      (>= (rope-count rope) (fib-bound (rope-depth rope)))))
 
 ;;; O(1).
 (define (rope-empty? rope)
