@@ -99,6 +99,12 @@
      (define combined (rope-concat ops l r))
      (if (rope-balanced? combined) combined (raw->rope ops (rope->raw ops combined)))]))
 
+;; O(log n * |ropes|)
+(define (rope-append* ops ropes)
+  (for/fold ([l (make-empty-rope ops)])
+            ([r (in-list ropes)])
+    (rope-append ops l r)))
+
 ;; Splits at an element index. O(log n) amortized: one descent, plus one rope-append per level on
 ;; the way back up.
 (define (rope-split ops rope i)
