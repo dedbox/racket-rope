@@ -21,12 +21,15 @@
 
 (struct rope-ops-impl rope-ops (leaf node) #:transparent)
 
+;;; O(1).
 (define (make-empty-rope ops)
   ((rope-ops-impl-leaf ops) 0 0 ((rope-ops-raw-empty ops))))
 
+;;; O(1).
 (define (make-rope-leaf ops raw)
   ((rope-ops-impl-leaf ops) ((rope-ops-raw-length ops) raw) ((rope-ops-raw-width ops) raw) raw))
 
+;;; O(1).
 (define (make-rope-node ops count width left right)
   ((rope-ops-impl-node ops) count width left right))
 
@@ -34,6 +37,7 @@
 ;;; Properties
 ;;; ---------------------------------------------------------------------------------------------
 
+;;; O(1).
 (define (rope-count rope) (match rope [(rope-leaf c _ _) c] [(rope-node c _ _ _) c]))
 (define (rope-width rope) (match rope [(rope-leaf _ w _) w] [(rope-node _ w _ _) w]))
 
@@ -41,12 +45,13 @@
 (define (rope-length rope)
   (rope-width rope))
 
+;;; O(1).
 (define (rope-depth rope)
   (match rope
     [(rope-leaf _ _ _)   0]
     [(rope-node _ _ l r) (add1 (max (rope-depth l) (rope-depth r)))]))
 
-;; Fibonacci bound, offset by 2 per Boehm/Atkinson/Plass.
+;; Fibonacci bound, offset by 2 per Boehm/Atkinson/Plass. O(1).
 (define (fib-bound depth)
   (define table
     #(1 2 3 5 8 13 21 34 55 89 144 233 377 610 987 1597 2584 4181 6765 10946 17711 28657 46368
@@ -54,9 +59,11 @@
         24157817 39088169 63245986 102334155))
   (vector-ref table (min depth (sub1 (vector-length table)))))
 
+;;; O(1).
 (define (rope-balanced? rope)
   (>= (rope-count rope) (fib-bound (rope-depth rope))))
 
+;;; O(1).
 (define (rope-empty? rope)
   (zero? (rope-length rope)))
 
@@ -64,14 +71,14 @@
 ;;; Operations
 ;;; ---------------------------------------------------------------------------------------------
 
-;; Collect leves left-to-right: O(# leaves); used only on rebalance.
+;; Collect leaves left-to-right. O(# leaves). Used only on rebalance.
 (define (rope-flatten rope)
   (let loop ([rope rope] [acc null])
     (match rope
       [(rope-leaf _ _ raw) (cons raw acc)]
       [(rope-node _ _ l r) (loop l (loop r acc))])))
 
-;;; Naive concatenation.
+;;; Naive concatenation. O(1).
 (define (rope-concat ops l r)
   (make-rope-node ops
                   (+ (rope-count l) (rope-count r))
