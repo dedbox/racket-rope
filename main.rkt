@@ -1,11 +1,12 @@
-#lang racket/base
+#lang reprovide
 
-(require rope/bytes
-         rope/string
-         rope/cursor
-         rope/rope)
+;;; Generic Constructs
+rope/rope
+rope/cursor
 
-(provide (all-from-out rope/bytes
-                       rope/string
-                       rope/cursor
-                       rope/rope))
+rope/define-rope-type
+
+;;; Type-specific Instances
+rope/bytes
+rope/string
+

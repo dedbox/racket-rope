@@ -6,7 +6,8 @@
 (define pkg-desc "An alternative to strings.")
 
 (define deps
-  '("base"))
+  '("base"
+    "reprovide-lang-lib"))
 
 (define build-deps
   '("racket-doc"
