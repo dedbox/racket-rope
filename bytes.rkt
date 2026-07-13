@@ -9,7 +9,7 @@
 
 (define BYTES-LEAF-LIMIT 512)
 
-(define bytes-rope-ops
+(define-rope-type bytes
   (rope-ops BYTES-LEAF-LIMIT
             (λ () #"")
             bytes-length
@@ -17,8 +17,6 @@
             subbytes
             (λ (raws) (apply bytes-append raws))
             bytes-ref))
-
-(define-rope-type bytes bytes-rope-ops)
 
 ;; Per-read complexity: O(1).
 ;; 

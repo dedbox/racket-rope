@@ -19,6 +19,7 @@
   #:with *-rope?             (format-*id "~a-rope?")
   #:with *-rope-leaf?        (format-*id "~a-rope-leaf?")
   #:with *-rope-node?        (format-*id "~a-rope-node?")
+  #:with *-rope-ops          (format-*id "~a-rope-ops")
   #:with empty-*-rope        (format-*id "empty-~a-rope")
   #:with *-rope-append       (format-*id "~a-rope-append")
   #:with *-rope-append*      (format-*id "~a-rope-append*")
@@ -45,9 +46,11 @@
     (define (*-rope? x)
       (or (*-rope-leaf? x) (*-rope-node? x)))
 
-    (splicing-let ([ops (let ([fields (struct->list ops-expr)]
-                              [ctors  (list *-rope-leaf *-rope-node)])
-                          (apply rope-ops-impl (append fields ctors)))])
+    (define *-rope-ops (let ([fields (struct->list ops-expr)]
+                             [ctors  (list *-rope-leaf *-rope-node)])
+                         (apply rope-ops-impl (append fields ctors))))
+
+    (splicing-let ([ops *-rope-ops])
       (define empty-*-rope                    (make-empty-rope   ops))
       (define (*-rope-append       l r)       (rope-append       ops l r))
       (define (*-rope-append*      r)         (rope-append*      ops r))

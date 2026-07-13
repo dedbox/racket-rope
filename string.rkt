@@ -9,7 +9,7 @@
 
 (define STRING-LEAF-LIMIT 512)
 
-(define string-rope-ops
+(define-rope-type string
   (rope-ops STRING-LEAF-LIMIT
             (λ () "")
             string-length
@@ -17,8 +17,6 @@
             substring
             (λ (raws) (apply string-append raws))
             string-ref))
-
-(define-rope-type string string-rope-ops)
 
 ;; Per-read complexity: O(k), where k is the number of bytes transferred in that call.
 ;; 
