@@ -70,3 +70,51 @@
   (match-define (cursor raw pos rest) cur)
   (define n ((rope-ops-raw-length ops) raw))
   (rope-append ops (make-rope-leaf ops ((rope-ops-raw-slice ops) raw pos n)) rest))
+
+;;; ---------------------------------------------------------------------------------------------
+;;; Cursor-Based Rope Operations
+;;; ---------------------------------------------------------------------------------------------
+
+;; O(n)
+(define (rope-foldl ops proc init rope0 . ropes)
+  ;; All ropes must have the same length.
+  (define len1 (rope-length rope0))
+  (for ([rope (in-list ropes)])
+    (define len2 (rope-length rope))
+    (unless (= len1 len2)
+      (raise-arguments-error 'rope-foldl
+                             "all ropes must have the same length"
+                             "first rope length" len1
+                             "other rope length" len2
+                             "procedure" proc)))
+
+  (define (inner-foldl init curs)
+    (if (cursor-at-end? ops (car curs))
+        init
+        (let ([head (map (λ (c) (cursor-peek    ops c)) curs)]
+              [tail (map (λ (c) (cursor-advance ops c)) curs)])
+          (inner-foldl (apply proc init head) tail))))
+
+  (inner-foldl init (map (λ (r) (rope->cursor ops r)) (cons rope0 ropes))))
+
+;; O(n)
+(define (rope-foldr ops proc init rope0 . ropes)
+  ;; All ropes must have the same length.
+  (define len1 (rope-length rope0))
+  (for ([rope (in-list ropes)])
+    (define len2 (rope-length rope))
+    (unless (= len1 len2)
+      (raise-arguments-error 'rope-foldr
+                             "all ropes must have the same length"
+                             "first rope length" len1
+                             "other rope length" len2
+                             "procedure" proc)))
+
+  (define (inner-foldr init curs)
+    (if (cursor-at-end? ops (car curs))
+        init
+        (let ([head (map (λ (c) (cursor-peek    ops c)) curs)]
+              [tail (map (λ (c) (cursor-advance ops c)) curs)])
+          (apply proc (inner-foldr init tail) head))))
+
+  (inner-foldr init (map (λ (r) (rope->cursor ops r)) (cons rope0 ropes))))

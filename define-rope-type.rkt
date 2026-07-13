@@ -36,6 +36,8 @@
   #:with *-cursor-drop       (format-*id "~a-cursor-drop")
   #:with in-*-rope-runtime   (format-*id "in-~a-rope-runtime")
   #:with in-*-rope           (format-*id "in-~a-rope")
+  #:with *-rope-foldl        (format-*id "~a-rope-foldl")
+  #:with *-rope-foldr        (format-*id "~a-rope-foldr")
   (begin
     (struct *-rope-leaf rope-leaf () #:transparent)
     (struct *-rope-node rope-node () #:transparent)
@@ -46,21 +48,27 @@
     (splicing-let ([ops (let ([fields (struct->list ops-expr)]
                               [ctors  (list *-rope-leaf *-rope-node)])
                           (apply rope-ops-impl (append fields ctors)))])
-      (define empty-*-rope                  (make-empty-rope   ops))
-      (define (*-rope-append       l r)     (rope-append       ops l r))
-      (define (*-rope-append*      rs)      (rope-append*      ops rs))
-      (define (*-rope-split        r i)     (rope-split        ops r i))
-      (define (*-rope-offset-index r o)     (rope-offset-index ops r o))
-      (define (*-rope-splice       r s o n) (rope-splice       ops r s o n))
-      (define (*-rope-slice        r s l)   (rope-slice        ops r s l))
-      (define (*->rope             r)       (raw->rope         ops r))
-      (define (rope->*             r)       (rope->raw         ops r))
-      (define (*-rope->cursor      r)       (rope->cursor      ops r))
-      (define (cursor->*-rope      c)       (cursor->rope      ops c))
-      (define (*-cursor-at-end?    c)       (cursor-at-end?    ops c))
-      (define (*-cursor-peek       c)       (cursor-peek       ops c))
-      (define (*-cursor-advance    c)       (cursor-advance    ops c))
-      (define (*-cursor-drop       c k)     (cursor-drop       ops c k))
+      (define empty-*-rope                    (make-empty-rope   ops))
+      (define (*-rope-append       l r)       (rope-append       ops l r))
+      (define (*-rope-append*      r)         (rope-append*      ops r))
+      (define (*-rope-split        r i)       (rope-split        ops r i))
+      (define (*-rope-offset-index r o)       (rope-offset-index ops r o))
+      (define (*-rope-splice       r s o n)   (rope-splice       ops r s o n))
+      (define (*-rope-slice        r s l)     (rope-slice        ops r s l))
+      (define (*->rope             r)         (raw->rope         ops r))
+      (define (rope->*             r)         (rope->raw         ops r))
+      (define (*-rope->cursor      r)         (rope->cursor      ops r))
+      (define (cursor->*-rope      c)         (cursor->rope      ops c))
+      (define (*-cursor-at-end?    c)         (cursor-at-end?    ops c))
+      (define (*-cursor-peek       c)         (cursor-peek       ops c))
+      (define (*-cursor-advance    c)         (cursor-advance    ops c))
+      (define (*-cursor-drop       c k)       (cursor-drop       ops c k))
+      (define (*-rope-foldl        p i r . s) (apply rope-foldl  ops p i r s))
+      (define (*-rope-foldr        p i r . s) (apply rope-foldr  ops p i r s))
+
+      ;;; ---------------------------------------------------------------------------------------
+      ;;; Sequencing
+      ;;; ---------------------------------------------------------------------------------------
 
       ;; Evaluated when `in-*-rope` is used as a first-class value outside of a `for` loop (e.g.,
       ;; passed to standard higher-order functions like `sequence-map`).
