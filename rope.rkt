@@ -101,7 +101,7 @@
      (if (rope-balanced? combined) combined (raw->rope ops (rope->raw ops combined)))]))
 
 ;; O(log n * |ropes|)
-(define (rope-append ops ropes)
+(define (rope-append ops . ropes)
   (for/fold ([l (make-empty-rope ops)])
             ([r (in-list ropes)])
     (rope-append1 ops l r)))

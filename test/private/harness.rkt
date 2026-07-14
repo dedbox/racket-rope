@@ -27,8 +27,8 @@
             (λ () (vector))
             vector-length
             weighted-raw-width
-            (λ (v s e) (vector-copy v s e))
-            (λ (vs) (apply vector-append vs))
+            vector-copy
+            vector-append
             vector-ref))
 
 ;; The base structs double perfectly well as their own "instance" — no subtyping needed to probe
@@ -46,7 +46,7 @@
 
 (define (random-weight)              (add1 (random 4)))       ; widths in [1,4]
 (define (random-weighted-raw n)      (build-vector n (λ (_) (random-weight))))
-(define (weighted->vec r)            ((rope-ops-raw-append weighted-ops) (rope-flatten r)))
+(define (weighted->vec r)            (apply (rope-ops-raw-append weighted-ops) (rope-flatten r)))
 
 ;;; ---------------------------------------------------------------------------------------------
 ;;; General-purpose random content, reused by the string/bytes suites.

@@ -4,7 +4,7 @@
   (require rackunit
            racket/vector
            rope/rope
-           "private/harness.rkt")
+           "./private/harness.rkt")
 
   (define ops weighted-ops)
 
