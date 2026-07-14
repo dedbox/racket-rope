@@ -37,6 +37,9 @@
 ;;; Properties
 ;;; ---------------------------------------------------------------------------------------------
 
+(define (rope? x)
+  (or (rope-leaf? x) (rope-node? x)))
+
 ;;; O(1).
 (define (rope-count rope) (match rope [(rope-leaf c _ _) c] [(rope-node c _ _ _) c]))
 (define (rope-width rope) (match rope [(rope-leaf _ w _) w] [(rope-node _ w _ _) w]))
