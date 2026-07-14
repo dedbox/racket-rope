@@ -17,7 +17,7 @@
   (check-property #:trials 300
                    ([a (random-bytes (random 100))]
                     [b (random-bytes (random 100))])
-    (equal? (rope->bytes (bytes-rope-append (bytes->rope a) (bytes->rope b)))
+    (equal? (rope->bytes (bytes-rope-append1 (bytes->rope a) (bytes->rope b)))
             (bytes-append a b)))
 
   (check-property #:trials 300

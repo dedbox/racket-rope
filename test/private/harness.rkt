@@ -39,14 +39,14 @@
                  (rope-ops-raw-length    weighted-base-ops)
                  (rope-ops-raw-width     weighted-base-ops)
                  (rope-ops-raw-slice     weighted-base-ops)
-                 (rope-ops-raw-append*   weighted-base-ops)
+                 (rope-ops-raw-append    weighted-base-ops)
                  (rope-ops-raw-ref       weighted-base-ops)
                  rope-leaf
                  rope-node))
 
 (define (random-weight)              (add1 (random 4)))       ; widths in [1,4]
 (define (random-weighted-raw n)      (build-vector n (λ (_) (random-weight))))
-(define (weighted->vec r)            ((rope-ops-raw-append* weighted-ops) (rope-flatten r)))
+(define (weighted->vec r)            ((rope-ops-raw-append weighted-ops) (rope-flatten r)))
 
 ;;; ---------------------------------------------------------------------------------------------
 ;;; General-purpose random content, reused by the string/bytes suites.

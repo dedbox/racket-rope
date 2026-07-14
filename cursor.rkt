@@ -62,14 +62,14 @@
      (cursor raw 0 (make-empty-rope ops))]
     [(rope-node _ _ l r)
      (match-define (cursor lraw lpos lrest) (rope->cursor ops l))
-     (cursor lraw lpos (rope-append ops lrest r))]))
+     (cursor lraw lpos (rope-append1 ops lrest r))]))
 
 ;; Reconstitutes everything from the cursor on as a rope. This is needed to implement a large
 ;; skip in O(log n) rather than O(k) individual steps.
 (define (cursor->rope ops cur)
   (match-define (cursor raw pos rest) cur)
   (define n ((rope-ops-raw-length ops) raw))
-  (rope-append ops (make-rope-leaf ops ((rope-ops-raw-slice ops) raw pos n)) rest))
+  (rope-append1 ops (make-rope-leaf ops ((rope-ops-raw-slice ops) raw pos n)) rest))
 
 ;;; ---------------------------------------------------------------------------------------------
 ;;; Cursor-Based Rope Operations

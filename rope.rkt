@@ -15,7 +15,7 @@
    raw-length                           ; element count of a raw chunk
    raw-width                            ; character width of a raw chunk
    raw-slice                            ; extract a raw sub-chunk
-   raw-append*                          ; concatenate many raw chunks (used only during a rebalance)
+   raw-append                           ; concatenate many raw chunks (used only during a rebalance)
    raw-ref)                             ; used by the cursor's peek
   #:transparent)
 
@@ -89,10 +89,10 @@
 ;; Balancing concatenation: concatenate naively, then repair balance if the Fibonacci invariant is
 ;; violated.
 ;;
-;; This makes rope-append amortized O(log n): a rebuild is triggered only when depth has drifted
+;; This makes rope-append1 amortized O(log n): a rebuild is triggered only when depth has drifted
 ;; ahead of what the element count justifies, which cannot happen more than O(log n) times across
 ;; O(n) appends.
-(define (rope-append ops l r)
+(define (rope-append1 ops l r)
   (cond
     [(zero? (rope-count l)) r]
     [(zero? (rope-count r)) l]
@@ -101,12 +101,12 @@
      (if (rope-balanced? combined) combined (raw->rope ops (rope->raw ops combined)))]))
 
 ;; O(log n * |ropes|)
-(define (rope-append* ops ropes)
+(define (rope-append ops ropes)
   (for/fold ([l (make-empty-rope ops)])
             ([r (in-list ropes)])
-    (rope-append ops l r)))
+    (rope-append1 ops l r)))
 
-;; Splits at an element index. O(log n) amortized: one descent, plus one rope-append per level on
+;; Splits at an element index. O(log n) amortized: one descent, plus one rope-append1 per level on
 ;; the way back up.
 (define (rope-split ops rope i)
   (match rope
@@ -118,9 +118,9 @@
      (define lc (rope-count l))
      (if (<= i lc)
          (let-values ([(ll lr) (rope-split ops l i)])
-           (values ll (rope-append ops lr r)))
+           (values ll (rope-append1 ops lr r)))
          (let-values ([(rl rr) (rope-split ops r (- i lc))])
-           (values (rope-append ops l rl) rr)))]))
+           (values (rope-append1 ops l rl) rr)))]))
 
 ;; Finds the leftmost element index containing offset `ofs`. O(log n).
 (define (rope-offset-index ops rope ofs)
@@ -148,7 +148,7 @@
 (define (rope-splice ops rope start old-len new-raw)
   (define-values (before rest) (rope-split ops rope start))
   (define-values (_gone after) (rope-split ops rest old-len))
-  (rope-append ops (rope-append ops before (raw->rope ops new-raw)) after))
+  (rope-append1 ops (rope-append1 ops before (raw->rope ops new-raw)) after))
 
 ;; Extracts `len` elements starting at `start`. O(log n + # leaves in slice) amortized.
 (define (rope-slice ops rope start len)
@@ -173,5 +173,5 @@
 
 ;; O(# leaves)
 (define (rope->raw ops rope)
-  ((rope-ops-raw-append* ops) (rope-flatten rope)))
+  ((rope-ops-raw-append ops) (rope-flatten rope)))
 

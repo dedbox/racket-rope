@@ -39,7 +39,7 @@
   (test-case "append / split / splice / slice via the generated API"
     (define v1 (vector 'a 'b 'c))
     (define v2 (vector 'd 'e))
-    (define r (sym-rope-append (sym->rope v1) (sym->rope v2)))
+    (define r (sym-rope-append1 (sym->rope v1) (sym->rope v2)))
     (check-equal? (rope->sym r) (vector-append v1 v2))
     (define-values (l rr) (sym-rope-split r 3))
     (check-equal? (rope->sym l) v1)

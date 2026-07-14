@@ -34,7 +34,7 @@
   (check-property #:trials 300
                    ([a (random-weighted-raw (random 40))]
                     [b (random-weighted-raw (random 40))])
-    (define r (rope-append ops (make-rope-leaf ops a) (make-rope-leaf ops b)))
+    (define r (rope-append1 ops (make-rope-leaf ops a) (make-rope-leaf ops b)))
     (and (= (rope-count r) (+ (vector-length a) (vector-length b)))
          (= (rope-width r) (+ (weighted-raw-width a) (weighted-raw-width b)))
          (equal? (weighted->vec r) (vector-append a b))
@@ -43,23 +43,23 @@
   (test-case "append is a content identity on either empty side"
     (define e (make-empty-rope ops))
     (define r (make-rope-leaf ops (vector 1 2 3)))
-    (check-equal? (weighted->vec (rope-append ops e r)) (weighted->vec r))
-    (check-equal? (weighted->vec (rope-append ops r e)) (weighted->vec r)))
+    (check-equal? (weighted->vec (rope-append1 ops e r)) (weighted->vec r))
+    (check-equal? (weighted->vec (rope-append1 ops r e)) (weighted->vec r)))
 
   (test-case "many sequential appends stay Fibonacci-balanced at every step"
     (void
      (for/fold ([r (make-empty-rope ops)]) ([_ (in-range 800)])
-       (define r+ (rope-append ops r (make-rope-leaf ops (random-weighted-raw (add1 (random 6))))))
+       (define r+ (rope-append1 ops r (make-rope-leaf ops (random-weighted-raw (add1 (random 6))))))
        (check-true (rope-balanced? r+))
        r+)))
 
-  (test-case "rope-append* over an empty list yields the empty rope"
-    (check-true (rope-empty? (rope-append* ops '()))))
+  (test-case "rope-append over an empty list yields the empty rope"
+    (check-true (rope-empty? (rope-append ops '()))))
 
   (check-property #:trials 50
                    ([chunks (for/list ([_ (in-range (add1 (random 12)))])
                               (random-weighted-raw (random 20)))])
-    (define r (rope-append* ops (map (λ (c) (make-rope-leaf ops c)) chunks)))
+    (define r (rope-append ops (map (λ (c) (make-rope-leaf ops c)) chunks)))
     (equal? (weighted->vec r) (apply vector-append chunks)))
 
   ;;; -------------------------------------------------------------------------------------------
@@ -98,7 +98,7 @@
     (define old-len (random (add1 (- n start))))
     (define new (random-weighted-raw (random 20)))
     (define r (rope-splice ops (raw->rope ops raw) start old-len new))
-    (equal? ((rope-ops-raw-append* ops) (rope-flatten r))
+    (equal? ((rope-ops-raw-append ops) (rope-flatten r))
             (vector-splice raw start old-len new)))
 
   ;; (check-property #:trials 300
@@ -106,7 +106,7 @@
   ;;   (define n (vector-length raw))
   ;;   (define start (random (add1 n)))
   ;;   (define len (random (add1 (- n start))))
-  ;;   (define slice ((rope-ops-raw-append* ops) (rope-slice ops (raw->rope ops raw) start len)))
+  ;;   (define slice ((rope-ops-raw-append ops) (rope-slice ops (raw->rope ops raw) start len)))
   ;;   (equal? slice (vector-copy raw start (+ start len))))
 
   ;;; -------------------------------------------------------------------------------------------
@@ -151,7 +151,7 @@
   ;;; -------------------------------------------------------------------------------------------
   (test-case "fib-bound clamps gracefully past its literal table"
     ;; Build a deliberately unbalanced left comb 45 levels deep — deeper than fib-bound's table —
-    ;; entirely via naive rope-concat (never rope-append), so no rebalancing kicks in.
+    ;; entirely via naive rope-concat (never rope-append1), so no rebalancing kicks in.
     (define deep
       (for/fold ([r (make-rope-leaf ops (vector 1))]) ([_ (in-range 45)])
         (rope-concat ops r (make-rope-leaf ops (vector 1)))))

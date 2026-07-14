@@ -18,7 +18,7 @@
   (check-property #:trials 300
                    ([a (random-string (random 100))]
                     [b (random-string (random 100))])
-    (equal? (rope->string (string-rope-append (string->rope a) (string->rope b)))
+    (equal? (rope->string (string-rope-append1 (string->rope a) (string->rope b)))
             (string-append a b)))
 
   (check-property #:trials 300
