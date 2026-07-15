@@ -1,22 +1,54 @@
 #lang racket/base
 
-(require racket/match
+(require racket/contract
+         racket/match
          racket/port
          rope/define-rope-type
          rope/rope)
 
-(provide (all-defined-out))
-
-(define STRING-LEAF-LIMIT 512)
+(provide
+ in-string-rope
+ (contract-out
+  [string-raw?              (any/c . -> . boolean?)]
+  [string-raw-limit         (-> exact-nonnegative-integer?)]
+  [string-raw-empty         (-> rope?)]
+  [string-raw-count         (string? . -> . exact-nonnegative-integer?)]
+  [string-raw-width         (string? . -> . exact-nonnegative-integer?)]
+  [string-raw-slice         (string? exact-nonnegative-integer?
+                                     exact-nonnegative-integer? . -> . string?)]
+  [string-raw-ref           (string? exact-nonnegative-integer? . -> . char?)]
+  [string-raw-append        (string? ... . -> . string?)]
+  [make-string-rope-leaf    (string? . -> . rope-leaf?)]
+  [empty-string-rope        rope?]
+  [string-rope-append1      (rope? rope? . -> . rope?)]
+  [string-rope-append       (rope? ... . -> . rope?)]
+  [string-rope-offset-index (rope? exact-nonnegative-integer? . -> . exact-nonnegative-integer?)]
+  [string->string-rope      (string? . -> . rope?)]
+  [string-rope->string      (rope? . -> . string?)]
+  [string-cursor-at-end?    (cursor? . -> . boolean?)]
+  [string-cursor-peek       (cursor? . -> . char?)]
+  [string-cursor-advance    (cursor? . -> . cursor?)]
+  [string-cursor-drop       (cursor? exact-nonnegative-integer? . -> . cursor?)]
+  [string-rope->cursor      (rope? . -> . cursor?)]
+  [cursor->string-rope      (cursor? . -> . rope?)]
+  [string-rope-foldl        (procedure? any/c rope? rope? ... . -> . any/c)]
+  [string-rope-foldr        (procedure? any/c rope? rope? ... . -> . any/c)]
+  [open-input-string-rope   (rope? . -> . input-port?)]))
 
 (define-rope-type string
-  (rope-ops STRING-LEAF-LIMIT
-            (λ () "")
-            string-length
-            string-length
-            substring
-            (λ (raws) (apply string-append raws))
-            string-ref))
+  string?
+  512
+  ""
+  string-length
+  string-length
+  substring
+  (λ (raws) (apply string-append raws))
+  string-ref)
+
+(define empty-string-rope (make-empty-string-rope))
+
+(define (string->string-rope text) (string-raw->string-rope text))
+(define (string-rope->string rope) (string-rope->string-raw rope))
 
 ;; Per-read complexity: O(k), where k is the number of bytes transferred in that call.
 ;; 

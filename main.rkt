@@ -2,8 +2,8 @@
 
 ;;; Generic Constructs
 rope/rope
-rope/cursor
 
+;;; Instantiator
 rope/define-rope-type
 
 ;;; Type-specific Instances
