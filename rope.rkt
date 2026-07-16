@@ -17,7 +17,6 @@
                      [left  rope?]
                      [right rope?]))
   ;; Rope Operations
-  [make-rope-node (rope? rope? . -> . rope-node?)]
   [rope-count     (rope? . -> . exact-nonnegative-integer?)]
   [rope-width     (rope? . -> . exact-nonnegative-integer?)]
   [rope-length    (rope? . -> . exact-nonnegative-integer?)]
@@ -25,7 +24,6 @@
   [rope-empty?    (rope? . -> . boolean?)]
   [rope-balanced? (rope? . -> . boolean?)]
   [rope-flatten   (rope? . -> . list?)]
-  [rope-concat    (rope? rope? . -> . rope?)]
   ;; Raw Generics
   [raw?       (ropeable? any/c . -> . boolean?)]
   [raw-limit  (ropeable? . -> . exact-nonnegative-integer?)]
@@ -37,11 +35,20 @@
   [raw-ref    (ropeable? any/c exact-nonnegative-integer? . -> . any/c)]
   ;; Rope Generics
   [ropeable?         (any/c . -> . boolean?)]
+  [rope-leaf-ctor    (ropeable? . -> . procedure?)]
+  [rope-node-ctor    (ropeable? . -> . procedure?)]
   [make-rope-leaf    (ropeable? any/c . -> . rope-leaf?)]
+  [make-rope-node    (ropeable? rope? rope? . -> . rope-node?)]
   [make-empty-rope   (ropeable? . -> . rope?)]
+  [rope-concat       (ropeable? rope? rope? . -> . rope?)]
   [rope-append1      (ropeable? rope? rope? . -> . rope?)]
   [rope-append       (ropeable? rope? ... . -> . rope?)]
+  [rope-split        (ropeable? rope? exact-nonnegative-integer? . -> . (values rope? rope?))]
   [rope-offset-index (ropeable? rope? exact-nonnegative-integer? . -> . exact-nonnegative-integer?)]
+  [rope-splice       (ropeable? rope? exact-nonnegative-integer?
+                                exact-nonnegative-integer? any/c . -> . rope?)]
+  [rope-slice        (ropeable? rope? exact-nonnegative-integer?
+                                exact-nonnegative-integer? . -> . rope?)]
   [raw->rope         (ropeable? any/c . -> . rope?)]
   [rope->raw         (ropeable? rope? . -> . any/c)]
   ;; Cursors
@@ -67,11 +74,6 @@
 (struct rope () #:transparent)
 (struct rope-leaf rope (count width raw)        #:transparent)
 (struct rope-node rope (count width left right) #:transparent)
-
-(define (make-rope-node left right)
-  (rope-node (+ (rope-count left) (rope-count right))
-             (+ (rope-width left) (rope-width right))
-             left right))
 
 ;; O(1)
 (define (rope-count rope) (match rope [(rope-leaf c _ _) c] [(rope-node c _ _ _) c]))
@@ -111,10 +113,6 @@
       [(rope-leaf _ _ raw) (cons raw acc)]
       [(rope-node _ _ l r) (loop l (loop r acc))])))
 
-;; Naive concatenation. O(1)
-(define (rope-concat left right)
-  (make-rope-node left right))
-
 ;;; ---------------------------------------------------------------------------------------------
 ;;; Cursor
 ;;; ---------------------------------------------------------------------------------------------
@@ -128,7 +126,8 @@
 ;;; ---------------------------------------------------------------------------------------------
 
 (define-generics ropeable
-  #:requires (raw-limit raw-empty raw-count raw-width raw-slice raw-append raw-ref)
+  #:requires (raw-limit raw-empty raw-count raw-width raw-slice raw-append raw-ref
+                        rope-leaf-ctor rope-node-ctor)
   ;; Raw
   [raw-limit  ropeable]                 ; max element count per leaf
   [raw?       ropeable obj]             ; raw chunk predicate
@@ -139,11 +138,18 @@
   [raw-append ropeable . raws]          ; concatenate raw chunks
   [raw-ref    ropeable raw pos]         ; used by cursor-peek
   ;; Rope
+  [rope-leaf-ctor    ropeable]
+  [rope-node-ctor    ropeable]
   [make-rope-leaf    ropeable raw]
+  [make-rope-node    ropeable left right]
   [make-empty-rope   ropeable]
+  [rope-concat       ropeable left right]
   [rope-append1      ropeable left right]
   [rope-append       ropeable . ropes]
+  [rope-split        ropeable rope i]
   [rope-offset-index ropeable rope ofs]
+  [rope-splice       ropeable rope start old-len new-raw]
+  [rope-slice        ropeable rope start len]
   [raw->rope         ropeable raw]
   [rope->raw         ropeable rope]
   ;; Cursor
@@ -158,19 +164,30 @@
   [rope-foldr ropeable proc init rope0 . ropes]
 
   #:fallbacks
-  [(define/generic leaf:limit raw-limit)
+  [(define/generic raw:limit  raw-limit)
    (define/generic raw:empty  raw-empty)
    (define/generic raw:count  raw-count)
    (define/generic raw:width  raw-width)
    (define/generic raw:slice  raw-slice)
    (define/generic raw:append raw-append)
    (define/generic raw:ref    raw-ref)
+   (define/generic rope:leaf-ctor rope-leaf-ctor)
+   (define/generic rope:node-ctor rope-node-ctor)
 
    (define (make-rope-leaf gen raw)
-     (rope-leaf (raw:count gen raw) (raw:width gen raw) raw))
+     ((rope:leaf-ctor gen) (raw:count gen raw) (raw:width gen raw) raw))
+
+   (define (make-rope-node gen left right)
+     ((rope:node-ctor gen) (+ (rope-count left) (rope-count right))
+                           (+ (rope-width left) (rope-width right))
+                           left right))
 
    (define (make-empty-rope gen)
      (make-rope-leaf gen (raw:empty gen)))
+
+   ;; Naive concatenation. O(1)
+   (define (rope-concat gen left right)
+     (make-rope-node gen left right))
 
    ;; Balancing concatenation: concatenate naively, then repair balance if the Fibonacci invariant
    ;; is violated.
@@ -183,7 +200,7 @@
        [(zero? (rope-count left))  right]
        [(zero? (rope-count right)) left]
        [else
-        (define combined (rope-concat left right))
+        (define combined (rope-concat gen left right))
         (if (rope-balanced? combined) combined (raw->rope gen (rope->raw gen combined)))]))
 
    ;; O(log n * |ropes|)
@@ -197,9 +214,8 @@
    (define (rope-split gen rope i)
      (match rope
        [(rope-leaf cnt _ raw)
-        (define slice (raw:slice gen))
-        (values (make-rope-leaf gen (slice raw 0 i))
-                (make-rope-leaf gen (slice raw i cnt)))]
+        (values (make-rope-leaf gen (raw:slice gen raw 0 i))
+                (make-rope-leaf gen (raw:slice gen raw i cnt)))]
        [(rope-node _ _ l r)
         (define lc (rope-count l))
         (if (<= i lc)
@@ -245,10 +261,11 @@
    ;; O(n) bottom-up balanced build.
    (define (raw->rope gen raw)
      (define n (raw:count gen raw))
-     (if (<= n (leaf:limit gen))
+     (if (<= n (raw:limit gen))
          (make-rope-leaf gen raw)
          (let ([mid   (quotient n 2)])
-           (rope-concat (raw->rope gen (raw:slice gen raw 0 mid))
+           (rope-concat gen
+                        (raw->rope gen (raw:slice gen raw 0 mid))
                         (raw->rope gen (raw:slice gen raw mid n))))))
 
    ;; O(# leaves)

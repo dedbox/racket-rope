@@ -1,20 +1,22 @@
 #lang racket/base
+;; Shared test infrastructure. The synthetic "weighted" type is a hand-rolled gen:ropeable instance
+;; (not built through define-rope-type), which keeps rope.rkt's own generics testable independently
+;; of the macro's correctness. It now must supply rope-leaf-ctor/rope-node-ctor too, since both are
+;; in gen:ropeable's #:requires list with no #:fallbacks default.
 
-;; Shared test infrastructure: random generators, a synthetic "weighted" rope type used only to
-;; exercise the count≠width path of the generic layer (neither shipped instance can reach it,
-;; since both set raw-width ≡ raw-length), and a small declarative property macro.
-
-(require (for-syntax racket/base)
+(require (for-syntax racket/base
+                     syntax/parse)
+         racket/generic
          racket/vector
          rackunit
-         syntax/parse/define
          rope/rope)
 
 (provide (all-defined-out))
 
 ;;; ---------------------------------------------------------------------------------------------
 ;;; Synthetic weighted raw type: a vector of naturals ≥ 1, where element i's "width" is its own
-;;; value. raw-length (element count) and raw-width (Σ values) therefore diverge.
+;;; value, so raw-count and raw-width diverge — exercising a path neither shipped instance can
+;;; reach, since both set raw-width ≡ raw-count.
 ;;; ---------------------------------------------------------------------------------------------
 
 (define WEIGHTED-LEAF-LIMIT 8)
@@ -22,31 +24,26 @@
 (define (weighted-raw-width v)
   (for/sum ([w (in-vector v)]) w))
 
-(define weighted-base-ops
-  (rope-ops WEIGHTED-LEAF-LIMIT
-            (λ () (vector))
-            vector-length
-            weighted-raw-width
-            vector-copy
-            vector-append
-            vector-ref))
+(struct weighted-gen ()
+  #:methods gen:ropeable
+  [(define (raw?       _ obj)     (vector? obj))
+   (define (raw-limit  _)         WEIGHTED-LEAF-LIMIT)
+   (define (raw-empty  _)         (vector))
+   (define (raw-count  _ raw)     (vector-length raw))
+   (define (raw-width  _ raw)     (weighted-raw-width raw))
+   (define (raw-slice  _ raw s e) (vector-copy raw s e))
+   (define (raw-append _ . raws)  (apply vector-append raws))
+   (define (raw-ref    _ raw i)   (vector-ref raw i))
+   ;; Untagged base constructors are fine here — this harness exists to test rope.rkt's own
+   ;; generic algorithms, not per-type tagging (that's define-rope-type-test.rkt's job).
+   (define (rope-leaf-ctor _)     rope-leaf)
+   (define (rope-node-ctor _)     rope-node)])
 
-;; The base structs double perfectly well as their own "instance" — no subtyping needed to probe
-;; the generic algorithms directly.
-(define weighted-ops
-  (rope-ops-impl (rope-ops-limit         weighted-base-ops)
-                 (rope-ops-raw-empty     weighted-base-ops)
-                 (rope-ops-raw-length    weighted-base-ops)
-                 (rope-ops-raw-width     weighted-base-ops)
-                 (rope-ops-raw-slice     weighted-base-ops)
-                 (rope-ops-raw-append    weighted-base-ops)
-                 (rope-ops-raw-ref       weighted-base-ops)
-                 rope-leaf
-                 rope-node))
+(define gen (weighted-gen))                             ; the dispatch witness used throughout
 
-(define (random-weight)              (add1 (random 4)))       ; widths in [1,4]
-(define (random-weighted-raw n)      (build-vector n (λ (_) (random-weight))))
-(define (weighted->vec r)            (apply (rope-ops-raw-append weighted-ops) (rope-flatten r)))
+(define (random-weight)         (add1 (random 4)))      ; widths in [1,4]
+(define (random-weighted-raw n) (build-vector n (λ (_) (random-weight))))
+(define (weighted->vec r)       (rope->raw gen r))
 
 ;;; ---------------------------------------------------------------------------------------------
 ;;; General-purpose random content, reused by the string/bytes suites.
@@ -55,8 +52,7 @@
 (define (random-string n)
   (list->string (for/list ([_ (in-range n)]) (integer->char (+ 32 (random 95))))))
 
-;; Includes codepoints outside the BMP (astral plane) to stress UTF-8 multi-byte encoding, while
-;; skipping the surrogate range, which is not a valid Racket char.
+;; Includes codepoints outside the BMP (astral plane), skipping the surrogate range.
 (define (random-unicode-string n)
   (list->string
    (for/list ([_ (in-range n)])
@@ -71,14 +67,15 @@
   (build-bytes n (λ (_) (random 256))))
 
 ;;; ---------------------------------------------------------------------------------------------
-;;; A tiny declarative macro: run `body` (which must evaluate to a boolean) `trials` times against
-;;; fresh random bindings, reporting the failing sample via rackunit's check-info machinery.
+;;; A tiny declarative macro: run `body` (must evaluate to a boolean) `trials` times against fresh
+;;; random bindings, reporting the failing sample via rackunit's check-info machinery.
 ;;; ---------------------------------------------------------------------------------------------
 
 (define-syntax (check-property stx)
   (syntax-parse stx
-    [(_ #:trials trials:expr ([id:id gen:expr] ...) body:expr ...+)
+    [(_ #:trials trials:expr ([id:id gen-expr:expr] ...) body:expr ...+)
      #`(for ([iteration (in-range trials)])
-         (let* ([id gen] ...)
+         (let* ([id gen-expr] ...)
            (with-check-info (['iteration iteration] ['id id] ...)
-             #,(syntax/loc stx (check-true (let () body ...))))))]))
+             #,(syntax/loc stx
+                 (check-true (let () body ...))))))]))

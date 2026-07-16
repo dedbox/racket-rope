@@ -3,7 +3,6 @@
 (module+ test
   (require rackunit
            racket/port
-           racket/string
            rope/rope
            rope/string
            "private/harness.rkt")
@@ -12,17 +11,22 @@
   ;;; Oracle: string-rope operations vs. built-in string operations
   ;;; -------------------------------------------------------------------------------------------
   (check-property #:trials 300
-                   ([s (random-string (random 300))])
+      ([s (random-string (random 300))])
     (equal? (rope->string (string->rope s)) s))
 
   (check-property #:trials 300
-                   ([a (random-string (random 100))]
-                    [b (random-string (random 100))])
+      ([a (random-string (random 100))]
+       [b (random-string (random 100))])
     (equal? (rope->string (string-rope-append1 (string->rope a) (string->rope b)))
             (string-append a b)))
 
+  (check-property #:trials 50
+      ([parts (for/list ([_ (in-range (add1 (random 8)))]) (random-string (random 50)))])
+    (equal? (rope->string (apply string-rope-append (map string->rope parts)))
+            (apply string-append parts)))
+
   (check-property #:trials 300
-                   ([s (random-string (add1 (random 200)))])
+      ([s (random-string (add1 (random 200)))])
     (define n (string-length s))
     (define i (random (add1 n)))
     (define-values (l r) (string-rope-split (string->rope s) i))
@@ -30,7 +34,7 @@
          (equal? (rope->string r) (substring s i n))))
 
   (check-property #:trials 300
-                   ([s (random-string (add1 (random 200)))])
+      ([s (random-string (add1 (random 200)))])
     (define n (string-length s))
     (define start (random (add1 n)))
     (define old-len (random (add1 (- n start))))
@@ -38,36 +42,40 @@
     (equal? (rope->string (string-rope-splice (string->rope s) start old-len new))
             (string-append (substring s 0 start) new (substring s (+ start old-len) n))))
 
-  ;; (check-property #:trials 300
-  ;;                  ([s (random-string (add1 (random 200)))])
-  ;;   (define n (string-length s))
-  ;;   (define start (random (add1 n)))
-  ;;   (define len (random (add1 (- n start))))
-  ;;   (equal? (apply string-append (string-rope-slice (string->rope s) start len))
-  ;;           (substring s start (+ start len))))
+  (check-property #:trials 300
+      ([s (random-string (add1 (random 200)))])
+    (define n (string-length s))
+    (define start (random (add1 n)))
+    (define len (random (add1 (- n start))))
+    (equal? (rope->string (string-rope-slice (string->rope s) start len))
+            (substring s start (+ start len))))
 
-  ;; Since raw-width ≡ raw-length for strings, offset-index degenerates to the identity.
   (test-case "string-rope-offset-index is the identity when width ≡ count"
-    (check-equal? (string-rope-offset-index (string->rope "hello") 0) 0)
-    (check-equal? (string-rope-offset-index (string->rope "hello") 4) 4))
+    (define r (string->rope "hello world"))
+    (check-equal? (string-rope-offset-index r 0) 0)
+    (check-equal? (string-rope-offset-index r 4) 4))
 
   ;;; -------------------------------------------------------------------------------------------
-  ;;; Leaf-limit boundary: STRING-LEAF-LIMIT = 512
+  ;;; Leaf-limit boundary
   ;;; -------------------------------------------------------------------------------------------
-  (test-case "ropes at, above, and below the leaf limit are structurally sane"
-    (for ([n (list 0 1 511 512 513 1024 1025 2000)])
+  (test-case "ropes at, above, and below the leaf limit are structurally sane and correctly tagged"
+    (define limit (string-raw-limit))
+    (check-equal? limit 512)
+    (for ([n (list 0 1 (sub1 limit) limit (add1 limit) (* 2 limit) (add1 (* 2 limit)) 2000)])
       (define s (random-string n))
       (define r (string->rope s))
       (check-equal? (rope-count r) n)
       (check-equal? (rope->string r) s)
-      (when (> n STRING-LEAF-LIMIT)
-        (check-true (> (rope-depth r) 0)))))
+      (check-true (string-rope? r))
+      (when (> n limit)
+        (check-true (> (rope-depth r) 0))
+        (check-true (rope-node? r)))))
 
   ;;; -------------------------------------------------------------------------------------------
-  ;;; Unicode: astral-plane codepoints, multi-byte UTF-8 boundaries
+  ;;; Unicode
   ;;; -------------------------------------------------------------------------------------------
   (check-property #:trials 100
-                   ([s (random-unicode-string (random 80))])
+      ([s (random-unicode-string (random 80))])
     (equal? (rope->string (string->rope s)) s))
 
   (test-case "port output matches string->bytes/utf-8, byte for byte, even at tiny buffer sizes"
@@ -86,8 +94,7 @@
       (close-input-port port)))
 
   (test-case "empty string rope port yields immediate eof"
-    (define port (open-input-string-rope (string->rope "")))
-    (check-true (eof-object? (read-byte port))))
+    (check-true (eof-object? (read-byte (open-input-string-rope (string->rope ""))))))
 
   (test-case "closed string-rope ports report closed and reject further reads"
     (define port (open-input-string-rope (string->rope "abc")))
@@ -95,9 +102,15 @@
     (check-true (port-closed? port))
     (check-exn exn:fail? (λ () (read-byte port))))
 
-  ;;; -------------------------------------------------------------------------------------------
-  ;;; in-string-rope sequencing
-  ;;; -------------------------------------------------------------------------------------------
   (check-property #:trials 100
-                   ([s (random-string (random 100))])
-    (equal? (for/list ([c (in-string-rope (string->rope s))]) c) (string->list s))))
+      ([s (random-string (random 100))])
+    (equal? (for/list ([c (in-string-rope (string->rope s))]) c) (string->list s)))
+
+  ;;; -------------------------------------------------------------------------------------------
+  ;;; Contracts previously found buggy — now asserted positively, not as regressions
+  ;;; -------------------------------------------------------------------------------------------
+  (test-case "string-raw-empty returns the actual empty string, contract now matches"
+    (check-equal? (string-raw-empty) ""))
+
+  (test-case "make-string-rope-leaf returns a genuinely tagged leaf despite the looser contract"
+    (check-true (string-rope-leaf? (make-string-rope-leaf "abc")))))
