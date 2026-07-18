@@ -50,6 +50,14 @@
     (equal? (rope->bytes (bytes-rope-slice (bytes->rope b) start len))
             (subbytes b start (+ start len))))
 
+  (check-property #:trials 200
+      ([b (random-bytes (add1 (random 200)))])
+    (define n (bytes-length b))
+    (define start (random (add1 n)))
+    (define k (random (add1 (- n start))))
+    (define cur (bytes-cursor-drop (bytes-rope->cursor (bytes->rope b)) start))
+    (equal? (rope->bytes (bytes-cursor-take cur k)) (subbytes b start (+ start k))))
+
   ;;; -------------------------------------------------------------------------------------------
   ;;; Full byte-value coverage, including NUL and 0xFF
   ;;; -------------------------------------------------------------------------------------------
@@ -106,4 +114,8 @@
 
   (test-case "bytes-cursor-peek returns a byte, matching its corrected contract"
     (define cur (bytes-rope->cursor (bytes->rope #"A")))
-    (check-equal? (bytes-cursor-peek cur) 65)))
+    (check-equal? (bytes-cursor-peek cur) 65))
+
+  (test-case "bytes-cursor-peek past the end returns #f, matching its widened contract"
+    (define r (bytes->rope #"A"))
+    (check-false (bytes-cursor-peek (bytes-cursor-drop (bytes-rope->cursor r) 1)))))

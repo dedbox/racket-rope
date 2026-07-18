@@ -90,7 +90,10 @@
     (check-false (sym-cursor-at-end? c))
     (check-equal? (sym-cursor-peek c) 'a)
     (check-equal? (sym-cursor-peek (sym-cursor-advance c)) 'b)
-    (check-equal? (sym-rope->sym-raw (cursor->sym-rope (sym-cursor-drop c 2))) (vector 'c)))
+    (check-equal? (sym-rope->sym-raw (cursor->sym-rope (sym-cursor-drop c 2))) (vector 'c))
+    (check-equal? (sym-rope->sym-raw (sym-cursor-take c 2)) (vector 'a 'b))
+    (check-true (sym-rope? (sym-cursor-take c 2)))
+    (check-false (sym-cursor-peek (sym-cursor-drop c 3))))
 
   (test-case "fold identifiers"
     (define r (sym-raw->sym-rope (vector 1 2 3)))

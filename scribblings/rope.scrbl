@@ -160,9 +160,10 @@ A @racket[cursor] is a position within a rope, represented as the raw chunk
 currently being read, an offset within that chunk, and a rope of everything after
 it. Cursors support @math{O(1)} @racket[cursor-peek] and @racket[cursor-advance]
 except when crossing from one leaf into the next, which is itself amortized
-@math{O(1)} over the length of a leaf. @racket[cursor-drop] skips @math{k}
-elements in @math{O(log n)} time, independent of @math{k}, by splitting the
-rope rather than advancing one element at a time.
+@math{O(1)} over the length of a leaf. @racket[cursor-drop] skips
+@math{k} elements, and @racket[cursor-take] extracts the next @math{k}
+elements as a rope. Both run in @math{O(log n)} time, independent of
+@math{k}, by splitting the rope rather than visiting each element.
 
 Cursors are the mechanism behind @racket[rope-foldl] and @racket[rope-foldr],
 which fold over one or more ropes in lockstep, and behind sequence constructors
@@ -465,13 +466,22 @@ which chunk type's rules to follow.
  @racket[cursor-peek].}
 
 @defproc[(cursor-drop [ropeable ropeable?]
-                       [cursor cursor?]
-                       [k exact-nonnegative-integer?])
+                      [cursor cursor?]
+                      [k exact-nonnegative-integer?])
          cursor?]{
 
  Returns a cursor advanced @racket[k] elements past @racket[cursor], by splitting
  the remainder of the rope rather than stepping one element at a time.
  @math{O(log n)}, independent of @racket[k].}
+
+@defproc[(cursor-take [ropeable ropeable?]
+                      [cursor cursor?]
+                      [k exact-nonnegative-integer?])
+         rope?]{
+
+ Returns a rope of the @racket[k] elements starting at @racket[cursor], by
+ splitting the remainder of the rope rather than stepping one element at a
+ time. @math{O(log n)}, independent of @racket[k].}
 
 @defproc[(rope->cursor [ropeable ropeable?] [rope rope?]) cursor?]{
 
@@ -633,10 +643,12 @@ explicitly.
  analogous to @racket[substring].}
 
 @defproc[(string-cursor-at-end? [cursor cursor?]) boolean?]{ See @racket[cursor-at-end?]. }
-@defproc[(string-cursor-peek [cursor cursor?]) char?]{ See @racket[cursor-peek]. }
+@defproc[(string-cursor-peek [cursor cursor?]) (or/c #f char?)]{ See @racket[cursor-peek]. }
 @defproc[(string-cursor-advance [cursor cursor?]) cursor?]{ See @racket[cursor-advance]. }
 @defproc[(string-cursor-drop [cursor cursor?] [k exact-nonnegative-integer?]) cursor?]{
  See @racket[cursor-drop].}
+@defproc[(string-cursor-take [cursor cursor?] [k exact-nonnegative-integer?]) string-rope?]{
+ See @racket[cursor-take].}
 @defproc[(string-rope->cursor [rope string-rope?]) cursor?]{ See @racket[rope->cursor]. }
 @defproc[(cursor->string-rope [cursor cursor?]) string-rope?]{ See @racket[cursor->rope]. }
 
@@ -774,10 +786,12 @@ the corresponding string-rope operation described in the previous section.
  analogous to @racket[subbytes].}
 
 @defproc[(bytes-cursor-at-end? [cursor cursor?]) boolean?]{ See @racket[cursor-at-end?]. }
-@defproc[(bytes-cursor-peek [cursor cursor?]) byte?]{ See @racket[cursor-peek]. }
+@defproc[(bytes-cursor-peek [cursor cursor?]) (or/c #f byte?)]{ See @racket[cursor-peek]. }
 @defproc[(bytes-cursor-advance [cursor cursor?]) cursor?]{ See @racket[cursor-advance]. }
 @defproc[(bytes-cursor-drop [cursor cursor?] [k exact-nonnegative-integer?]) cursor?]{
  See @racket[cursor-drop].}
+@defproc[(bytes-cursor-take [cursor cursor?] [k exact-nonnegative-integer?]) bytes-rope?]{
+ See @racket[cursor-take].}
 @defproc[(bytes-rope->cursor [rope bytes-rope?]) cursor?]{ See @racket[rope->cursor]. }
 @defproc[(cursor->bytes-rope [cursor cursor?]) bytes-rope?]{ See @racket[cursor->rope]. }
 
@@ -853,10 +867,10 @@ the corresponding string-rope operation described in the previous section.
    @racket[_type-raw->_type-rope], and @racket[_type-rope->_type-raw], the
    specialized construction and editing operations from
    @secref["Generic_Rope_Operations"];}
- @item{@racket[_type-cursor-at-end?], @racket[_type-cursor-peek],
-   @racket[_type-cursor-advance], @racket[_type-cursor-drop],
-   @racket[_type-rope->cursor], and @racket[cursor->_type-rope], the specialized
-   cursor operations; and}
+@item{@racket[_type-cursor-at-end?], @racket[_type-cursor-peek],
+  @racket[_type-cursor-advance], @racket[_type-cursor-drop],
+  @racket[_type-cursor-take], @racket[_type-rope->cursor], and
+  @racket[cursor->_type-rope], the specialized cursor operations; and}
  @item{@racket[_type-rope-foldl], @racket[_type-rope-foldr], and
    @racket[in-_type-rope], the specialized fold and sequence operations.}]
 
@@ -901,6 +915,10 @@ the corresponding string-rope operation described in the previous section.
  when the sequence is handed to a higher-order function like
  @racket[sequence-map] instead of appearing directly in a @racket[for] clause,
  @emph{is} contracted and re-exported alongside it.}
+
+ Note that @racket[_type-cursor-peek]'s contract always admits @racket[#f] in
+ addition to @racket[element-contract-expr], since @racket[#f] signals that the
+ cursor has run out of elements rather than being itself an element value.
 
 As a complete example, here is a rope type over immutable vectors, exposing only
 the operations needed to build, edit, and read one back:
@@ -975,6 +993,7 @@ on a single call, when a rebalancing rebuild is triggered, but never more than
        (list @racket[rope-offset-index]         "O(log n)")
        (list @elem{@racket[cursor-peek]/@racket[cursor-advance]} "O(1) amortized")
        (list @racket[cursor-drop]               "O(log n)")
+       (list @racket[cursor-take]               "O(log n)")
        (list @elem{@racket[rope-foldl]/@racket[rope-foldr]}      "O(n)")
        (list @racket[raw->rope]                 "O(n)")
        (list @racket[rope->raw]                 "O(# leaves)"))]

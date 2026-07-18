@@ -56,6 +56,21 @@
     (check-equal? (string-rope-offset-index r 4) 4))
 
   ;;; -------------------------------------------------------------------------------------------
+  ;;; cursor-take: agrees with substring from a cursor's position
+  ;;; -------------------------------------------------------------------------------------------
+  (check-property #:trials 200
+      ([s (random-string (add1 (random 200)))])
+    (define n (string-length s))
+    (define start (random (add1 n)))
+    (define k (random (add1 (- n start))))
+    (define cur (string-cursor-drop (string-rope->cursor (string->rope s)) start))
+    (equal? (rope->string (string-cursor-take cur k)) (substring s start (+ start k))))
+
+  (test-case "string-cursor-peek past the end returns #f, matching its widened contract"
+    (define r (string->rope "abc"))
+    (check-false (string-cursor-peek (string-cursor-drop (string-rope->cursor r) 3))))
+
+  ;;; -------------------------------------------------------------------------------------------
   ;;; Leaf-limit boundary
   ;;; -------------------------------------------------------------------------------------------
   (test-case "ropes at, above, and below the leaf limit are structurally sane and correctly tagged"
