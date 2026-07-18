@@ -100,6 +100,10 @@
   (test-case "bytes-raw-ref returns a byte, matching its corrected contract"
     (check-equal? (bytes-raw-ref (bytes 65 66 67) 0) 65))
 
+  (test-case "the bytes-rope-leaf struct constructor itself now enforces bytes? on raw"
+    (check-not-exn (λ () (bytes-rope-leaf 3 3 #"abc")))
+    (check-exn exn:fail:contract? (λ () (bytes-rope-leaf 1 1 'not-bytes))))
+
   (test-case "bytes-cursor-peek returns a byte, matching its corrected contract"
     (define cur (bytes-rope->cursor (bytes->rope #"A")))
     (check-equal? (bytes-cursor-peek cur) 65)))

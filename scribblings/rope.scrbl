@@ -23,7 +23,7 @@ A @deftech{rope} is a tree of small string (or byte, or vector, or other) chunks
 It supports the same operations as a string, but where a string of length
 @math{n} takes @math{O(n)} time to split, splice, or concatenate, a balanced rope
 does the same work in @math{O(log n)}. This library provides the rope data
-structure itself, a generic protocol for building ropes out of any chunk-like
+structure, a generic protocol for building ropes out of any chunkable
 data, and ready-made instances for strings and byte strings.
 
 Based on the paper by @hyperlink["https://doi.org/10.1002/spe.4380251203"]{Boehm, Atkinson, and Plass}.
@@ -35,31 +35,31 @@ Based on the paper by @hyperlink["https://doi.org/10.1002/spe.4380251203"]{Boehm
 @section{Introduction}
 
 Racket strings are immutable, fixed-length vectors of characters. That makes them
-cheap to read and share, but expensive to edit: inserting a character in the
-middle of a string of length @racket[n] means allocating and copying a new string
+cheap to read and share, but expensive to edit. Inserting a character in the
+middle of a string of length @math{n} means allocating and copying a new string
 of length @math{n}, because @racket[substring] and @racket[string-append] both
 have to walk the whole thing. A text editor that repeatedly inserts and deletes
 characters in a large buffer this way pays @math{O(n)} per keystroke, and
 @math{O(n^2)} (or worse) over the course of editing the whole document.
 
-A rope solves this by representing a long sequence as a balanced binary tree of
-short chunks rather than as one flat vector. Each leaf holds a chunk small enough
-to slice or copy cheaply; each internal node caches the combined length of its two
+Ropes solve this by representing a long sequence as a balanced binary tree of
+short chunks rather than as a flat array. Each leaf holds a chunk small enough
+to slice or copy cheaply. Each internal node caches the combined length of its
 subtrees, so that length queries are @math{O(1)} and a split or concatenation only
-has to touch @math{O(log n)} nodes along a single root-to-leaf path. Splicing new
-content into the middle of a rope, then, costs @math{O(log n)} to find the split
-points plus the cost of building a small subtree for the inserted text, rather
-than @math{O(n)} to rebuild the whole sequence.
+has to touch @math{O(log n)} nodes along a single root-to-leaf path. Hence, splicing
+new content into a rope costs @math{O(log n)} to find the split points plus the cost
+of building a subtree for the inserted text, rather than @math{O(n)} to rebuild the
+whole sequence.
 
-This library separates that tree structure from what it holds. The @racket[rope]
-type itself only knows about leaves and nodes; it has no idea whether a leaf's
+This library separates the tree structure from what it holds. The @racket[rope]
+type itself only knows about leaves and nodes---it has no idea whether a leaf's
 payload is a string, a byte string, or something else entirely. A generic
 interface, @racket[gen:ropeable], describes the handful of operations a chunk type
 needs to support (@italic{slice}, @italic{append}, @italic{count}, and so on), and
 the @racket[define-rope-type] macro turns any such description into a complete,
-efficient, and type-specific rope implementation. The library ships with two such
-implementations out of the box, for strings and for byte strings, and
-@secref{Defining_New_Rope_Types} works through building a third from scratch.
+efficient, type-specific rope implementation. The library includes support for string
+ropes and byte string ropes out of the box, and @secref{Defining_New_Rope_Types} walks
+through building a new rope type from scratch.
 
 @; -------------------------------------------------------------------------------------------------
 
@@ -67,11 +67,11 @@ implementations out of the box, for strings and for byte strings, and
 
 The most common way to use this library is through @racketmodname[rope/string],
 which treats a rope as a persistent, efficiently editable stand-in for a
-@racket[string]. Build one with @racket[string->rope], and get an ordinary string
-back out with @racket[rope->string]:
+@racket[string]. You can build one with @racket[string->rope] and get an ordinary
+string back with @racket[rope->string]:
 
-@examples[#:eval rope-eval
- (define greeting (string->rope "Hello, !"))
+@examples[#:eval rope-eval #:label #f
+ (define greeting (string->rope "Hello!"))
  (rope-length greeting)
  (rope->string greeting)]
 
@@ -80,22 +80,22 @@ shares structure with the old one. @racket[string-rope-splice] replaces a run of
 characters with a new string, and inserting text is just the special case where
 nothing is replaced:
 
-@examples[#:eval rope-eval
- (define with-name (string-rope-splice greeting 7 0 "World"))
+@examples[#:eval rope-eval #:label #f
+ (define with-name (string-rope-splice greeting 5 0 " World"))
  (rope->string with-name)
  (code:comment "the original is untouched")
  (rope->string greeting)]
 
-Deleting a run of text is the mirror image: splice in the empty string.
+Deleting text is just splicing in the empty string.
 
-@examples[#:eval rope-eval
- (define bare (string-rope-splice with-name 7 5 ""))
+@examples[#:eval rope-eval #:label #f
+ (define bare (string-rope-splice with-name 5 7 ""))
  (rope->string bare)]
 
 Building up a large document out of pieces is a matter of appending ropes, which
-is also @math{O(log n)} rather than @math{O(n)}:
+is also @math{O(log n)}:
 
-@examples[#:eval rope-eval
+@examples[#:eval rope-eval #:label #f
  (define doc
    (string-rope-append
     (string->rope "It was the best of times, ")
@@ -103,18 +103,15 @@ is also @math{O(log n)} rather than @math{O(n)}:
  (rope->string doc)]
 
 Ropes are also sequences of their elements, so a rope of characters works with
-@racket[for] and friends via @racket[in-string-rope]:
+the various @racket[for] forms via @racket[in-string-rope]:
 
-@examples[#:eval rope-eval
+@examples[#:eval rope-eval #:label #f
  (for/list ([ch (in-string-rope doc)]
             #:when (char-upper-case? ch))
    ch)]
 
-Everything above works identically, position-for-position and result-for-result,
-on byte strings via @racketmodname[rope/bytes] in place of
-@racketmodname[rope/string]. The remaining sections cover the tree structure
-underlying both, the generic protocol that connects a chunk type to that
-structure, and how to add support for chunk types of your own.
+Everything above works identically for byte strings with @racketmodname[rope/bytes]
+in place of @racketmodname[rope/string].
 
 @; -------------------------------------------------------------------------------------------------
 
@@ -128,14 +125,14 @@ variants cache their element @racket[count] and @racket[width] (see below), whic
 is what makes @racket[rope-length] an @math{O(1)} operation instead of a tree
 walk.
 
-Left unchecked, repeated splitting and appending can produce a tree that
+Without careful management, repeated splitting and appending can produce a tree that
 degenerates into a linked list, at which point operations that ought to be
-@math{O(log n)} become @math{O(n)} again. Following Boehm, Atkinson, and Plass,
+@math{O(log n)} would become @math{O(n)} again. Following Boehm, Atkinson, and Plass,
 this library keeps every rope balanced by maintaining the invariant that a rope of
-depth @racket[d] always has at least @racket[(fib (+ d 2))] leaves, where
-@racket[fib] is the Fibonacci sequence. @racket[rope-append1] checks this
-invariant after every naive concatenation and, on the rare occasions it is
-violated, rebuilds the offending subtree from scratch in @math{O(n)} time.
+depth @math{d} always has at least @math{Fib(d + 2)} leaves, where
+@math{Fib} is the Fibonacci sequence. @racket[rope-append1] checks this
+invariant after every naive concatenation and, when it is violated, rebuilds the
+offending subtree from scratch in @math{O(n)} time.
 Because a rebuild is only triggered when the tree has drifted measurably out of
 balance, this happens at most @math{O(log n)} times over the course of
 @math{O(n)} edits, making @racket[rope-append1] amortized @math{O(log n)}.
@@ -145,15 +142,15 @@ balance, this happens at most @math{O(log n)} times over the course of
 Every rope tracks two numbers: its @deftech{count}, the number of elements it
 holds, and its @deftech{width}, the total extent of those elements along some
 other axis. For the string and byte-string ropes in this library, every element
-occupies exactly one unit of width — a character is one character wide, a byte is
-one byte wide — so @racket[rope-count] and @racket[rope-width] always agree, and
-@racket[rope-length] is simply defined as the latter.
+occupies exactly one unit of width---a character is one character wide, and a byte is
+one byte wide---so @racket[rope-count] and @racket[rope-width] always agree.
+@racket[rope-length] is simply an alias for the latter.
 
-The two numbers diverge for a chunk type whose elements have variable extent: a
-rope over a sequence of on-screen glyphs, say, where each glyph is one element but
-occupies a variable number of display columns. @racket[rope-offset-index] exists
+The two numbers diverge for a chunk type whose elements have variable extent. For
+example, in a rope over a sequence of on-screen glyphs, each glyph is a single element
+that may occupy a variable number of display columns. @racket[rope-offset-index] exists
 for exactly this situation: given a rope and a @tech{width}, such as a column
-number, it locates the @tech{count}-based element index at that position, in
+number, it locates the @tech{count}-based element index at that position in
 @math{O(log n)} time. For the built-in types this is a straightforward binary
 search, but the machinery is there for chunk types that need it.
 
@@ -169,12 +166,11 @@ rope rather than advancing one element at a time.
 
 Cursors are the mechanism behind @racket[rope-foldl] and @racket[rope-foldr],
 which fold over one or more ropes in lockstep, and behind sequence constructors
-such as @racket[in-string-rope] that each type-specific module provides.
+such as @racket[in-string-rope].
 
 @subsection[#:tag "The_gen_ropeable_Interface"]{The @racket[gen:ropeable] Interface}
 
-Everything above — balancing, splitting, splicing, cursors, folds — is
-implemented once, generically, in terms of a small interface,
+Everything above is implemented once, generically, in terms of a small interface,
 @racket[gen:ropeable], that describes how to work with a raw chunk. A chunk type
 implements @racket[gen:ropeable] by supplying:
 
@@ -189,8 +185,8 @@ implements @racket[gen:ropeable] by supplying:
  @item{constructors for type-specific leaf and node structs
    (@racket[rope-leaf-ctor], @racket[rope-node-ctor]).}]
 
-Every other operation in @secref{Generic_Rope_Operations} — splitting, splicing,
-slicing, balancing, cursors, folds — comes for free as a fallback implementation
+Every other operation in @secref{Generic_Rope_Operations}---splitting, splicing,
+slicing, balancing, cursors, folds---comes for free as a fallback implementation
 once those pieces are in place. You will rarely call these generic operations
 directly;
 @racket[define-rope-type] (@secref{Defining_New_Rope_Types}) uses them to generate
@@ -221,10 +217,9 @@ what the type-specific operations reduce to underneath.
                               [width exact-nonnegative-integer?]
                               [raw any/c])]{
 
- A rope holding a single chunk of raw data directly. @racket[count] and
- @racket[width] are the chunk's @tech{count} and @tech{width}; @racket[raw] is the
- chunk itself, whose type depends on the @racket[gen:ropeable] implementation that
- produced it.}
+ A rope holding a single chunk of raw data. @racket[count] and @racket[width] are
+ the chunk's @tech{count} and @tech{width}; @racket[raw] is the chunk itself,
+ whose type depends on the @racket[gen:ropeable] implementation that produced it.}
 
 @defstruct*[(rope-node rope) ([count exact-nonnegative-integer?]
                               [width exact-nonnegative-integer?]
@@ -233,21 +228,21 @@ what the type-specific operations reduce to underneath.
 
  A rope formed by concatenating @racket[left] and @racket[right]. @racket[count]
  and @racket[width] are the sums of the corresponding fields of @racket[left] and
- @racket[right], cached so that they need not be recomputed on every query.}
+ @racket[right], cached to avoid recomputation on every query.}
 
 @defproc[(rope-count [rope rope?]) exact-nonnegative-integer?]{
 
- Returns the total @tech{count} of @racket[rope] — the number of elements it
- holds, summed across every leaf. Constant time.}
+ Returns the total @tech{count} of @racket[rope]---the number of elements it
+ holds, summed across every leaf.}
 
 @defproc[(rope-width [rope rope?]) exact-nonnegative-integer?]{
 
- Returns the total @tech{width} of @racket[rope]. Constant time.}
+ Returns the total @tech{width} of @racket[rope].}
 
 @defproc[(rope-length [rope rope?]) exact-nonnegative-integer?]{
 
  An alias for @racket[rope-width], provided for symmetry with
- @racket[string-length] and @racket[bytes-length]. Constant time.}
+ @racket[string-length] and @racket[bytes-length].}
 
 @defproc[(rope-depth [rope rope?]) exact-nonnegative-integer?]{
 
@@ -305,8 +300,7 @@ what the type-specific operations reduce to underneath.
 @subsubsection{Raw Chunk Operations}
 
 These describe the raw, non-rope representation that a @racket[gen:ropeable]
-instance is built around — a string, a byte string, or any other type with a
-notion of slicing and appending.
+instance is built around.
 
 @defproc[(raw? [ropeable ropeable?] [v any/c]) boolean?]{
 
@@ -316,17 +310,17 @@ notion of slicing and appending.
 @defproc[(raw-limit [ropeable ropeable?]) exact-nonnegative-integer?]{
 
  Returns the largest @tech{count} a single leaf is allowed to hold for
- @racket[ropeable]'s type. Both @racket[rope/string] and @racket[rope/bytes] use
- @racket[512].}
+ @racket[ropeable]'s type. Both @racketmodname[rope/string] and
+ @racketmodname[rope/bytes] use @racket[512].}
 
 @defproc[(raw-empty [ropeable ropeable?]) any/c]{
 
- Constructs an empty raw chunk for @racket[ropeable]'s type — @racket[""] for
- strings, @racket[#""] for byte strings.}
+ Constructs an empty raw chunk for @racket[ropeable]'s type, e.g., @racket[""] for
+ strings and @racket[#""] for byte strings.}
 
 @defproc[(raw-count [ropeable ropeable?] [raw any/c]) exact-nonnegative-integer?]{
 
- Returns the @tech{count} of @racket[raw]: how many elements it holds.}
+ Returns the @tech{count} of @racket[raw], i.e, how many elements it holds.}
 
 @defproc[(raw-width [ropeable ropeable?] [raw any/c]) exact-nonnegative-integer?]{
 
@@ -359,9 +353,8 @@ notion of slicing and appending.
 
 These are the same operations exposed under type-specific names by
 @racketmodname[rope/string] and @racketmodname[rope/bytes]; see those sections for
-usage examples. Each takes an explicit @racket[ropeable] instance identifying
-which chunk type's rules to follow, which @racket[define-rope-type] hides behind a
-type-specific name.
+usage examples. Each takes an explicit @racket[gen:ropeable] instance identifying
+which chunk type's rules to follow.
 
 @defproc[(make-rope-leaf [ropeable ropeable?] [raw any/c]) rope-leaf?]{
 
@@ -443,7 +436,7 @@ type-specific name.
  Flattens @racket[rope] back into a single raw chunk, by appending its leaves left
  to right. Time proportional to the number of leaves.}
 
-@subsection{Cursors}
+@subsection[#:tag "Cursors-API"]{Cursors}
 
 @defstruct*[cursor ([raw any/c]
                     [pos exact-nonnegative-integer?]
@@ -511,8 +504,7 @@ type-specific name.
                       [rope rope?] ...+)
          any/c]{
 
- Like @racket[rope-foldl], but folds right to left: @racket[proc] is applied as
- @racket[(proc elem ... acc)]. @math{O(n)}.}
+ Like @racket[rope-foldl], but folds right to left.}
 
 @; -------------------------------------------------------------------------------------------------
 
@@ -526,7 +518,7 @@ below behaves exactly like its generic counterpart in @racketmodname[rope/rope],
 specialized to strings and with no need to supply a @racket[ropeable] instance
 explicitly.
 
-@examples[#:eval rope-eval
+@examples[#:eval rope-eval #:label "Example:"
  (define r (string->rope "supercalifragilisticexpialidocious"))
  (rope-length r)
  (rope-depth r)
@@ -601,7 +593,9 @@ explicitly.
 
 @examples[#:eval rope-eval
  (rope->string
-  (string-rope-append (string->rope "one ") (string->rope "two ") (string->rope "three")))]}
+  (string-rope-append (string->rope "one ")
+                      (string->rope "two ")
+                      (string->rope "three")))]}
 
 @defproc[(string-rope-split [rope string-rope?] [i exact-nonnegative-integer?])
          (values string-rope? string-rope?)]{
@@ -626,7 +620,7 @@ explicitly.
  with @racket[new-str]. @math{O(log n + m)}, where @racket[m] is
  @racket[(string-length new-str)].
 
-@examples[#:eval rope-eval
+@examples[#:eval rope-eval #:label "Example:"
  (define r (string->rope "a tree of text"))
  (rope->string (string-rope-splice r 2 4 "rope"))]}
 
@@ -767,7 +761,7 @@ the corresponding string-rope operation described in the previous section.
  Replaces @racket[old-len] bytes of @racket[rope] beginning at @racket[start] with
  @racket[new-bstr].
 
-@examples[#:eval rope-eval
+@examples[#:eval rope-eval #:label "Example:"
  (define r (bytes->rope #"hello world"))
  (rope->bytes (bytes-rope-splice r 6 5 #"racket"))]}
 
@@ -835,12 +829,12 @@ the corresponding string-rope operation described in the previous section.
    chunk;}
  @item{@racket[raw-count] and @racket[raw-width] are one-argument procedures
    returning a chunk's @tech{count} and @tech{width};}
- @item{@racket[raw-slice] is a three-argument procedure, chunk followed by start
-   and end indices, returning a sub-chunk;}
+ @item{@racket[raw-slice] is a three-argument procedure, taking a chunk followed
+   by start and end indices, and returning a sub-chunk;}
  @item{@racket[raw-append] is a one-argument procedure that takes a
    @emph{list} of chunks and returns their concatenation; and}
- @item{@racket[raw-ref] is a two-argument procedure, chunk followed by index,
-   returning a single element.}]
+ @item{@racket[raw-ref] is a two-argument procedure that takes a chunk and an index
+   and returns a single element.}]
 
  Given these, @racket[define-rope-type] defines, among others, the following
  bindings, where @racket[_type] stands for the identifier bound to @racket[type]:
@@ -869,8 +863,44 @@ the corresponding string-rope operation described in the previous section.
  @racket[define-rope-type] does not @racket[provide] any of these bindings; it
  only defines them in the enclosing module. A module that uses
  @racket[define-rope-type] is expected to re-export the bindings it wants to make
- public, typically via @racket[contract-out], the way
- @racketmodname[rope/string] and @racketmodname[rope/bytes] do.}
+ public, typically via @racket[rope-type-out] or @racket[rope-type-out/contract]
+ (below).}
+
+@defform[(rope-type-out type)]{
+
+ A @racket[provide] sub-form. Re-exports every public binding
+ @racket[define-rope-type] introduces for @racket[type]---the structs,
+ predicates, raw operations, rope operations, cursor operations, folds, and
+ @racket[in-_type-rope]---under their generated names, with @emph{no} contracts
+ attached. Implementation plumbing (@racket[_type-rope-gen], the leaf/node
+ constructor selectors, and @racket[in-_type-rope-runtime]) is excluded; none of
+ it is meant to be called directly.
+
+ Use this inside a trusted module where paying for contract checks at every
+ rope operation isn't worthwhile.}
+
+@defform[
+ (rope-type-out/contract type maybe-raw maybe-element)
+ #:grammar
+ ([maybe-raw     (code:line) (code:line #:raw raw-contract-expr)]
+  [maybe-element (code:line) (code:line #:element element-contract-expr)])
+ #:contracts ([raw-contract-expr contract?]
+              [element-contract-expr contract?])]{
+
+ Like @racket[rope-type-out], but wraps every re-exported procedure in
+ @racket[contract-out]. Without @racket[#:raw] or @racket[#:element], raw values
+ are checked against the generic @racket[_type-raw?] and individual elements
+ against @racket[any/c], which is sound but as loose as the generic protocol allows.
+ @racket[#:raw] and @racket[#:element] tighten those two positions to whatever
+ concrete contract the instantiating module actually promises, .e.g., @racket[string?]
+ and @racket[char?] for @racketmodname[rope/string], @racket[bytes?] and
+ @racket[byte?] for @racketmodname[rope/bytes].
+
+ @racket[in-_type-rope] is re-exported bare, since a sequence macro has no
+ useful contract. Its runtime fallback @racket[in-_type-rope-runtime], which is used
+ when the sequence is handed to a higher-order function like
+ @racket[sequence-map] instead of appearing directly in a @racket[for] clause,
+ @emph{is} contracted and re-exported alongside it.}
 
 As a complete example, here is a rope type over immutable vectors, exposing only
 the operations needed to build, edit, and read one back:
@@ -907,10 +937,19 @@ racket/base
 (define (rope->vector r) (vector-rope->vector-raw r))
 ]
 
-Every operation on the resulting @racket[vector-rope] type — appending, splicing,
-slicing, folding, iterating with @racket[in-vector-rope] — behaves exactly like
+Every operation on the resulting @racket[vector-rope] type (appending, splicing,
+slicing, folding, iterating with @racket[in-vector-rope]) behaves exactly like
 its string and byte-string counterparts, at the same complexity, without any
 further code.
+
+The @racket[provide] clause above spells out each binding's contract by hand,
+which is worth doing for a small, curated surface like this one. A type that
+wants to expose everything @racket[define-rope-type] generates can skip the
+boilerplate:
+
+@racketblock[
+(provide (rope-type-out/contract vector #:raw vector?))
+]
 
 @; -------------------------------------------------------------------------------------------------
 
@@ -941,8 +980,6 @@ on a single call, when a rebalancing rebuild is triggered, but never more than
        (list @racket[rope->raw]                 "O(# leaves)"))]
 
 Here @math{m} is the count of the chunk being spliced in, and @math{k} is the
-number of leaves spanned by an extracted slice. For comparison, the corresponding
-operations on plain strings — @racket[string-append], slicing with
-@racket[substring], and splicing by hand — are all @math{O(n)}.
+number of leaves spanned by an extracted slice.
 
 @(close-eval rope-eval)

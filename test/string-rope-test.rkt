@@ -112,5 +112,9 @@
   (test-case "string-raw-empty returns the actual empty string, contract now matches"
     (check-equal? (string-raw-empty) ""))
 
-  (test-case "make-string-rope-leaf returns a genuinely tagged leaf despite the looser contract"
-    (check-true (string-rope-leaf? (make-string-rope-leaf "abc")))))
+  (test-case "make-string-rope-leaf returns a genuinely tagged leaf"
+    (check-true (string-rope-leaf? (make-string-rope-leaf "abc"))))
+
+  (test-case "the string-rope-leaf struct constructor itself now enforces string? on raw"
+    (check-not-exn (λ () (string-rope-leaf 3 3 "abc")))
+    (check-exn exn:fail:contract? (λ () (string-rope-leaf 1 1 'not-a-string)))))

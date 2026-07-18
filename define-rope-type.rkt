@@ -1,13 +1,72 @@
 #lang racket/base
 
 (require (for-syntax racket/base
+                     racket/provide-transform
                      racket/syntax
                      syntax/parse)
+         racket/contract
          racket/splicing
          rope/rope
          syntax/parse/define)
 
-(provide define-rope-type)
+(provide define-rope-type rope-type-out rope-type-out/contract)
+
+;; `define-rope-type`, `rope-type-out`, and `rope-type-out/contract` all call this with the same
+;; `type` identifier, so the names they produce are `free-identifier=?` to one another.
+(begin-for-syntax
+  (define (rope-type-ids type-stx)
+    (define (mk  fmt) (format-id type-stx fmt (syntax-e type-stx)))
+    (define (mk2 fmt) (format-id type-stx fmt (syntax-e type-stx) (syntax-e type-stx)))
+    (hasheq
+     'rope-gen          (mk  "~a-rope-gen")
+     'rope-leaf         (mk  "~a-rope-leaf")
+     'rope-node         (mk  "~a-rope-node")
+     'rope-leaf?        (mk  "~a-rope-leaf?")
+     'rope-node?        (mk  "~a-rope-node?")
+     'rope?             (mk  "~a-rope?")
+     'raw?              (mk  "~a-raw?")
+     'raw-limit         (mk  "~a-raw-limit")
+     'raw-empty         (mk  "~a-raw-empty")
+     'raw-count         (mk  "~a-raw-count")
+     'raw-width         (mk  "~a-raw-width")
+     'raw-slice         (mk  "~a-raw-slice")
+     'raw-append        (mk  "~a-raw-append")
+     'raw-ref           (mk  "~a-raw-ref")
+     'rope-leaf-ctor    (mk  "~a-rope-leaf-ctor")
+     'rope-node-ctor    (mk  "~a-rope-node-ctor")
+     'make-rope-leaf    (mk  "make-~a-rope-leaf")
+     'make-empty-rope   (mk  "make-empty-~a-rope")
+     'rope-append1      (mk  "~a-rope-append1")
+     'rope-append       (mk  "~a-rope-append")
+     'rope-split        (mk  "~a-rope-split")
+     'rope-offset-index (mk  "~a-rope-offset-index")
+     'rope-splice       (mk  "~a-rope-splice")
+     'rope-slice        (mk  "~a-rope-slice")
+     'raw->rope         (mk2 "~a-raw->~a-rope")
+     'rope->raw         (mk2 "~a-rope->~a-raw")
+     'cursor-at-end?    (mk  "~a-cursor-at-end?")
+     'cursor-peek       (mk  "~a-cursor-peek")
+     'cursor-advance    (mk  "~a-cursor-advance")
+     'cursor-drop       (mk  "~a-cursor-drop")
+     'cursor-take       (mk  "~a-cursor-take")
+     'rope->cursor      (mk  "~a-rope->cursor")
+     'cursor->rope      (mk  "cursor->~a-rope")
+     'rope-foldl        (mk  "~a-rope-foldl")
+     'rope-foldr        (mk  "~a-rope-foldr")
+     'in-rope-runtime   (mk  "in-~a-rope-runtime")
+     'in-rope           (mk  "in-~a-rope")))
+
+  (define public-key-order
+    '(rope-leaf
+      rope-node rope-leaf? rope-node? rope?
+      raw? raw-limit raw-empty raw-count raw-width raw-slice raw-append raw-ref
+      make-rope-leaf make-empty-rope
+      rope-append1 rope-append rope-split rope-offset-index rope-splice rope-slice
+      raw->rope rope->raw
+      cursor-at-end? cursor-peek cursor-advance cursor-drop cursor-take
+      rope->cursor cursor->rope
+      rope-foldl rope-foldr
+      in-rope)))
 
 (define-simple-macro (define-rope-type type:id
                        raw?-expr:expr
@@ -18,44 +77,45 @@
                        raw-slice-expr:expr
                        raw-append-expr:expr
                        raw-ref-expr:expr)
-  #:do [(define (type-id  fmt) (format-id #'type fmt (syntax-e #'type)))
-        (define (type-id2 fmt) (format-id #'type fmt (syntax-e #'type) (syntax-e #'type)))]
-  #:with *-rope-gen          (type-id  "~a-rope-gen")
-  #:with *-rope-leaf         (type-id  "~a-rope-leaf")
-  #:with *-rope-node         (type-id  "~a-rope-node")
-  #:with *-rope-leaf?        (type-id  "~a-rope-leaf?")
-  #:with *-rope-node?        (type-id  "~a-rope-node?")
-  #:with *-rope?             (type-id  "~a-rope?")
-  #:with *-raw?              (type-id  "~a-raw?")
-  #:with *-raw-limit         (type-id  "~a-raw-limit")
-  #:with *-raw-empty         (type-id  "~a-raw-empty")
-  #:with *-raw-count         (type-id  "~a-raw-count")
-  #:with *-raw-width         (type-id  "~a-raw-width")
-  #:with *-raw-slice         (type-id  "~a-raw-slice")
-  #:with *-raw-append        (type-id  "~a-raw-append")
-  #:with *-raw-ref           (type-id  "~a-raw-ref")
-  #:with *-rope-leaf-ctor    (type-id  "~a-rope-leaf-ctor")
-  #:with *-rope-node-ctor    (type-id  "~a-rope-node-ctor")
-  #:with make-*-rope-leaf    (type-id  "make-~a-rope-leaf")
-  #:with make-empty-*-rope   (type-id  "make-empty-~a-rope")
-  #:with *-rope-append1      (type-id  "~a-rope-append1")
-  #:with *-rope-append       (type-id  "~a-rope-append")
-  #:with *-rope-split        (type-id  "~a-rope-split")
-  #:with *-rope-offset-index (type-id  "~a-rope-offset-index")
-  #:with *-rope-splice       (type-id  "~a-rope-splice")
-  #:with *-rope-slice        (type-id  "~a-rope-slice")
-  #:with *-raw->*-rope       (type-id2 "~a-raw->~a-rope")
-  #:with *-rope->*-raw       (type-id2 "~a-rope->~a-raw")
-  #:with *-cursor-at-end?    (type-id  "~a-cursor-at-end?")
-  #:with *-cursor-peek       (type-id  "~a-cursor-peek")
-  #:with *-cursor-advance    (type-id  "~a-cursor-advance")
-  #:with *-cursor-drop       (type-id  "~a-cursor-drop")
-  #:with *-rope->cursor      (type-id  "~a-rope->cursor")
-  #:with cursor->*-rope      (type-id  "cursor->~a-rope")
-  #:with *-rope-foldl        (type-id  "~a-rope-foldl")
-  #:with *-rope-foldr        (type-id  "~a-rope-foldr")
-  #:with in-*-rope-runtime   (type-id  "in-~a-rope-runtime")
-  #:with in-*-rope           (type-id  "in-~a-rope")
+  #:do [(define ids (rope-type-ids (attribute type)))
+        (define (id* key) (hash-ref ids key))]
+  #:with *-rope-gen          (id* 'rope-gen)
+  #:with *-rope-leaf         (id* 'rope-leaf)
+  #:with *-rope-node         (id* 'rope-node)
+  #:with *-rope-leaf?        (id* 'rope-leaf?)
+  #:with *-rope-node?        (id* 'rope-node?)
+  #:with *-rope?             (id* 'rope?)
+  #:with *-raw?              (id* 'raw?)
+  #:with *-raw-limit         (id* 'raw-limit)
+  #:with *-raw-empty         (id* 'raw-empty)
+  #:with *-raw-count         (id* 'raw-count)
+  #:with *-raw-width         (id* 'raw-width)
+  #:with *-raw-slice         (id* 'raw-slice)
+  #:with *-raw-append        (id* 'raw-append)
+  #:with *-raw-ref           (id* 'raw-ref)
+  #:with *-rope-leaf-ctor    (id* 'rope-leaf-ctor)
+  #:with *-rope-node-ctor    (id* 'rope-node-ctor)
+  #:with make-*-rope-leaf    (id* 'make-rope-leaf)
+  #:with make-empty-*-rope   (id* 'make-empty-rope)
+  #:with *-rope-append1      (id* 'rope-append1)
+  #:with *-rope-append       (id* 'rope-append)
+  #:with *-rope-split        (id* 'rope-split)
+  #:with *-rope-offset-index (id* 'rope-offset-index)
+  #:with *-rope-splice       (id* 'rope-splice)
+  #:with *-rope-slice        (id* 'rope-slice)
+  #:with *-raw->*-rope       (id* 'raw->rope)
+  #:with *-rope->*-raw       (id* 'rope->raw)
+  #:with *-cursor-at-end?    (id* 'cursor-at-end?)
+  #:with *-cursor-peek       (id* 'cursor-peek)
+  #:with *-cursor-advance    (id* 'cursor-advance)
+  #:with *-cursor-drop       (id* 'cursor-drop)
+  #:with *-cursor-take       (id* 'cursor-take)
+  #:with *-rope->cursor      (id* 'rope->cursor)
+  #:with cursor->*-rope      (id* 'cursor->rope)
+  #:with *-rope-foldl        (id* 'rope-foldl)
+  #:with *-rope-foldr        (id* 'rope-foldr)
+  #:with in-*-rope-runtime   (id* 'in-rope-runtime)
+  #:with in-*-rope           (id* 'in-rope)
   (begin
     (struct *-rope-gen rope () #:transparent
       #:methods gen:ropeable
@@ -75,7 +135,6 @@
 
     (define (*-rope? obj) (or (*-rope-leaf? obj) (*-rope-node? obj)))
 
-    ;; A dummy instance provides the required internal raw methods
     (splicing-let ([gen (*-rope-gen)])
       (define (*-raw? obj)                       (raw?              gen obj))
       (define (*-raw-limit)                      (raw-limit         gen))
@@ -101,6 +160,7 @@
       (define (*-cursor-peek       cur)          (cursor-peek       gen cur))
       (define (*-cursor-advance    cur)          (cursor-advance    gen cur))
       (define (*-cursor-drop       cur k)        (cursor-drop       gen cur k))
+      (define (*-cursor-take       cur k)        (cursor-take       gen cur k))
       (define (*-rope->cursor      rope)         (rope->cursor      gen rope))
       (define (cursor->*-rope      cur)          (cursor->rope      gen cur))
       (define (*-rope-foldl proc init rope0 . ropes) (apply rope-foldl gen proc init rope0 ropes))
@@ -109,8 +169,6 @@
       ;; Evaluated when `in-*-rope` is used as a first-class value outside of a `for` loop (e.g.,
       ;; passed to standard higher-order functions like `sequence-map`).
       (define (in-*-rope-runtime rope)
-        ;; (unless (*-rope? r)
-        ;;   (raise-argument-error 'in-*-rope (format "~a-rope?" 'name) r))
         (make-do-sequence
          (λ ()
            (values *-cursor-peek
@@ -129,21 +187,119 @@
             [[(id:id) (_ rope-expr:expr)]
              #'[(id)
                 (:do-in
-                 ;; Outer bindings (setup before the loop starts)
                  ([(rope) rope-expr])
-                 ;; Outer check (fails early if the provided value isn't a rope
-                 ;; (unless (*-rope? rope)
-                 ;;   (raise-argument-error 'in-*-rope (format "~a-rope?" 'name) rope))
                  (begin)
-                 ;; Loop bindings (state initialization)
                  ([cur (*-rope->cursor rope)])
-                 ;; Position guard (condition to continue iterating)
                  (not (*-cursor-at-end? cur))
-                 ;; Inner bindings (extracting the current element)
                  ([(id) (*-cursor-peek cur)])
-                 ;; Pre-guard (optional condition before body evaluation)
                  #t
-                 ;; Post-guard (optional condition after body evaluation)
                  #t
-                 ;; Loop arguments (state transition for the next iteration)
                  ((*-cursor-advance cur)))]]))))))
+
+(define-syntax rope-type-out
+  (make-provide-pre-transformer
+   (λ (stx modes)
+     (syntax-parse stx
+       [(_ type:id)
+        #:do [(define ids (rope-type-ids (attribute type)))]
+        #:with (pub ...) (map (λ (k) (hash-ref ids k)) public-key-order)
+        #'(combine-out pub ...)]))))
+
+;; The macro only knows the shape of a rope type generically: `~a-raw?` classifies raw payloads and
+;; `~a-rope?` classifies ropes, so those predicates are the honest default contracts for anything
+;; raw-shaped or rope-shaped. It cannot know, e.g., that a string-rope raw is specifically `string?`
+;; rather than merely `string-raw?`, or that a raw-ref on it returns `char?` rather than an opaque
+;; element — that concrete knowledge belongs to the instantiating module. `#:raw` and `#:element`
+;; let the caller tighten those two contracts.
+;;
+;; Struct field names/types (count, width, raw / count, width, left, right) are taken from the
+;; observed shape of `rope-leaf` / `rope-node` in `rope/rope` — if that base layout ever changes,
+;; this clause must change with it.
+(define-syntax rope-type-out/contract
+  (make-provide-pre-transformer
+   (λ (stx modes)
+     (syntax-parse stx
+       [(_ type:id
+           (~optional (~seq #:raw     raw-ctc:expr))
+           (~optional (~seq #:element elem-ctc:expr) #:defaults ([elem-ctc #'any/c])))
+        #:do [(define ids (rope-type-ids #'type))
+              (define (id* key) (hash-ref ids key))]
+        #:with *rope-leaf         (id* 'rope-leaf)
+        #:with *rope-node         (id* 'rope-node)
+        #:with *rope-leaf?        (id* 'rope-leaf?)
+        #:with *rope-node?        (id* 'rope-node?)
+        #:with *rope?             (id* 'rope?)
+        #:with *raw?              (id* 'raw?)
+        #:with *raw-limit         (id* 'raw-limit)
+        #:with *raw-empty         (id* 'raw-empty)
+        #:with *raw-count         (id* 'raw-count)
+        #:with *raw-width         (id* 'raw-width)
+        #:with *raw-slice         (id* 'raw-slice)
+        #:with *raw-append        (id* 'raw-append)
+        #:with *raw-ref           (id* 'raw-ref)
+        #:with make-*rope-leaf    (id* 'make-rope-leaf)
+        #:with make-empty-*rope   (id* 'make-empty-rope)
+        #:with *rope-append1      (id* 'rope-append1)
+        #:with *rope-append       (id* 'rope-append)
+        #:with *rope-split        (id* 'rope-split)
+        #:with *rope-offset-index (id* 'rope-offset-index)
+        #:with *rope-splice       (id* 'rope-splice)
+        #:with *rope-slice        (id* 'rope-slice)
+        #:with *raw->*rope        (id* 'raw->rope)
+        #:with *rope->*raw        (id* 'rope->raw)
+        #:with *cursor-at-end?    (id* 'cursor-at-end?)
+        #:with *cursor-peek       (id* 'cursor-peek)
+        #:with *cursor-advance    (id* 'cursor-advance)
+        #:with *cursor-drop       (id* 'cursor-drop)
+        #:with *cursor-take       (id* 'cursor-take)
+        #:with *rope->cursor      (id* 'rope->cursor)
+        #:with cursor->*rope      (id* 'cursor->rope)
+        #:with *rope-foldl        (id* 'rope-foldl)
+        #:with *rope-foldr        (id* 'rope-foldr)
+        #:with in-*rope           (id* 'in-rope)
+        #:with raw/c              (if (attribute raw-ctc) #'raw-ctc #'*raw?)
+        (pre-expand-export
+         #'(combine-out
+            (contract-out
+             (struct *rope-leaf ([count exact-nonnegative-integer?]
+                                 [width exact-nonnegative-integer?]
+                                 [raw   raw/c]))
+             (struct *rope-node ([count exact-nonnegative-integer?]
+                                 [width exact-nonnegative-integer?]
+                                 [left  *rope?]
+                                 [right *rope?]))
+             [*rope?             (-> any/c boolean?)]
+             [*raw?              (-> any/c boolean?)]
+             [*raw-limit         (-> exact-nonnegative-integer?)]
+             [*raw-empty         (-> raw/c)]
+             [*raw-count         (raw/c . -> . exact-nonnegative-integer?)]
+             [*raw-width         (raw/c . -> . exact-nonnegative-integer?)]
+             [*raw-slice         (raw/c exact-nonnegative-integer?
+                                        exact-nonnegative-integer? . -> . raw/c)]
+             [*raw-ref           (raw/c exact-nonnegative-integer? . -> . elem-ctc)]
+             [*raw-append        (raw/c (... ...) . -> . raw/c)]
+             [make-*rope-leaf    (raw/c . -> . *rope-leaf?)]
+             [make-empty-*rope   (-> *rope?)]
+             [*rope-append1      (*rope? *rope? . -> . *rope?)]
+             [*rope-append       (*rope? (... ...) . -> . *rope?)]
+             [*rope-split        (*rope? exact-nonnegative-integer? . -> .
+                                         (values *rope? *rope?))]
+             [*rope-offset-index (*rope? exact-nonnegative-integer? . -> .
+                                         exact-nonnegative-integer?)]
+             [*rope-splice       (*rope? exact-nonnegative-integer?
+                                         exact-nonnegative-integer? raw/c . -> . *rope?)]
+             [*rope-slice        (*rope? exact-nonnegative-integer?
+                                         exact-nonnegative-integer? . -> . *rope?)]
+             [*raw->*rope        (raw/c . -> . *rope?)]
+             [*rope->*raw        (*rope? . -> . raw/c)]
+             [*cursor-at-end?    (cursor? . -> . boolean?)]
+             [*cursor-peek       (cursor? . -> . (or/c #f elem-ctc))]
+             [*cursor-advance    (cursor? . -> . cursor?)]
+             [*cursor-drop       (cursor? exact-nonnegative-integer? . -> . cursor?)]
+             [*cursor-take       (cursor? exact-nonnegative-integer? . -> . *rope?)]
+             [*rope->cursor      (*rope? . -> . cursor?)]
+             [cursor->*rope      (cursor? . -> . *rope?)]
+             [*rope-foldl        (procedure? any/c *rope? *rope? (... ...) . -> . any/c)]
+             [*rope-foldr        (procedure? any/c *rope? *rope? (... ...) . -> . any/c)])
+            in-*rope)
+         modes)]))))

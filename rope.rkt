@@ -59,6 +59,7 @@
   [cursor-peek    (ropeable? cursor? . -> . any/c)]
   [cursor-advance (ropeable? cursor? . -> . cursor?)]
   [cursor-drop    (ropeable? cursor? exact-nonnegative-integer? . -> . cursor?)]
+  [cursor-take    (ropeable? cursor? exact-nonnegative-integer? . -> . rope?)]
   [rope->cursor   (ropeable? rope? . -> . cursor?)]
   [cursor->rope   (ropeable? cursor? . -> . rope?)]
   ;; Cursor-Based Rope Operations
@@ -157,6 +158,7 @@
   [cursor-peek    ropeable cur]
   [cursor-advance ropeable cur]
   [cursor-drop    ropeable cur k]
+  [cursor-take    ropeable cur k]
   [rope->cursor   ropeable rope]
   [cursor->rope   ropeable cur]
   ;; Cursor-Based Rope Operations
@@ -299,12 +301,19 @@
          (cursor raw pos+ after)
          (rope->cursor gen after)))     ; boundary crossing
 
-   ;; Skip k tokens at once. O(log n), independent of k
+   ;; Skip k elements at once. O(log n), independent of k
    (define (cursor-drop gen cur k)
      (if (zero? k)
          cur
          (let-values ([(_skipped after) (rope-split gen (cursor->rope gen cur) k)])
            (rope->cursor gen after))))
+
+   ;; Extracts a `k`-element rope starting at `cur`. O(log n), independent of k
+   (define (cursor-take gen cur k)
+     (if (zero? k)
+         (make-empty-rope gen)
+         (let-values ([(before _after) (rope-split gen (cursor->rope gen cur) k)])
+           before)))
 
    ;; Descends to the leftmost leaf. O(depth) = O(log n)
    (define (rope->cursor gen rope)

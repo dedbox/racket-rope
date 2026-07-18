@@ -3,52 +3,15 @@
 (require racket/contract
          racket/match
          racket/port
-         rope/define-rope-type
-         rope/rope)
+         rope/define-rope-type)
 
 (provide
- in-string-rope
+ (rope-type-out/contract string #:raw string? #:element char?)
  (contract-out
-  (struct string-rope-leaf ([count exact-nonnegative-integer?]
-                            [width exact-nonnegative-integer?]
-                            [raw   string?]))
-  (struct string-rope-node ([count exact-nonnegative-integer?]
-                            [width exact-nonnegative-integer?]
-                            [left  string-rope?]
-                            [right string-rope?]))
-  [string-rope?             (any/c . -> . boolean?)]
-  [string-raw?              (any/c . -> . boolean?)]
-  [string-raw-limit         (-> exact-nonnegative-integer?)]
-  [string-raw-empty         (-> string?)]
-  [string-raw-count         (string? . -> . exact-nonnegative-integer?)]
-  [string-raw-width         (string? . -> . exact-nonnegative-integer?)]
-  [string-raw-slice         (string? exact-nonnegative-integer?
-                                     exact-nonnegative-integer? . -> . string?)]
-  [string-raw-ref           (string? exact-nonnegative-integer? . -> . char?)]
-  [string-raw-append        (string? ... . -> . string?)]
-  [make-string-rope-leaf    (string? . -> . string-rope-leaf?)]
-  [empty-string-rope        string-rope?]
-  [string-rope-append1      (string-rope? string-rope? . -> . string-rope?)]
-  [string-rope-append       (string-rope? ... . -> . string-rope?)]
-  [string-rope-split        (string-rope? exact-nonnegative-integer? . -> .
-                                          (values string-rope? string-rope?))]
-  [string-rope-offset-index (string-rope? exact-nonnegative-integer? . -> .
-                                          exact-nonnegative-integer?)]
-  [string-rope-splice       (string-rope? exact-nonnegative-integer?
-                                          exact-nonnegative-integer? string? . -> . string-rope?)]
-  [string-rope-slice        (string-rope? exact-nonnegative-integer?
-                                          exact-nonnegative-integer? . -> . string-rope?)]
-  [string->rope             (string? . -> . string-rope?)]
-  [rope->string             (string-rope? . -> . string?)]
-  [string-cursor-at-end?    (cursor? . -> . boolean?)]
-  [string-cursor-peek       (cursor? . -> . char?)]
-  [string-cursor-advance    (cursor? . -> . cursor?)]
-  [string-cursor-drop       (cursor? exact-nonnegative-integer? . -> . cursor?)]
-  [string-rope->cursor      (string-rope? . -> . cursor?)]
-  [cursor->string-rope      (cursor? . -> . string-rope?)]
-  [string-rope-foldl        (procedure? any/c string-rope? string-rope? ... . -> . any/c)]
-  [string-rope-foldr        (procedure? any/c string-rope? string-rope? ... . -> . any/c)]
-  [open-input-string-rope   (string-rope? . -> . input-port?)]))
+  (rename string-raw->string-rope string->rope (string? . -> . string-rope?))
+  (rename string-rope->string-raw rope->string (string-rope? . -> . string?))
+  [empty-string-rope      string-rope?]
+  [open-input-string-rope (string-rope? . -> . input-port?)]))
 
 (define-rope-type string
   string?
@@ -60,11 +23,7 @@
   (λ (raws) (apply string-append raws))
   string-ref)
 
-(define string-limit (string-raw-limit))
 (define empty-string-rope (make-empty-string-rope))
-
-(define (string->rope text) (string-raw->string-rope text))
-(define (rope->string rope) (string-rope->string-raw rope))
 
 ;; Per-read complexity: O(k), where k is the number of bytes transferred in that call.
 ;; 
@@ -106,3 +65,11 @@
    read-in
    #f
    close))
+
+(module* uncontracted #f
+  (provide
+   (except-out (rope-type-out string) string-raw->string-rope string-rope->string-raw)
+   (rename-out [string-raw->string-rope string->rope]
+               [string-rope->string-raw rope->string])
+   empty-string-rope
+   open-input-string-rope))
