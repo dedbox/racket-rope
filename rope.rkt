@@ -29,14 +29,15 @@
   [rope-balanced? (rope? . -> . boolean?)]
   [rope-flatten   (rope? . -> . list?)]
   ;; Raw Generics
-  [raw?       (ropeable? any/c . -> . boolean?)]
-  [raw-limit  (ropeable? . -> . exact-nonnegative-integer?)]
-  [raw-empty  (ropeable? . -> . any/c)]
-  [raw-count  (ropeable? any/c . -> . exact-nonnegative-integer?)]
-  [raw-width  (ropeable? any/c . -> . exact-nonnegative-integer?)]
-  [raw-slice  (ropeable? any/c exact-nonnegative-integer? exact-nonnegative-integer? . -> . any/c)]
-  [raw-append (ropeable? any/c ... . -> . any/c)]
-  [raw-ref    (ropeable? any/c exact-nonnegative-integer? . -> . any/c)]
+  [raw?        (ropeable? any/c . -> . boolean?)]
+  [raw-limit   (ropeable? . -> . exact-nonnegative-integer?)]
+  [raw-empty   (ropeable? . -> . any/c)]
+  [raw-count   (ropeable? any/c . -> . exact-nonnegative-integer?)]
+  [raw-width   (ropeable? any/c . -> . exact-nonnegative-integer?)]
+  [raw-slice   (ropeable? any/c exact-nonnegative-integer? exact-nonnegative-integer? . -> . any/c)]
+  [raw-append  (ropeable? any/c ... . -> . any/c)]
+  [raw-ref     (ropeable? any/c exact-nonnegative-integer? . -> . any/c)]
+  [raw-compare (ropeable? any/c any/c . -> . (or/c '< '= '>))]
   ;; Rope Generics
   [ropeable?         (any/c . -> . boolean?)]
   [rope-leaf-ctor    (ropeable? . -> . procedure?)]
@@ -55,6 +56,12 @@
                                 exact-nonnegative-integer? . -> . rope?)]
   [raw->rope         (ropeable? any/c . -> . rope?)]
   [rope->raw         (ropeable? rope? . -> . any/c)]
+  [rope-compare-with (ropeable? procedure? rope? rope? . -> . (or/c '< '= '>))]
+  [rope-compare      (ropeable? rope? rope? . -> . (or/c '< '= '>))]
+  [rope<?            (ropeable? rope? rope? . -> . boolean?)]
+  [rope<=?           (ropeable? rope? rope? . -> . boolean?)]
+  [rope>?            (ropeable? rope? rope? . -> . boolean?)]
+  [rope>=?           (ropeable? rope? rope? . -> . boolean?)]
   ;; Cursors
   (struct cursor ([raw   any/c]
                   [pos   exact-nonnegative-integer?]
@@ -140,6 +147,42 @@
   [rope-hash rope-equatable])
 
 ;;; ---------------------------------------------------------------------------------------------
+;;; Rope Comparisons
+;;; ---------------------------------------------------------------------------------------------
+
+;; Lexicographic comparison, parameterized on the raw-chunk comparator, so
+;; alternate orderings (e.g. case-insensitive) can reuse the same walk without
+;; a second gen:ropeable instance. O(log n + d) amortized, where d is the
+;; number of elements scanned before the first difference (or n on a tie),
+;; each amortized O(1) even across leaf boundaries.
+(define (rope-compare-with gen proc a b)
+  (let loop ([ca (rope->cursor gen a)] [cb (rope->cursor gen b)])
+    (cond
+      [(and (cursor-at-end? gen ca) (cursor-at-end? gen cb)) '=]
+      [(cursor-at-end? gen ca) '<]
+      [(cursor-at-end? gen cb) '>]
+      [else
+       (match-define (cursor ra pa afa) ca)
+       (match-define (cursor rb pb afb) cb)
+       (define na (- (raw-count gen ra) pa))
+       (define nb (- (raw-count gen rb) pb))
+       (define k  (min na nb))
+       (define c  (proc (raw-slice gen ra pa (+ pa k))
+                        (raw-slice gen rb pb (+ pb k))))
+       (if (not (eq? c '=))
+           c
+           (loop (if (= k na) (rope->cursor gen afa) (cursor ra (+ pa k) afa))
+                 (if (= k nb) (rope->cursor gen afb) (cursor rb (+ pb k) afb))))])))
+
+(define (rope-compare gen a b)
+  (rope-compare-with gen (λ (x y) (raw-compare gen x y)) a b))
+
+(define (rope<?  gen a b) (eq? (rope-compare gen a b) '<))
+(define (rope>?  gen a b) (eq? (rope-compare gen a b) '>))
+(define (rope<=? gen a b) (not (eq? (rope-compare gen a b) '>)))
+(define (rope>=? gen a b) (not (eq? (rope-compare gen a b) '<)))
+
+;;; ---------------------------------------------------------------------------------------------
 ;;; Ropeable
 ;;; ---------------------------------------------------------------------------------------------
 
@@ -147,14 +190,15 @@
   #:requires (raw-limit raw-empty raw-count raw-width raw-slice raw-append raw-ref
                         rope-leaf-ctor rope-node-ctor)
   ;; Raw
-  [raw-limit  ropeable]                 ; max element count per leaf
-  [raw?       ropeable obj]             ; raw chunk predicate
-  [raw-empty  ropeable]                 ; construct a raw empty chunk
-  [raw-count  ropeable raw]             ; element count of a raw chunk
-  [raw-width  ropeable raw]             ; total width width of a raw chunk
-  [raw-slice  ropeable raw pos end]     ; extract a raw sub-chunk
-  [raw-append ropeable . raws]          ; concatenate raw chunks
-  [raw-ref    ropeable raw pos]         ; used by cursor-peek
+  [raw-limit   ropeable]                ; max element count per leaf
+  [raw?        ropeable obj]            ; raw chunk predicate
+  [raw-empty   ropeable]                ; construct a raw empty chunk
+  [raw-count   ropeable raw]            ; element count of a raw chunk
+  [raw-width   ropeable raw]            ; total width width of a raw chunk
+  [raw-slice   ropeable raw pos end]    ; extract a raw sub-chunk
+  [raw-append  ropeable . raws]         ; concatenate raw chunks
+  [raw-ref     ropeable raw pos]        ; used by cursor-peek
+  [raw-compare ropeable raw1 raw2]      ; lexicographic comparison (optional)
   ;; Rope
   [rope-leaf-ctor    ropeable]
   [rope-node-ctor    ropeable]

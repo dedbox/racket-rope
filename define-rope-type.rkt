@@ -45,6 +45,12 @@
      'rope-slice        (mk  "~a-rope-slice")
      'raw->rope         (mk2 "~a-raw->~a-rope")
      'rope->raw         (mk2 "~a-rope->~a-raw")
+     'rope-compare      (mk  "~a-rope-compare")
+     'rope-compare-with (mk  "~a-rope-compare-with")
+     'rope<?            (mk  "~a-rope<?")
+     'rope>?            (mk  "~a-rope>?")
+     'rope<=?           (mk  "~a-rope<=?")
+     'rope>=?           (mk  "~a-rope>=?")
      'cursor-at-end?    (mk  "~a-cursor-at-end?")
      'cursor-peek       (mk  "~a-cursor-peek")
      'cursor-advance    (mk  "~a-cursor-advance")
@@ -64,6 +70,7 @@
       make-rope-leaf make-empty-rope
       rope-append1 rope-append rope-split rope-offset-index rope-splice rope-slice
       raw->rope rope->raw
+      rope-compare rope-compare-with rope<? rope>? rope<=? rope>=?
       cursor-at-end? cursor-peek cursor-advance cursor-drop cursor-take
       rope->cursor cursor->rope
       rope-foldl rope-foldr
@@ -77,7 +84,8 @@
                        raw-width-expr:expr
                        raw-slice-expr:expr
                        raw-append-expr:expr
-                       raw-ref-expr:expr)
+                       raw-ref-expr:expr
+                       (~optional (~seq #:compare raw-compare-expr:expr)))
   #:do [(define ids (rope-type-ids (attribute type)))
         (define (id* key) (hash-ref ids key))]
   #:with *-rope-gen          (id* 'rope-gen)
@@ -106,6 +114,12 @@
   #:with *-rope-slice        (id* 'rope-slice)
   #:with *-raw->*-rope       (id* 'raw->rope)
   #:with *-rope->*-raw       (id* 'rope->raw)
+  #:with *-rope-compare-with (id* 'rope-compare-with)
+  #:with *-rope-compare      (id* 'rope-compare)
+  #:with *-rope<?            (id* 'rope<?)
+  #:with *-rope>?            (id* 'rope>?)
+  #:with *-rope<=?           (id* 'rope<=?)
+  #:with *-rope>=?           (id* 'rope>=?)
   #:with *-cursor-at-end?    (id* 'cursor-at-end?)
   #:with *-cursor-peek       (id* 'cursor-peek)
   #:with *-cursor-advance    (id* 'cursor-advance)
@@ -129,7 +143,8 @@
        (define (raw-append _ . rs)  (raw-append-expr rs))
        (define (raw-ref    _ r p)   (raw-ref-expr r p))
        (define (rope-leaf-ctor _)   *-rope-leaf)
-       (define (rope-node-ctor _)   *-rope-node)])
+       (define (rope-node-ctor _)   *-rope-node)
+       (~? (define (raw-compare _ a b) (raw-compare-expr a b)))])
 
     ;; Using an independent ⟨base, mod⟩ pair for the secondary hash (rather
     ;; than reusing pow) reduces collisions in nested hash tables.
@@ -175,6 +190,12 @@
       (define (cursor->*-rope      cur)          (cursor->rope      gen cur))
       (define (*-rope-foldl proc init rope0 . ropes) (apply rope-foldl gen proc init rope0 ropes))
       (define (*-rope-foldr proc init rope0 . ropes) (apply rope-foldr gen proc init rope0 ropes))
+      (define (*-rope-compare-with cmp a b) (rope-compare-with gen cmp a b))
+      (define (*-rope-compare a b) (rope-compare gen a b))
+      (define (*-rope<?       a b) (rope<?       gen a b))
+      (define (*-rope>?       a b) (rope>?       gen a b))
+      (define (*-rope<=?      a b) (rope<=?      gen a b))
+      (define (*-rope>=?      a b) (rope>=?      gen a b))
 
       ;; A Composable Polynomial Hash
       ;;
@@ -322,6 +343,12 @@
         #:with *rope-slice        (id* 'rope-slice)
         #:with *raw->*rope        (id* 'raw->rope)
         #:with *rope->*raw        (id* 'rope->raw)
+        #:with *rope-compare      (id* 'rope-compare)
+        #:with *rope-compare-with (id* 'rope-compare-with)
+        #:with *rope<?            (id* 'rope<?)
+        #:with *rope>?            (id* 'rope>?)
+        #:with *rope<=?           (id* 'rope<=?)
+        #:with *rope>=?           (id* 'rope>=?)
         #:with *cursor-at-end?    (id* 'cursor-at-end?)
         #:with *cursor-peek       (id* 'cursor-peek)
         #:with *cursor-advance    (id* 'cursor-advance)
@@ -367,6 +394,12 @@
                                          exact-nonnegative-integer? . -> . *rope?)]
              [*raw->*rope        (raw/c . -> . *rope?)]
              [*rope->*raw        (*rope? . -> . raw/c)]
+             [*rope-compare      (*rope? *rope? . -> . (or/c '< '= '>))]
+             [*rope-compare-with (procedure? *rope? *rope? . -> . (or/c '< '= '>))]
+             [*rope<?            (*rope? *rope? . -> . boolean?)]
+             [*rope>?            (*rope? *rope? . -> . boolean?)]
+             [*rope<=?           (*rope? *rope? . -> . boolean?)]
+             [*rope>=?           (*rope? *rope? . -> . boolean?)]
              [*cursor-at-end?    (cursor? . -> . boolean?)]
              [*cursor-peek       (cursor? . -> . (or/c #f elem-ctc))]
              [*cursor-advance    (cursor? . -> . cursor?)]

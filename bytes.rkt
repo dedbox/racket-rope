@@ -22,7 +22,8 @@
   bytes-length
   subbytes
   (λ (raws) (apply bytes-append raws))
-  bytes-ref)
+  bytes-ref
+  #:compare (λ (a b) (cond [(bytes<? a b) '<] [(bytes=? a b) '=] [else '>])))
 
 (define empty-bytes-rope (make-empty-bytes-rope))
 

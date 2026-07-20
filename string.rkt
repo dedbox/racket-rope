@@ -11,7 +11,12 @@
   (rename string-raw->string-rope string->rope (string? . -> . string-rope?))
   (rename string-rope->string-raw rope->string (string-rope? . -> . string?))
   [empty-string-rope      string-rope?]
-  [open-input-string-rope (string-rope? . -> . input-port?)]))
+  [open-input-string-rope (string-rope? . -> . input-port?)]
+  [string-rope-ci-compare (string-rope? string-rope? . -> . (or/c '< '= '>))]
+  [string-rope-ci<?       (string-rope? string-rope? . -> . boolean?)]
+  [string-rope-ci>?       (string-rope? string-rope? . -> . boolean?)]
+  [string-rope-ci<=?      (string-rope? string-rope? . -> . boolean?)]
+  [string-rope-ci>=?      (string-rope? string-rope? . -> . boolean?)]))
 
 (define-rope-type string
   string?
@@ -21,7 +26,8 @@
   string-length
   substring
   (λ (raws) (apply string-append raws))
-  string-ref)
+  string-ref
+  #:compare (λ (a b) (cond [(string<? a b) '<] [(string=? a b) '=] [else '>])))
 
 (define empty-string-rope (make-empty-string-rope))
 
@@ -65,6 +71,19 @@
    read-in
    #f
    close))
+
+;; Case-insensitive ordering, reusing the same cursor walk as
+;; *-rope-compare-with.
+(define (string-rope-ci-compare-raw a b)
+  (cond [(string-ci<? a b) '<] [(string-ci=? a b) '=] [else '>]))
+
+(define (string-rope-ci-compare a b)
+  (string-rope-compare-with string-rope-ci-compare-raw a b))
+
+(define (string-rope-ci<? a b) (eq? (string-rope-ci-compare a b) '<))
+(define (string-rope-ci>? a b) (eq? (string-rope-ci-compare a b) '>))
+(define (string-rope-ci<=? a b) (not (eq? (string-rope-ci-compare a b) '>)))
+(define (string-rope-ci>=? a b) (not (eq? (string-rope-ci-compare a b) '<)))
 
 (module* uncontracted #f
   (provide
