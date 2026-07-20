@@ -17,7 +17,6 @@
 
 (require racket/contract
          racket/format
-         "../bench-core.rkt"
          "../suite.rkt"
          "../type-ops.rkt")
 

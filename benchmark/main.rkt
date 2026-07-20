@@ -19,7 +19,6 @@
 (require racket/cmdline
          racket/format
          racket/string
-         "bench-core.rkt"
          "suite.rkt"
          "report.rkt"
          "suites/all.rkt")

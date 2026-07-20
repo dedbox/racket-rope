@@ -5,6 +5,7 @@
                      racket/syntax
                      syntax/parse)
          racket/contract
+         racket/match
          racket/splicing
          rope/rope
          syntax/parse/define)
@@ -130,8 +131,17 @@
        (define (rope-leaf-ctor _)   *-rope-leaf)
        (define (rope-node-ctor _)   *-rope-node)])
 
-    (struct *-rope-leaf rope-leaf () #:transparent)
-    (struct *-rope-node rope-node () #:transparent)
+    ;; Using an independent ⟨base, mod⟩ pair for the secondary hash (rather
+    ;; than reusing pow) reduces collisions in nested hash tables.
+    (struct *-rope-leaf rope-leaf ()
+      #:methods gen:rope-equatable
+      [(define rope=?    (λ (a b) (*-rope-content=? a b)))
+       (define rope-hash (λ (a)   (rope-poly-hash a)))])
+
+    (struct *-rope-node rope-node ()
+      #:methods gen:rope-equatable
+      [(define rope=?    (λ (a b) (*-rope-content=? a b)))
+       (define rope-hash (λ (a)   (rope-poly-hash a)))])
 
     (define (*-rope? obj) (or (*-rope-leaf? obj) (*-rope-node? obj)))
 
@@ -165,6 +175,71 @@
       (define (cursor->*-rope      cur)          (cursor->rope      gen cur))
       (define (*-rope-foldl proc init rope0 . ropes) (apply rope-foldl gen proc init rope0 ropes))
       (define (*-rope-foldr proc init rope0 . ropes) (apply rope-foldr gen proc init rope0 ropes))
+
+      ;; A Composable Polynomial Hash
+      ;;
+      ;; We define a polynomial rolling hash (Rabin–Karp Style) that is
+      ;; algebraically associative under concatenation, so H(A ++ B) depends
+      ;; only on H(A), H(B), and width(A), and never on how the tree groups A
+      ;; and B. Combined with the an eq?-keyed memo table, this becomes O(log n)
+      ;; amortized after small edits:
+      ;;
+      ;; For a raw run r₀ r₁ … r_{k−1}, define
+      ;;
+      ;;   H(run) ≡ Σᵢ hash(rᵢ) · Pⁱ   (mod M)
+      ;;
+      ;; with M a Mersenne prime (fixnum-friendly on 64-bit CS) and P a fixed
+      ;; base coprime to M. The identity:
+      ;;
+      ;;   H(A ++ B) ≡ H(A) + P^{|A|} · H(B)   (mod M)
+      ;;
+      ;; is exact and independent of how A ++ B is further subdivided, so
+      ;; caching ⟨H(subtree), P^{count(subtree)} mod M⟩ per node makes any
+      ;; parent combination O(1).
+
+      (define HASH-BASE (sub1 (expt 2 31))) ; odd, < M
+      (define HASH-MOD  (sub1 (expt 2 61))) ; Mersenne prime 2^61 - 1
+
+      (define hash-cache (make-weak-hasheq))
+
+      (define (leaf-poly-hash raw)
+        (for/fold ([h 0] [p 1] #:result (cons h p))
+                  ([i (in-range (*-raw-count raw))])
+          (define e (equal-hash-code (*-raw-ref raw i)))
+          (values (modulo (+ h (* e p)) HASH-MOD)
+                  (modulo (* p HASH-BASE) HASH-MOD))))
+
+      (define (rope-poly-hash rope)
+        (hash-ref!
+         hash-cache rope
+         (λ ()
+           (match rope
+             [(*-rope-leaf _ _ raw) (leaf-poly-hash raw)]
+             [(*-rope-node _ _ l r)
+              (match-define (cons hl pl) (rope-poly-hash l))
+              (match-define (cons hr pr) (rope-poly-hash r))
+              (cons (modulo (+ hl (* pl hr)) HASH-MOD)
+                    (modulo (* pl pr)        HASH-MOD))]))))
+
+      ;; O(1) reject on count mismatch, otherwise walk both ropes' raw runs in
+      ;; lockstep, comparing only the overlapping prefix of whatever chunk
+      ;; each cursor is currently in, so leaf boundaries never need to align.
+      (define (*-rope-content=? a b)
+        (or (eq? a b)
+            (and (= (rope-count a) (rope-count b))
+                 (let loop ([ca (*-rope->cursor a)] [cb (*-rope->cursor b)])
+                   (cond
+                     [(and (*-cursor-at-end? ca) (*-cursor-at-end? cb)) #t]
+                     [else
+                      (match-define (cursor ra pa afa) ca)
+                      (match-define (cursor rb pb afb) cb)
+                      (define na (- (*-raw-count ra) pa))
+                      (define nb (- (*-raw-count rb) pb))
+                      (define k  (min na nb))
+                      (and (for/and ([i (in-range k)])
+                             (equal? (*-raw-ref ra (+ pa i)) (*-raw-ref rb (+ pb i))))
+                           (loop (if (= k na) (*-rope->cursor afa) (cursor ra (+ pa k) afa))
+                                 (if (= k nb) (*-rope->cursor afb) (cursor rb (+ pb k) afb))))])))))
 
       ;; Evaluated when `in-*-rope` is used as a first-class value outside of a `for` loop (e.g.,
       ;; passed to standard higher-order functions like `sequence-map`).

@@ -6,6 +6,7 @@
 
 (provide
  gen:ropeable
+ gen:rope-equatable
  (contract-out
   ;; Ropes
   (struct rope      ())
@@ -16,6 +17,9 @@
                      [width exact-nonnegative-integer?]
                      [left  rope?]
                      [right rope?]))
+  ;; Rupe Equatability
+  [rope=?    (rope? rope? . -> . boolean?)]
+  [rope-hash (rope? . -> . pair?)]
   ;; Rope Operations
   [rope-count     (rope? . -> . exact-nonnegative-integer?)]
   [rope-width     (rope? . -> . exact-nonnegative-integer?)]
@@ -72,7 +76,12 @@
 
 ;; A rope is either a leaf holding a small collection of elements, or a concatenation of two
 ;; sub-ropes. Both variants cache their aggregate element count and width so those queries are O(1).
-(struct rope () #:transparent)
+(struct rope ()
+  #:methods gen:equal+hash
+  [(define (equal-proc a b _) (rope=? a b))
+   (define (hash-proc  a _) (car (rope-hash a)))
+   (define (hash2-proc a _) (cdr (rope-hash a)))])
+
 (struct rope-leaf rope (count width raw)        #:transparent)
 (struct rope-node rope (count width left right) #:transparent)
 
@@ -121,6 +130,14 @@
 ;; A cursor contains the current chunk being consumed, a position within it, and the rope of
 ;; everything strictly after the current chunk.
 (struct cursor (raw pos after) #:transparent)
+
+;;; ---------------------------------------------------------------------------------------------
+;;; Rope Equatable
+;;; ---------------------------------------------------------------------------------------------
+
+(define-generics rope-equatable
+  [rope=?    rope-equatable other]
+  [rope-hash rope-equatable])
 
 ;;; ---------------------------------------------------------------------------------------------
 ;;; Ropeable

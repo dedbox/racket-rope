@@ -194,6 +194,30 @@ directly;
 a complete, type-specific API like the one @racketmodname[rope/string] exposes for
 strings.
 
+@subsection{Content-Based Equality and Hashing}
+
+Every rope produced by @racket[define-rope-type] implements
+@racket[gen:equal+hash]---@racket[equal?] compares the @emph{sequence of elements}
+two ropes denote, not their tree shape, so a rope built by one sequence of
+appends/splices is @racket[equal?] to a differently-shaped rope holding the
+same content. @racket[equal-hash-code] and
+@racket[equal-secondary-hash-code] agree accordingly.
+
+Internally, this is a composable polynomial (Rabin–Karp style) rolling hash.
+Each node caches ⟨hash, baseⁿ⟩ for its subtree in a weak, @racket[eq?]-keyed
+table, so combining two already-hashed subtrees into a parent is
+@math{O(1)}. Hashing a freshly built rope of @math{n} elements is
+@math{O(n)}; hashing it again, or hashing any rope sharing structure with
+one already hashed, is @math{O(1)} amortized. @racket[equal?] itself takes
+an @racket[eq?] fast path; on mismatch, it falls back to an @math{O(n)}
+cursor-based walk that never requires the two ropes' leaf boundaries to align.
+
+@examples[#:eval rope-eval #:label #f
+ (define a (string->rope "hello world"))
+ (define b (string-rope-append (string->rope "hello ") (string->rope "world")))
+ (equal? a b)
+ (equal? (equal-hash-code a) (equal-hash-code b))]
+
 @; -------------------------------------------------------------------------------------------------
 
 @section[#:tag "Generic_Rope_Operations"]{Generic Rope Operations}
@@ -982,21 +1006,25 @@ on a single call, when a rebalancing rebuild is triggered, but never more than
  #:style 'boxed
  #:column-properties '(left center)
  #:row-properties '(bottom-border ())
- (list (list @bold{Operation}                  @bold{Time})
-       (list @racket[rope-length]              "O(1)")
-       (list @racket[rope-depth]                "O(1)")
-       (list @racket[rope-balanced?]            "O(1)")
-       (list @racket[rope-append]               "O(log n) amortized")
-       (list @racket[rope-split]                "O(log n) amortized")
-       (list @racket[rope-splice]               "O(log n + m) amortized")
-       (list @racket[rope-slice]                "O(log n + k) amortized")
-       (list @racket[rope-offset-index]         "O(log n)")
-       (list @elem{@racket[cursor-peek]/@racket[cursor-advance]} "O(1) amortized")
-       (list @racket[cursor-drop]               "O(log n)")
-       (list @racket[cursor-take]               "O(log n)")
-       (list @elem{@racket[rope-foldl]/@racket[rope-foldr]}      "O(n)")
-       (list @racket[raw->rope]                 "O(n)")
-       (list @racket[rope->raw]                 "O(# leaves)"))]
+ (list
+  (list @bold{Operation}                  @bold{Time})
+  (list @racket[rope-length]              "O(1)")
+  (list @racket[rope-depth]                "O(1)")
+  (list @racket[rope-balanced?]            "O(1)")
+  (list @racket[rope-append]               "O(log n) amortized")
+  (list @racket[rope-split]                "O(log n) amortized")
+  (list @racket[rope-splice]               "O(log n + m) amortized")
+  (list @racket[rope-slice]                "O(log n + k) amortized")
+  (list @racket[rope-offset-index]         "O(log n)")
+  (list @elem{@racket[cursor-peek]/@racket[cursor-advance]} "O(1) amortized")
+  (list @racket[cursor-drop]               "O(log n)")
+  (list @racket[cursor-take]               "O(log n)")
+  (list @elem{@racket[rope-foldl]/@racket[rope-foldr]}      "O(n)")
+  (list @racket[raw->rope]                 "O(n)")
+  (list @racket[rope->raw]                 "O(# leaves)")
+  (list @elem{@racket[equal?]}             "O(n) worst case, O(1) if eq? or already hashed")
+  (list @elem{@racket[equal-hash-code]}    "O(n) cold, O(1) amortized (cached)")
+  )]
 
 Here @math{m} is the count of the chunk being spliced in, and @math{k} is the
 number of leaves spanned by an extracted slice.
