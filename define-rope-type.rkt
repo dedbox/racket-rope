@@ -12,56 +12,56 @@
 
 (provide define-rope-type rope-type-out rope-type-out/contract)
 
-;; `define-rope-type`, `rope-type-out`, and `rope-type-out/contract` all call this with the same
-;; `type` identifier, so the names they produce are `free-identifier=?` to one another.
+;; define-rope-type, rope-type-out, and rope-type-out/contract all call this
+;; with the same `type` identifier, so the names they produce are
+;; free-identifier=? to one another.
 (begin-for-syntax
   (define (rope-type-ids type-stx)
     (define (mk  fmt) (format-id type-stx fmt (syntax-e type-stx)))
-    (define (mk2 fmt) (format-id type-stx fmt (syntax-e type-stx) (syntax-e type-stx)))
     (hasheq
-     'rope-gen          (mk  "~a-rope-gen")
-     'rope-leaf         (mk  "~a-rope-leaf")
-     'rope-node         (mk  "~a-rope-node")
-     'rope-leaf?        (mk  "~a-rope-leaf?")
-     'rope-node?        (mk  "~a-rope-node?")
-     'rope?             (mk  "~a-rope?")
-     'raw?              (mk  "~a-raw?")
-     'raw-limit         (mk  "~a-raw-limit")
-     'raw-empty         (mk  "~a-raw-empty")
-     'raw-count         (mk  "~a-raw-count")
-     'raw-width         (mk  "~a-raw-width")
-     'raw-slice         (mk  "~a-raw-slice")
-     'raw-append        (mk  "~a-raw-append")
-     'raw-ref           (mk  "~a-raw-ref")
-     'rope-leaf-ctor    (mk  "~a-rope-leaf-ctor")
-     'rope-node-ctor    (mk  "~a-rope-node-ctor")
-     'make-rope-leaf    (mk  "make-~a-rope-leaf")
-     'make-empty-rope   (mk  "make-empty-~a-rope")
-     'rope-append1      (mk  "~a-rope-append1")
-     'rope-append       (mk  "~a-rope-append")
-     'rope-split        (mk  "~a-rope-split")
-     'rope-offset-index (mk  "~a-rope-offset-index")
-     'rope-splice       (mk  "~a-rope-splice")
-     'rope-slice        (mk  "~a-rope-slice")
-     'raw->rope         (mk2 "~a-raw->~a-rope")
-     'rope->raw         (mk2 "~a-rope->~a-raw")
-     'rope-compare      (mk  "~a-rope-compare")
-     'rope-compare-with (mk  "~a-rope-compare-with")
-     'rope<?            (mk  "~a-rope<?")
-     'rope>?            (mk  "~a-rope>?")
-     'rope<=?           (mk  "~a-rope<=?")
-     'rope>=?           (mk  "~a-rope>=?")
-     'cursor-at-end?    (mk  "~a-cursor-at-end?")
-     'cursor-peek       (mk  "~a-cursor-peek")
-     'cursor-advance    (mk  "~a-cursor-advance")
-     'cursor-drop       (mk  "~a-cursor-drop")
-     'cursor-take       (mk  "~a-cursor-take")
-     'rope->cursor      (mk  "~a-rope->cursor")
-     'cursor->rope      (mk  "cursor->~a-rope")
-     'rope-foldl        (mk  "~a-rope-foldl")
-     'rope-foldr        (mk  "~a-rope-foldr")
-     'in-rope-runtime   (mk  "in-~a-rope-runtime")
-     'in-rope           (mk  "in-~a-rope")))
+     'rope-gen          (mk "~a-rope-gen")
+     'rope-leaf         (mk "~a-rope-leaf")
+     'rope-node         (mk "~a-rope-node")
+     'rope-leaf?        (mk "~a-rope-leaf?")
+     'rope-node?        (mk "~a-rope-node?")
+     'rope?             (mk "~a-rope?")
+     'raw?              (mk "~a-raw?")
+     'raw-limit         (mk "~a-raw-limit")
+     'raw-empty         (mk "~a-raw-empty")
+     'raw-count         (mk "~a-raw-count")
+     'raw-width         (mk "~a-raw-width")
+     'raw-slice         (mk "~a-raw-slice")
+     'raw-append        (mk "~a-raw-append")
+     'raw-ref           (mk "~a-raw-ref")
+     'rope-leaf-ctor    (mk "~a-rope-leaf-ctor")
+     'rope-node-ctor    (mk "~a-rope-node-ctor")
+     'make-rope-leaf    (mk "make-~a-rope-leaf")
+     'make-empty-rope   (mk "make-empty-~a-rope")
+     'rope-append1      (mk "~a-rope-append1")
+     'rope-append       (mk "~a-rope-append")
+     'rope-split        (mk "~a-rope-split")
+     'rope-offset-index (mk "~a-rope-offset-index")
+     'rope-splice       (mk "~a-rope-splice")
+     'rope-slice        (mk "~a-rope-slice")
+     'raw->rope         (mk "~a->rope")
+     'rope->raw         (mk "rope->~a")
+     'rope-compare      (mk "~a-rope-compare")
+     'rope-compare-with (mk "~a-rope-compare-with")
+     'rope<?            (mk "~a-rope<?")
+     'rope>?            (mk "~a-rope>?")
+     'rope<=?           (mk "~a-rope<=?")
+     'rope>=?           (mk "~a-rope>=?")
+     'cursor-at-end?    (mk "~a-cursor-at-end?")
+     'cursor-peek       (mk "~a-cursor-peek")
+     'cursor-advance    (mk "~a-cursor-advance")
+     'cursor-drop       (mk "~a-cursor-drop")
+     'cursor-take       (mk "~a-cursor-take")
+     'rope->cursor      (mk "~a-rope->cursor")
+     'cursor->rope      (mk "cursor->~a-rope")
+     'rope-foldl        (mk "~a-rope-foldl")
+     'rope-foldr        (mk "~a-rope-foldr")
+     'in-rope-runtime   (mk "in-~a-rope-runtime")
+     'in-rope           (mk "in-~a-rope")))
 
   (define public-key-order
     '(rope-leaf
@@ -76,6 +76,11 @@
       rope-foldl rope-foldr
       in-rope)))
 
+;; NOTE on the #:with block below: each generated identifier follows its own
+;; naming pattern (make-*-rope-leaf, cursor->*-rope, *-raw->*-rope, ...), so
+;; there's no uniform substitution that would let a loop bind them all -
+;; syntax-parse templates need each pattern variable bound by its own literal
+;; name.
 (define-simple-macro (define-rope-type type:id
                        raw?-expr:expr
                        raw-limit-expr:expr
@@ -112,8 +117,8 @@
   #:with *-rope-offset-index (id* 'rope-offset-index)
   #:with *-rope-splice       (id* 'rope-splice)
   #:with *-rope-slice        (id* 'rope-slice)
-  #:with *-raw->*-rope       (id* 'raw->rope)
-  #:with *-rope->*-raw       (id* 'rope->raw)
+  #:with *->rope             (id* 'raw->rope)
+  #:with rope->*             (id* 'rope->raw)
   #:with *-rope-compare-with (id* 'rope-compare-with)
   #:with *-rope-compare      (id* 'rope-compare)
   #:with *-rope<?            (id* 'rope<?)
@@ -146,8 +151,12 @@
        (define (rope-node-ctor _)   *-rope-node)
        (~? (define (raw-compare _ a b) (raw-compare-expr a b)))])
 
-    ;; Using an independent ⟨base, mod⟩ pair for the secondary hash (rather
-    ;; than reusing pow) reduces collisions in nested hash tables.
+    ;; Content-based equal?/equal-hash-code: two ropes are equal iff they
+    ;; denote the same sequence of elements, independent of tree shape (see
+    ;; rope.rkt's gen:rope-equatable and the composable-hash note on
+    ;; rope-poly-hash below). Overrides rope.rkt's fallback. An independent
+    ;; ⟨base, mod⟩ pair for the secondary hash (rather than reusing pow)
+    ;; reduces collisions in nested hash tables.
     (struct *-rope-leaf rope-leaf ()
       #:methods gen:rope-equatable
       [(define rope=?    (λ (a b) (*-rope-content=? a b)))
@@ -179,8 +188,8 @@
       (define (*-rope-offset-index rope pos)     (rope-offset-index gen rope pos))
       (define (*-rope-splice       rope s ol nt) (rope-splice       gen rope s ol nt))
       (define (*-rope-slice        rope s l)     (rope-slice        gen rope s l))
-      (define (*-raw->*-rope       raw)          (raw->rope         gen raw))
-      (define (*-rope->*-raw       rope)         (rope->raw         gen rope))
+      (define (*->rope             raw)          (raw->rope         gen raw))
+      (define (rope->*             rope)         (rope->raw         gen rope))
       (define (*-cursor-at-end?    cur)          (cursor-at-end?    gen cur))
       (define (*-cursor-peek       cur)          (cursor-peek       gen cur))
       (define (*-cursor-advance    cur)          (cursor-advance    gen cur))
@@ -199,33 +208,34 @@
 
       ;; A Composable Polynomial Hash
       ;;
-      ;; We define a polynomial rolling hash (Rabin–Karp Style) that is
-      ;; algebraically associative under concatenation, so H(A ++ B) depends
-      ;; only on H(A), H(B), and width(A), and never on how the tree groups A
-      ;; and B. Combined with the an eq?-keyed memo table, this becomes O(log n)
-      ;; amortized after small edits:
+      ;; A polynomial rolling hash (Rabin–Karp style) that is algebraically
+      ;; associative under concatenation: H(A ++ B) depends only on H(A),
+      ;; H(B), and width(A), never on how the tree groups A and B. Combined
+      ;; with an eq?-keyed memo table, this becomes O(log n) amortized after
+      ;; small edits.
       ;;
-      ;; For a raw run r₀ r₁ … r_{k−1}, define
+      ;; For a raw run r₀ r₁ … rk−1, define
       ;;
       ;;   H(run) ≡ Σᵢ hash(rᵢ) · Pⁱ   (mod M)
       ;;
       ;; with M a Mersenne prime (fixnum-friendly on 64-bit CS) and P a fixed
-      ;; base coprime to M. The identity:
+      ;; base coprime to M. The identity
       ;;
-      ;;   H(A ++ B) ≡ H(A) + P^{|A|} · H(B)   (mod M)
+      ;;   H(A ++ B) ≡ H(A) + P|A| · H(B)   (mod M)
       ;;
       ;; is exact and independent of how A ++ B is further subdivided, so
-      ;; caching ⟨H(subtree), P^{count(subtree)} mod M⟩ per node makes any
-      ;; parent combination O(1).
+      ;; caching ⟨H(subtree), P(count(subtree)) mod M⟩ per node makes any
+      ;; parent combination O(1). Hashing a freshly built rope of n elements
+      ;; is O(n). Hashing it again, or hashing any rope sharing structure with
+      ;; one already hashed, is O(1) amortized.
 
       (define HASH-BASE (sub1 (expt 2 31))) ; odd, < M
-      (define HASH-MOD  (sub1 (expt 2 61))) ; Mersenne prime 2^61 - 1
+      (define HASH-MOD  (sub1 (expt 2 61))) ; Mersenne prime 2⁶¹ - 1
 
       (define hash-cache (make-weak-hasheq))
 
       (define (leaf-poly-hash raw)
-        (for/fold ([h 0] [p 1] #:result (cons h p))
-                  ([i (in-range (*-raw-count raw))])
+        (for/fold ([h 0] [p 1] #:result (cons h p)) ([i (in-range (*-raw-count raw))])
           (define e (equal-hash-code (*-raw-ref raw i)))
           (values (modulo (+ h (* e p)) HASH-MOD)
                   (modulo (* p HASH-BASE) HASH-MOD))))
@@ -234,36 +244,35 @@
         (hash-ref!
          hash-cache rope
          (λ ()
-           (match rope
-             [(*-rope-leaf _ _ raw) (leaf-poly-hash raw)]
-             [(*-rope-node _ _ l r)
-              (match-define (cons hl pl) (rope-poly-hash l))
-              (match-define (cons hr pr) (rope-poly-hash r))
-              (cons (modulo (+ hl (* pl hr)) HASH-MOD)
-                    (modulo (* pl pr)        HASH-MOD))]))))
+           (if (*-rope-leaf? rope)
+               (leaf-poly-hash (rope-leaf-raw rope))
+               (match-let ([(cons hl pl) (rope-poly-hash (rope-node-left rope))]
+                           [(cons hr pr) (rope-poly-hash (rope-node-right rope))])
+                 (cons (modulo (+ hl (* pl hr)) HASH-MOD)
+                       (modulo (* pl pr) HASH-MOD)))))))
 
-      ;; O(1) reject on count mismatch, otherwise walk both ropes' raw runs in
-      ;; lockstep, comparing only the overlapping prefix of whatever chunk
+      ;; O(1) reject on count mismatch, otherwise walk both ropes' raw runs
+      ;; together, comparing only the overlapping prefix of whatever chunk
       ;; each cursor is currently in, so leaf boundaries never need to align.
       (define (*-rope-content=? a b)
         (or (eq? a b)
             (and (= (rope-count a) (rope-count b))
                  (let loop ([ca (*-rope->cursor a)] [cb (*-rope->cursor b)])
-                   (cond
-                     [(and (*-cursor-at-end? ca) (*-cursor-at-end? cb)) #t]
-                     [else
-                      (match-define (cursor ra pa afa) ca)
-                      (match-define (cursor rb pb afb) cb)
-                      (define na (- (*-raw-count ra) pa))
-                      (define nb (- (*-raw-count rb) pb))
-                      (define k  (min na nb))
-                      (and (for/and ([i (in-range k)])
-                             (equal? (*-raw-ref ra (+ pa i)) (*-raw-ref rb (+ pb i))))
-                           (loop (if (= k na) (*-rope->cursor afa) (cursor ra (+ pa k) afa))
-                                 (if (= k nb) (*-rope->cursor afb) (cursor rb (+ pb k) afb))))])))))
+                   (if (and (*-cursor-at-end? ca) (*-cursor-at-end? cb))
+                       #t
+                       (match-let ([(cursor ra pa afa) ca]
+                                   [(cursor rb pb afb) cb])
+                         (define na (- (*-raw-count ra) pa))
+                         (define nb (- (*-raw-count rb) pb))
+                         (define k  (min na nb))
+                         (and (for/and ([i (in-range k)])
+                                (equal? (*-raw-ref ra (+ pa i)) (*-raw-ref rb (+ pb i))))
+                              (loop (if (= k na) (*-rope->cursor afa) (cursor ra (+ pa k) afa))
+                                    (if (= k nb) (*-rope->cursor afb) (cursor rb (+ pb k) afb))))))))))
 
-      ;; Evaluated when `in-*-rope` is used as a first-class value outside of a `for` loop (e.g.,
-      ;; passed to standard higher-order functions like `sequence-map`).
+      ;; Evaluated when in-*-rope is used as a first-class value outside of a
+      ;; `for` loop (e.g. passed to a higher-order function like
+      ;; sequence-map).
       (define (in-*-rope-runtime rope)
         (make-do-sequence
          (λ ()
@@ -274,8 +283,8 @@
                    #f
                    #f))))
 
-      ;; Evaluated when `in-*-rope` is used directly in a `for` comprehension clause. Expands into a
-      ;; specialized `:do-in` form that Racket optimizes heavily.
+      ;; Evaluated when in-*-rope is used directly in a `for` clause. Expands
+      ;; into a specialized :do-in form that Racket optimizes heavily.
       (define-sequence-syntax in-*-rope
         (λ () #'in-*-rope-runtime)
         (λ (stx)
@@ -294,23 +303,23 @@
 
 (define-syntax rope-type-out
   (make-provide-pre-transformer
-   (λ (stx modes)
+   (λ (stx _modes)
      (syntax-parse stx
        [(_ type:id)
         #:do [(define ids (rope-type-ids (attribute type)))]
         #:with (pub ...) (map (λ (k) (hash-ref ids k)) public-key-order)
         #'(combine-out pub ...)]))))
 
-;; The macro only knows the shape of a rope type generically: `~a-raw?` classifies raw payloads and
-;; `~a-rope?` classifies ropes, so those predicates are the honest default contracts for anything
-;; raw-shaped or rope-shaped. It cannot know, e.g., that a string-rope raw is specifically `string?`
-;; rather than merely `string-raw?`, or that a raw-ref on it returns `char?` rather than an opaque
-;; element — that concrete knowledge belongs to the instantiating module. `#:raw` and `#:element`
-;; let the caller tighten those two contracts.
+;; The macro only knows the shape of a rope type generically: ~a-raw? classifies raw payloads and
+;; ~a-rope? classifies ropes, so those predicates are the honest default contracts for anything
+;; raw-shaped or rope-shaped. It cannot know, e.g., that a string-rope raw is specifically string?
+;; rather than merely string-raw?, or that raw-ref on it returns char? rather than an opaque
+;; element — that concrete knowledge belongs to the instantiating module. #:raw and #:element let
+;; the caller tighten those two contracts.
 ;;
 ;; Struct field names/types (count, width, raw / count, width, left, right) are taken from the
-;; observed shape of `rope-leaf` / `rope-node` in `rope/rope` — if that base layout ever changes,
-;; this clause must change with it.
+;; observed shape of rope-leaf / rope-node in rope/rope — if that base layout ever changes, this
+;; clause must change with it.
 (define-syntax rope-type-out/contract
   (make-provide-pre-transformer
    (λ (stx modes)
@@ -323,7 +332,6 @@
         #:with *rope-leaf         (id* 'rope-leaf)
         #:with *rope-node         (id* 'rope-node)
         #:with *rope-leaf?        (id* 'rope-leaf?)
-        #:with *rope-node?        (id* 'rope-node?)
         #:with *rope?             (id* 'rope?)
         #:with *raw?              (id* 'raw?)
         #:with *raw-limit         (id* 'raw-limit)
@@ -341,8 +349,8 @@
         #:with *rope-offset-index (id* 'rope-offset-index)
         #:with *rope-splice       (id* 'rope-splice)
         #:with *rope-slice        (id* 'rope-slice)
-        #:with *raw->*rope        (id* 'raw->rope)
-        #:with *rope->*raw        (id* 'rope->raw)
+        #:with *->rope            (id* 'raw->rope)
+        #:with rope->*            (id* 'rope->raw)
         #:with *rope-compare      (id* 'rope-compare)
         #:with *rope-compare-with (id* 'rope-compare-with)
         #:with *rope<?            (id* 'rope<?)
@@ -392,8 +400,8 @@
                                          exact-nonnegative-integer? raw/c . -> . *rope?)]
              [*rope-slice        (*rope? exact-nonnegative-integer?
                                          exact-nonnegative-integer? . -> . *rope?)]
-             [*raw->*rope        (raw/c . -> . *rope?)]
-             [*rope->*raw        (*rope? . -> . raw/c)]
+             [*->rope            (raw/c . -> . *rope?)]
+             [rope->*            (*rope? . -> . raw/c)]
              [*rope-compare      (*rope? *rope? . -> . (or/c '< '= '>))]
              [*rope-compare-with (procedure? *rope? *rope? . -> . (or/c '< '= '>))]
              [*rope<?            (*rope? *rope? . -> . boolean?)]

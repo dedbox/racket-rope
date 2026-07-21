@@ -944,7 +944,7 @@ the corresponding string-rope operation described in the previous section.
    @racket[_type-rope-append1], @racket[_type-rope-append],
    @racket[_type-rope-split], @racket[_type-rope-offset-index],
    @racket[_type-rope-splice], @racket[_type-rope-slice],
-   @racket[_type-raw->_type-rope], and @racket[_type-rope->_type-raw], the
+   @racket[_type->-rope], and @racket[rope->_type], the
    specialized construction and editing operations from
    @secref["Generic_Rope_Operations"];}
 @item{@racket[_type-cursor-at-end?], @racket[_type-cursor-peek],
@@ -1030,9 +1030,6 @@ racket/base
   (λ (v start end) (vector-copy v start end))
   (λ (vs) (apply vector-append vs))
   vector-ref)
-
-(define (vector->rope v) (vector-raw->vector-rope v))
- (define (rope->vector r) (vector-rope->vector-raw r))
 ]
 
 Every operation on the resulting @racket[vector-rope] type (appending, splicing,
