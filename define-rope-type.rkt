@@ -40,6 +40,7 @@
      'rope-append1      (mk "~a-rope-append1")
      'rope-append       (mk "~a-rope-append")
      'rope-split        (mk "~a-rope-split")
+     'rope-ref          (mk "~a-rope-ref")
      'rope-offset-index (mk "~a-rope-offset-index")
      'rope-splice       (mk "~a-rope-splice")
      'rope-slice        (mk "~a-rope-slice")
@@ -68,7 +69,7 @@
       rope-node rope-leaf? rope-node? rope?
       raw? raw-limit raw-empty raw-count raw-width raw-slice raw-append raw-ref
       make-rope-leaf make-empty-rope
-      rope-append1 rope-append rope-split rope-offset-index rope-splice rope-slice
+      rope-append1 rope-append rope-split rope-ref rope-offset-index rope-splice rope-slice
       raw->rope rope->raw
       rope-compare rope-compare-with rope<? rope>? rope<=? rope>=?
       cursor-at-end? cursor-peek cursor-advance cursor-drop cursor-take
@@ -114,6 +115,7 @@
   #:with *-rope-append1      (id* 'rope-append1)
   #:with *-rope-append       (id* 'rope-append)
   #:with *-rope-split        (id* 'rope-split)
+  #:with *-rope-ref          (id* 'rope-ref)
   #:with *-rope-offset-index (id* 'rope-offset-index)
   #:with *-rope-splice       (id* 'rope-splice)
   #:with *-rope-slice        (id* 'rope-slice)
@@ -157,12 +159,12 @@
     ;; rope-poly-hash below). Overrides rope.rkt's fallback. An independent
     ;; ⟨base, mod⟩ pair for the secondary hash (rather than reusing pow)
     ;; reduces collisions in nested hash tables.
-    (struct *-rope-leaf rope-leaf ()
+    (struct *-rope-leaf rope-leaf () #:transparent
       #:methods gen:rope-equatable
       [(define rope=?    (λ (a b) (*-rope-content=? a b)))
        (define rope-hash (λ (a)   (rope-poly-hash a)))])
 
-    (struct *-rope-node rope-node ()
+    (struct *-rope-node rope-node () #:transparent
       #:methods gen:rope-equatable
       [(define rope=?    (λ (a b) (*-rope-content=? a b)))
        (define rope-hash (λ (a)   (rope-poly-hash a)))])
@@ -185,6 +187,7 @@
       (define (*-rope-append1      left right)   (rope-append1      gen left right))
       (define (*-rope-append   .   ropes)        (apply rope-append gen ropes))
       (define (*-rope-split        rope i)       (rope-split        gen rope i))
+      (define (*-rope-ref          rope i)       (rope-ref          gen rope i))
       (define (*-rope-offset-index rope pos)     (rope-offset-index gen rope pos))
       (define (*-rope-splice       rope s ol nt) (rope-splice       gen rope s ol nt))
       (define (*-rope-slice        rope s l)     (rope-slice        gen rope s l))
@@ -346,6 +349,7 @@
         #:with *rope-append1      (id* 'rope-append1)
         #:with *rope-append       (id* 'rope-append)
         #:with *rope-split        (id* 'rope-split)
+        #:with *rope-ref          (id* 'rope-ref)
         #:with *rope-offset-index (id* 'rope-offset-index)
         #:with *rope-splice       (id* 'rope-splice)
         #:with *rope-slice        (id* 'rope-slice)
@@ -394,6 +398,7 @@
              [*rope-append       (*rope? (... ...) . -> . *rope?)]
              [*rope-split        (*rope? exact-nonnegative-integer? . -> .
                                          (values *rope? *rope?))]
+             [*rope-ref          (*rope? exact-nonnegative-integer? . -> . (or/c #f *rope?))]
              [*rope-offset-index (*rope? exact-nonnegative-integer? . -> .
                                          exact-nonnegative-integer?)]
              [*rope-splice       (*rope? exact-nonnegative-integer?

@@ -49,6 +49,7 @@
   [rope-append1      (ropeable? rope? rope? . -> . rope?)]
   [rope-append       (ropeable? rope? ... . -> . rope?)]
   [rope-split        (ropeable? rope? exact-nonnegative-integer? . -> . (values rope? rope?))]
+  [rope-ref          (ropeable? rope? exact-nonnegative-integer? . -> . (or/c #f any/c))]
   [rope-offset-index (ropeable? rope? exact-nonnegative-integer? . -> . exact-nonnegative-integer?)]
   [rope-splice       (ropeable? rope? exact-nonnegative-integer?
                                 exact-nonnegative-integer? any/c . -> . rope?)]
@@ -124,7 +125,7 @@
 ;; structural equality. gen:rope-equatable's #:fallbacks (below) keep the
 ;; default behavior for ropes that don't implement rope=?/rope-hash
 ;; themselves.
-(struct rope ()
+(struct rope () #:transparent
   #:methods gen:rope-equatable []
   #:methods gen:equal+hash
   [(define (equal-proc a b _) (rope=? a b))
@@ -244,6 +245,7 @@
   [rope-append1      ropeable left right]
   [rope-append       ropeable . ropes]
   [rope-split        ropeable rope i]
+  [rope-ref          ropeable rope i]
   [rope-offset-index ropeable rope ofs]
   [rope-splice       ropeable rope start old-len new-raw]
   [rope-slice        ropeable rope start len]
@@ -323,6 +325,11 @@
               (values ll (rope-append1 self lr r)))
             (let-values ([(rl rr) (rope-split self r (- i lc))])
               (values (rope-append1 self l rl) rr)))]))
+
+   ;; O(log n)
+   (define (rope-ref self rope i)
+     (define-values (_before after) (rope-split self rope i))
+     (cursor-peek self (rope->cursor self after)))
 
    ;; Finds the leftmost element index containing offset `ofs`. O(log n).
    (define (rope-offset-index self rope ofs)
