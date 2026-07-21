@@ -338,14 +338,15 @@
        [(rope-leaf? rope)
         (define cnt (rope-leaf-count rope))
         (define raw (rope-leaf-raw   rope))
-        ;; ropeable gives no direct per-element width, but the width of a single-element slice
-        ;; serves the same purpose.
+        ;; ropeable gives no direct per-element width, but the width of a
+        ;; single-element slice serves the same purpose.
         (define (elem-width i) (raw:width self (raw:slice self raw i (add1 i))))
         (let loop ([i 0] [acc 0])
-          (if (= i cnt)
-              (sub1 i)
-              (let ([iw (elem-width i)])
-                (if (< ofs (+ acc iw)) i (loop (add1 i) (+ acc iw))))))]
+          (cond
+            [(= i cnt) (sub1 i)]
+            [else
+             (define iw (elem-width i))
+             (if (< ofs (+ acc iw)) i (loop (add1 i) (+ acc iw)))]))]
        [else
         (define l  (rope-node-left rope))
         (define lw (rope-width l))
