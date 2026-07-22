@@ -18,8 +18,8 @@
                      [left  rope?]
                      [right rope?]))
   ;; Rupe Equatability
-  [rope=?    (rope? rope? . -> . boolean?)]
-  [rope-hash (rope? . -> . pair?)]
+  [rope-equal? (rope? rope? . -> . boolean?)]
+  [rope-hash   (rope? . -> . pair?)]
   ;; Rope Operations
   [rope-count     (rope? . -> . exact-nonnegative-integer?)]
   [rope-width     (rope? . -> . exact-nonnegative-integer?)]
@@ -83,8 +83,8 @@
 ;;; --------------------------------------------------------------------------
 
 (define-generics rope-equatable
-  [rope=?    rope-equatable other]
-  [rope-hash rope-equatable]
+  [rope-equal? rope-equatable other]
+  [rope-hash   rope-equatable]
   #:fallbacks
   [;; A rope built directly from the leaf/node constructors has no
    ;; type-specific notion of content equality to hash against. This recovers
@@ -92,13 +92,14 @@
    ;; equal?, recursively for nodes. define-rope-type overrides this with a
    ;; content-based (shape-independent) implementation; see rope-poly-hash and
    ;; *-rope-content=? in define-rope-type.rkt.
-   (define (rope=? a b)
+   (define (rope-equal? a b)
      (and (rope? b)
           (= (rope-count a) (rope-count b))
           (= (rope-width a) (rope-width b))
           (match* (a b)
-            [((rope-leaf _ _ ra)    (rope-leaf _ _ rb))    (equal? ra rb)]
-            [((rope-node _ _ la ra) (rope-node _ _ lb rb)) (and (rope=? la lb) (rope=? ra rb))]
+            [((rope-leaf _ _ ra) (rope-leaf _ _ rb)) (equal? ra rb)]
+            [((rope-node _ _ la ra) (rope-node _ _ lb rb))
+             (and (rope-equal? la lb) (rope-equal? ra rb))]
             [(_ _) #f])))
    (define (rope-hash a)
      (match a
@@ -123,12 +124,12 @@
 ;; supertype, means subtypes (rope-leaf, rope-node, and every define-rope-type
 ;; instance) inherit this dispatch and cannot silently fall back to plain
 ;; structural equality. gen:rope-equatable's #:fallbacks (below) keep the
-;; default behavior for ropes that don't implement rope=?/rope-hash
+;; default behavior for ropes that don't implement rope-equal?/rope-hash
 ;; themselves.
 (struct rope () #:transparent
   #:methods gen:rope-equatable []
   #:methods gen:equal+hash
-  [(define (equal-proc a b _) (rope=? a b))
+  [(define (equal-proc a b _) (rope-equal? a b))
    (define (hash-proc  a _)   (car (rope-hash a)))
    (define (hash2-proc a _)   (cdr (rope-hash a)))])
 

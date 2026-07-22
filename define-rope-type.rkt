@@ -161,13 +161,13 @@
     ;; reduces collisions in nested hash tables.
     (struct *-rope-leaf rope-leaf () #:transparent
       #:methods gen:rope-equatable
-      [(define rope=?    (λ (a b) (*-rope-content=? a b)))
-       (define rope-hash (λ (a)   (rope-poly-hash a)))])
+      [(define rope-equal? (λ (a b) (*-rope-content=? a b)))
+       (define rope-hash   (λ (a)   (rope-poly-hash a)))])
 
     (struct *-rope-node rope-node () #:transparent
       #:methods gen:rope-equatable
-      [(define rope=?    (λ (a b) (*-rope-content=? a b)))
-       (define rope-hash (λ (a)   (rope-poly-hash a)))])
+      [(define rope-equal? (λ (a b) (*-rope-content=? a b)))
+       (define rope-hash   (λ (a)   (rope-poly-hash a)))])
 
     (define (*-rope? obj) (or (*-rope-leaf? obj) (*-rope-node? obj)))
 
