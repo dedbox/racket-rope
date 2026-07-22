@@ -48,6 +48,7 @@
      'rope->raw         (mk "rope->~a")
      'rope-compare      (mk "~a-rope-compare")
      'rope-compare-with (mk "~a-rope-compare-with")
+     'rope=?            (mk "~a-rope=?")
      'rope<?            (mk "~a-rope<?")
      'rope>?            (mk "~a-rope>?")
      'rope<=?           (mk "~a-rope<=?")
@@ -71,7 +72,7 @@
       make-rope-leaf make-empty-rope
       rope-append1 rope-append rope-split rope-ref rope-offset-index rope-splice rope-slice
       raw->rope rope->raw
-      rope-compare rope-compare-with rope<? rope>? rope<=? rope>=?
+      rope-compare rope-compare-with rope=? rope<? rope>? rope<=? rope>=?
       cursor-at-end? cursor-peek cursor-advance cursor-drop cursor-take
       rope->cursor cursor->rope
       rope-foldl rope-foldr
@@ -123,6 +124,7 @@
   #:with rope->*             (id* 'rope->raw)
   #:with *-rope-compare-with (id* 'rope-compare-with)
   #:with *-rope-compare      (id* 'rope-compare)
+  #:with *-rope=?            (id* 'rope=?)
   #:with *-rope<?            (id* 'rope<?)
   #:with *-rope>?            (id* 'rope>?)
   #:with *-rope<=?           (id* 'rope<=?)
@@ -204,6 +206,7 @@
       (define (*-rope-foldr proc init rope0 . ropes) (apply rope-foldr gen proc init rope0 ropes))
       (define (*-rope-compare-with cmp a b) (rope-compare-with gen cmp a b))
       (define (*-rope-compare a b) (rope-compare gen a b))
+      (define (*-rope=?       a b) (rope=?       gen a b))
       (define (*-rope<?       a b) (rope<?       gen a b))
       (define (*-rope>?       a b) (rope>?       gen a b))
       (define (*-rope<=?      a b) (rope<=?      gen a b))
@@ -357,6 +360,7 @@
         #:with rope->*            (id* 'rope->raw)
         #:with *rope-compare      (id* 'rope-compare)
         #:with *rope-compare-with (id* 'rope-compare-with)
+        #:with *rope=?            (id* 'rope=?)
         #:with *rope<?            (id* 'rope<?)
         #:with *rope>?            (id* 'rope>?)
         #:with *rope<=?           (id* 'rope<=?)
@@ -409,6 +413,7 @@
              [rope->*            (*rope? . -> . raw/c)]
              [*rope-compare      (*rope? *rope? . -> . (or/c '< '= '>))]
              [*rope-compare-with (procedure? *rope? *rope? . -> . (or/c '< '= '>))]
+             [*rope=?            (*rope? *rope? . -> . boolean?)]
              [*rope<?            (*rope? *rope? . -> . boolean?)]
              [*rope>?            (*rope? *rope? . -> . boolean?)]
              [*rope<=?           (*rope? *rope? . -> . boolean?)]

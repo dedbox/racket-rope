@@ -59,6 +59,7 @@
   [rope->raw         (ropeable? rope? . -> . any/c)]
   [rope-compare-with (ropeable? procedure? rope? rope? . -> . (or/c '< '= '>))]
   [rope-compare      (ropeable? rope? rope? . -> . (or/c '< '= '>))]
+  [rope=?            (ropeable? rope? rope? . -> . boolean?)]
   [rope<?            (ropeable? rope? rope? . -> . boolean?)]
   [rope<=?           (ropeable? rope? rope? . -> . boolean?)]
   [rope>?            (ropeable? rope? rope? . -> . boolean?)]
@@ -213,6 +214,7 @@
 (define (rope-compare self a b)
   (rope-compare-with self (λ (x y) (raw-compare self x y)) a b))
 
+(define (rope=?  self a b) (eq? (rope-compare self a b) '=))
 (define (rope<?  self a b) (eq? (rope-compare self a b) '<))
 (define (rope>?  self a b) (eq? (rope-compare self a b) '>))
 (define (rope<=? self a b) (not (eq? (rope-compare self a b) '>)))
