@@ -483,6 +483,21 @@ which chunk type's rules to follow.
  without flattening either. @math{O(log n + d)} amortized, where @math{d}
  is the number of elements scanned before the first difference.}
 
+@defproc[(rope=? [ropeable ropeable?] [rope1 rope?] [rope2 rope?]) boolean?]{
+
+ Returns @racket[#t] iff @racket[rope-compare] reports @racket['=] for
+ @racket[rope1] and @racket[rope2]. @math{O(log n + d)} amortized, same as
+ @racket[rope-compare].
+
+ Note this is @emph{not} the same check as @racket[equal?] on two ropes: this
+ comparator-based check requires the instantiating type to have supplied
+ @racket[#:compare] to @racket[define-rope-type], and does not benefit from
+ the memoized content-hash caching described in
+ @secref{Content-Based_Equality_and_Hashing}. Prefer @racket[equal?] for a
+ plain equality test; use @racket[rope=?] when you already need
+ @racket[rope-compare]'s ordering (e.g. alongside @racket[rope<?]) and want
+ the equal-case answer from the same family of operations.}
+
 @defproc[(rope<?  [ropeable ropeable?] [rope1 rope?] [rope2 rope?]) boolean?]
 @defproc[(rope<=? [ropeable ropeable?] [rope1 rope?] [rope2 rope?]) boolean?]
 @defproc[(rope>?  [ropeable ropeable?] [rope1 rope?] [rope2 rope?]) boolean?]
@@ -696,6 +711,8 @@ explicitly.
 
 @defproc[(string-rope-compare [rope1 string-rope?] [rope2 string-rope?])
          (or/c '< '= '>)]{ See @racket[rope-compare]. }
+@defproc[(string-rope=? [rope1 string-rope?] [rope2 string-rope?]) boolean?]{
+ See @racket[rope=?].}
 @defproc[(string-rope<?  [rope1 string-rope?] [rope2 string-rope?]) boolean?]
 @defproc[(string-rope<=? [rope1 string-rope?] [rope2 string-rope?]) boolean?]
 @defproc[(string-rope>?  [rope1 string-rope?] [rope2 string-rope?]) boolean?]
@@ -856,14 +873,16 @@ the corresponding string-rope operation described in the previous section.
  Extracts @racket[len] bytes of @racket[rope] beginning at @racket[start],
  analogous to @racket[subbytes].}
 
-@defproc[(string-rope-compare [rope1 string-rope?] [rope2 string-rope?])
+@defproc[(bytes-rope-compare [rope1 bytes-rope?] [rope2 bytes-rope?])
          (or/c '< '= '>)]{ See @racket[rope-compare]. }
-@defproc[(string-rope<?  [rope1 string-rope?] [rope2 string-rope?]) boolean?]
-@defproc[(string-rope<=? [rope1 string-rope?] [rope2 string-rope?]) boolean?]
-@defproc[(string-rope>?  [rope1 string-rope?] [rope2 string-rope?]) boolean?]
-@defproc[(string-rope>=? [rope1 string-rope?] [rope2 string-rope?]) boolean?]{
- Versions of @racket[bytes<?]/@racket[bytes>?]/
- @racket[bytes>=?] for ropes, without flattening either argument.}
+@defproc[(bytes-rope=?  [rope1 bytes-rope?] [rope2 bytes-rope?]) boolean?]{
+ See @racket[rope=?].}
+@defproc[(bytes-rope<?  [rope1 bytes-rope?] [rope2 bytes-rope?]) boolean?]
+@defproc[(bytes-rope<=? [rope1 bytes-rope?] [rope2 bytes-rope?]) boolean?]
+@defproc[(bytes-rope>?  [rope1 bytes-rope?] [rope2 bytes-rope?]) boolean?]
+@defproc[(bytes-rope>=? [rope1 bytes-rope?] [rope2 bytes-rope?]) boolean?]{
+ Versions of @racket[bytes<?]//@racket[bytes>?] for ropes, without flattening
+ either argument.}
 
 @defproc[(bytes-cursor-at-end? [cursor cursor?]) boolean?]{ See @racket[cursor-at-end?]. }
 @defproc[(bytes-cursor-peek [cursor cursor?]) (or/c #f byte?)]{ See @racket[cursor-peek]. }
@@ -947,10 +966,15 @@ the corresponding string-rope operation described in the previous section.
    @racket[_type->-rope], and @racket[rope->_type], the
    specialized construction and editing operations from
    @secref["Generic_Rope_Operations"];}
-@item{@racket[_type-cursor-at-end?], @racket[_type-cursor-peek],
-  @racket[_type-cursor-advance], @racket[_type-cursor-drop],
-  @racket[_type-cursor-take], @racket[_type-rope->cursor], and
-  @racket[cursor->_type-rope], the specialized cursor operations; and}
+ @item{@racket[_type-rope-compare], @racket[_type-rope-compare-with],
+   @racket[_type-rope=?], @racket[_type-rope<?], @racket[_type-rope<=?],
+   @racket[_type-rope>?], and @racket[_type-rope>=?], the specialized
+   comparison operations (raises at call time unless @racket[#:compare] was
+   supplied to @racket[define-rope-type]);}
+ @item{@racket[_type-cursor-at-end?], @racket[_type-cursor-peek],
+   @racket[_type-cursor-advance], @racket[_type-cursor-drop],
+   @racket[_type-cursor-take], @racket[_type-rope->cursor], and
+   @racket[cursor->_type-rope], the specialized cursor operations; and}
  @item{@racket[_type-rope-foldl], @racket[_type-rope-foldr], and
    @racket[in-_type-rope], the specialized fold and sequence operations.}]
 

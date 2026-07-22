@@ -1,31 +1,32 @@
 #lang racket/base
 
-(require rope
-         "../suite.rkt")
+(require racket/contract
+         racket/format
+         rope
+         "../suite.rkt"
+         "../type-ops.rkt"
+         "./equality.rkt")
 
 (provide make-comparison-benchmarks)
 
-;; Two ropes equal for the first (n - Δ) elements, then diverge, built via
-;; different tree shapes so the walk must actually cross leaf boundaries.
-(define (fixture n diverge-at)
-  (define base (make-string n #\a))
-  (define s1 (string->rope base))
-  (define s2 (string-rope-splice (string->rope base) diverge-at 1 "b"))
-  (cons s1 s2))
-
-(define (make-comparison-benchmarks sizes)
+(define/contract (make-comparison-benchmarks ops sizes)
+  (-> rope-type-ops? (listof exact-nonnegative-integer?) (listof bench?))
+  (define type-label (rope-type-ops-label ops))
+  (define ci? (string=? type-label "string"))
   (apply append
-         (for/list ([n (in-list sizes)] #:when (> n 0))
-           (list
-            (make-bench "compare/diverge-at-start" "compare" n
-                        (λ () (fixture n 0)) (λ (p) (string-rope-compare (car p) (cdr p))))
-            (make-bench "compare/diverge-at-end" "compare" n
-                        (λ () (fixture n (sub1 n))) (λ (p) (string-rope-compare (car p) (cdr p))))
-            (make-bench "compare/equal" "compare" n
-                        (λ () (cons (string->rope (make-string n #\a))
-                                    (string->rope (make-string n #\a))))
-                        (λ (p) (string-rope-compare (car p) (cdr p))))
-            (make-bench "ci-compare/equal-different-case" "compare" n
-                        (λ () (cons (string->rope (make-string n #\a))
-                                    (string->rope (make-string n #\A))))
-                        (λ (p) (string-rope-ci-compare (car p) (cdr p))))))))
+         (for*/list ([n (in-list sizes)] [label (in-list scenario-labels)])
+           (define (bname op) (~a op "/" type-label "/" label))
+           (define group (~a "comparison/" type-label))
+           (append
+            (list
+             (make-bench (bname 'compare) group n
+                         (λ () (build-pair ops n label))
+                         (λ (p) ((rope-type-ops-compare ops) (car p) (cdr p))))
+             (make-bench (bname 'rope=?) group n
+                         (λ () (build-pair ops n label))
+                         (λ (p) ((rope-type-ops-rope=? ops) (car p) (cdr p)))))
+            (if (and ci? (> n 0))
+                (list (make-bench (~a "ci-compare/" type-label "/" label) group n
+                                  (λ () (build-pair ops n label))
+                                  (λ (p) (string-rope-ci-compare (car p) (cdr p)))))
+                '())))))

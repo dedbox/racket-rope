@@ -31,6 +31,8 @@
    cursor-at-end?   ; cursor -> boolean
    fold             ; (any elem -> any) any rope -> any
    walk-sequence    ; rope -> nat, counts elements via this type's `in-*-rope`
+   compare          ; rope rope -> (or/c '< '= '>)
+   rope=?           ; rope rope -> boolean?, comparator-based (see rope=?)
    random-raw       ; nat -> raw, `n` random raw elements
    raw-length       ; raw -> nat
    raw-append       ; raw raw -> raw
@@ -56,6 +58,8 @@
          #:cursor-at-end? cursor-at-end?
          #:fold           fold
          #:walk-sequence  walk-sequence
+         #:compare        compare
+         #:rope=?         rope=?
          #:random-raw     random-raw
          #:raw-length     raw-length
          #:raw-append     raw-append
@@ -63,7 +67,7 @@
          #:singletons     singletons)
   (rope-type-ops label to-rope to-raw append1 empty split splice slice offset-index
                  to-cursor cursor-advance cursor-peek cursor-at-end? fold walk-sequence
-                 random-raw raw-length raw-append raw-slice singletons))
+                 compare rope=? random-raw raw-length raw-append raw-slice singletons))
 
 ;; Same content as `raw`, assembled one element at a time via `append1` (the
 ;; shape of a rope created incrementally by user input). Exercises the

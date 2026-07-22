@@ -9,6 +9,20 @@
            "private/testing.rkt")
 
   ;; A minimal instance: raw = vector of symbols. limit/empty are thunks.
+  (define (sym-raw-compare a b)
+    (define la (vector-length a))
+    (define lb (vector-length b))
+    (let loop ([i 0])
+      (cond [(and (= i la) (= i lb)) '=]
+            [(= i la) '<]
+            [(= i lb) '>]
+            [else
+             (define sa (symbol->string (vector-ref a i)))
+             (define sb (symbol->string (vector-ref b i)))
+             (cond [(string<? sa sb) '<]
+                   [(string>? sa sb) '>]
+                   [else (loop (add1 i))])])))
+
   (define-rope-type sym
     (λ (v) (and (vector? v) (for/and ([e (in-vector v)]) (symbol? e))))
     (λ () 4)
@@ -17,7 +31,8 @@
     vector-length
     (λ (v s e) (vector-copy v s e))
     (λ (raws) (apply vector-append raws))
-    vector-ref)
+    vector-ref
+    #:compare sym-raw-compare)
 
   ;; Macro-safety / hygiene probe: rope.rkt used to use the identifier `gen`
   ;; internally. This confirms nothing leaks.
@@ -111,13 +126,32 @@
           (for/fold ([r (make-empty-sym-rope)]) ([s (in-vector syms)])
             (sym-rope-append1 r (sym->rope (vector s)))))
         (check-true (sym-rope? built-via-append))
-        (check-equal? (rope->sym built-via-append) syms))))
+        (check-equal? (rope->sym built-via-append) syms))
+
+      (test-case "comparison identifiers: compare / </<=/>/>=/rope=? agree with a raw oracle"
+        (define a (sym->rope (vector 'a 'b 'c)))
+        (define b (sym->rope (vector 'a 'b 'd)))
+        (define c (sym->rope (vector 'a 'b 'c))) ; equal content, distinct object
+        (check-eq? (sym-rope-compare a a) '=)
+        (check-eq? (sym-rope-compare a b) '<)
+        (check-eq? (sym-rope-compare b a) '>)
+        (check-true  (sym-rope<?  a b))
+        (check-false (sym-rope<?  b a))
+        (check-true  (sym-rope<=? a c))
+        (check-true  (sym-rope>?  b a))
+        (check-true  (sym-rope>=? a c))
+        (check-true  (sym-rope=?  a c))
+        (check-false (sym-rope=?  a b))
+        (check-true  (equal? a c)))))   ; content-hash path still agrees
 
   ;; rope-type-out/contract needs its own contracted vs. uncontracted views of
   ;; the same instantiation to test contract enforcement in isolation.
   (module sym-fixture racket/base
-    (require racket/vector rope/define-rope-type)
+    (require racket/vector
+             rope/define-rope-type)
+
     (provide (rope-type-out sym))
+
     (define-rope-type sym
       (λ (v) (and (vector? v) (for/and ([e (in-vector v)]) (symbol? e))))
       (λ () 4)
@@ -126,11 +160,19 @@
       vector-length
       (λ (v s e) (vector-copy v s e))
       (λ (raws) (apply vector-append raws))
-      vector-ref))
+      vector-ref
+      #:compare (λ (a b) (cond [(string<? (format "~a" a) (format "~a" b)) '<]
+                               [(equal? a b) '=]
+                               [else '>]))))
+
   (module sym-fixture-contracted racket/base
-    (require rope/define-rope-type (submod ".." sym-fixture))
+    (require rope/define-rope-type
+             (submod ".." sym-fixture))
+
     (provide (rope-type-out/contract sym #:raw sym-raw? #:element symbol?)))
-  (require 'sym-fixture (prefix-in c: 'sym-fixture-contracted))
+
+  (require 'sym-fixture
+           (prefix-in c: 'sym-fixture-contracted))
 
   (define contract-suite
     (test-suite "rope-type-out/contract"
@@ -153,6 +195,11 @@
         (define taken (c:sym-cursor-take c 2))
         (check-true (c:sym-rope? taken))
         (check-equal? (rope->sym taken) (vector 'a 'b))
-        (check-exn exn:fail:contract? (λ () (c:sym-cursor-take c -1))))))
+        (check-exn exn:fail:contract? (λ () (c:sym-cursor-take c -1))))
+
+      (test-case "rope-type-out/contract enforces argument types on *rope=?"
+        (define r (c:sym->rope (vector 'a 'b)))
+        (check-not-exn (λ () (c:sym-rope=? r r)))
+        (check-exn exn:fail:contract? (λ () (c:sym-rope=? r "not a rope"))))))
 
   (run-suite! (test-suite "define-rope-type.rkt" instantiation-suite contract-suite)))

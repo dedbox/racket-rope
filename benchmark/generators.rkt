@@ -51,6 +51,8 @@
    #:cursor-at-end? string-cursor-at-end?
    #:fold           string-rope-foldl
    #:walk-sequence  (λ (r) (for/sum ([_c (in-string-rope r)]) 1))
+   #:compare        string-rope-compare
+   #:rope=?         string-rope=?
    #:random-raw     random-string
    #:raw-length     string-length
    #:raw-append     string-append
@@ -74,6 +76,8 @@
    #:cursor-at-end? bytes-cursor-at-end?
    #:fold           bytes-rope-foldl
    #:walk-sequence  (λ (r) (for/sum ([_b (in-bytes-rope r)]) 1))
+   #:compare        bytes-rope-compare
+   #:rope=?         bytes-rope=?
    #:random-raw     random-bytes
    #:raw-length     bytes-length
    #:raw-append     bytes-append

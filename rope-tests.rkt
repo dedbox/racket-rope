@@ -290,9 +290,9 @@
                       (rope-concat weighted (mk (vector 1)) (mk (vector 2)))))
 
       (test-case "structural fallback does NOT see across leaf/node shape differences"
-        ;; Unlike define-rope-type's content-based override, the fallback is honestly
-        ;; structural: a leaf and a differently-shaped node holding the same elements are
-        ;; not required to compare equal.
+        ;; Unlike define-rope-type's content-based override, the fallback is
+        ;; honestly structural: a leaf and a differently-shaped node holding
+        ;; the same elements are not required to compare equal.
         (define as-leaf (make-rope-leaf weighted (vector 1 2)))
         (define as-node (rope-append1 weighted (make-rope-leaf weighted (vector 1))
                                       (make-rope-leaf weighted (vector 2))))
@@ -307,6 +307,15 @@
         (check-false (rope>? weighted a b))
         (check-true  (rope<=? weighted a a))
         (check-true  (rope>=? weighted b a)))
+
+      (test-case "rope=? agrees with rope-compare, including on non-eq? equal content"
+        (define a  (raw->rope weighted (vector 1 2 3)))
+        (define a2 (raw->rope weighted (vector 1 2 3)))   ; equal? content, distinct object
+        (define b  (raw->rope weighted (vector 1 2 4)))
+        (check-true  (rope=? weighted a a))
+        (check-true  (rope=? weighted a a2))
+        (check-false (rope=? weighted a b))
+        (check-eq? (rope=? weighted a a2) (eq? (rope-compare weighted a a2) '=)))
 
       (test-case "rope-compare-with accepts an alternate comparator"
         (define a (raw->rope weighted (vector 1 2 3)))

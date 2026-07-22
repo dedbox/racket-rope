@@ -22,6 +22,7 @@
 
 (provide scenario-labels
          scenario-same-content?
+         build-pair
          make-equality-benchmarks)
 
 (define scenario-labels

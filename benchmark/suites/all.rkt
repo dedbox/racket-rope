@@ -18,6 +18,7 @@
    (cons "bytes-core"      (λ (sizes) (make-core-benchmarks       bytes-ops sizes)))
    (cons "string-equality" (λ (sizes) (make-equality-benchmarks   string-ops sizes)))
    (cons "bytes-equality"  (λ (sizes) (make-equality-benchmarks   bytes-ops sizes)))
-   (cons "comparison"      (λ (sizes) (make-comparison-benchmarks sizes)))))
+   (cons "string-comparison" (λ (sizes) (make-comparison-benchmarks string-ops sizes)))
+   (cons "bytes-comparison"  (λ (sizes) (make-comparison-benchmarks bytes-ops  sizes)))))
 
 (define suite-names (map car suite-registry))

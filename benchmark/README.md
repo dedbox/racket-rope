@@ -14,17 +14,18 @@
 
 # Layout
 
-| File                     | Responsibility                                                               |
-|--------------------------|------------------------------------------------------------------------------|
-| `bench-core.rkt`         | Timing/statistics primitives. Knows nothing about ropes.                     |
-| `suite.rkt`              | The `bench` fixture/op abstraction; warm vs. cold execution.                 |
-| `type-ops.rkt`           | Generic rope-type vocabulary (`rope-type-ops`) + shape/perturbation helpers. |
-| `generators.rkt`         | Random raw-content generators + concrete `string-ops~/~bytes-ops`.           |
-| `suites/generic-ops.rkt` | build/append/split/splice/slice/cursor/fold/sequence/shape benchmarks.       |
-| `suites/equality.rkt`    | `equal?~/~equal-hash-code` benchmark matrix (7 scenarios × warm/cold).       |
-| `suites/all.rkt`         | Suite registry main.rkt drives.                                              |
-| `report.rkt`             | JSON I/O + A/B comparison + regression report.                               |
-| `main.rkt`               | CLI entry point.                                                             |
+| File                     | Responsibility                                                                                           |
+|--------------------------|----------------------------------------------------------------------------------------------------------|
+| `bench-core.rkt`         | Timing/statistics primitives. Knows nothing about ropes.                                                 |
+| `suite.rkt`              | The `bench` fixture/op abstraction; warm vs. cold execution.                                             |
+| `type-ops.rkt`           | Generic rope-type vocabulary (`rope-type-ops`) + shape/perturbation helpers.                             |
+| `generators.rkt`         | Random raw-content generators + concrete `string-ops~/~bytes-ops`.                                       |
+| `suites/generic-ops.rkt` | build/append/split/splice/slice/cursor/fold/sequence/shape benchmarks.                                   |
+| `suites/equality.rkt`    | `equal?~/~equal-hash-code` benchmark matrix (7 scenarios × warm/cold).                                   |
+| `suites/comparison.rkt`  | `rope-compare`/`rope=?` (+ string-only `ci-compare`) benchmark matrix, reusing equality.rkt's scenarios. |
+| `suites/all.rkt`         | Suite registry main.rkt drives.                                                                          |
+| `report.rkt`             | JSON I/O + A/B comparison + regression report.                                                           |
+| `main.rkt`               | CLI entry point.                                                                                         |
 
 Every benchmark is written once, generically, against `rope-type-ops` (see `type-ops.rkt`), and instantiated for both `rope/string` and `rope/bytes` in `generators.rkt`. A new rope type only needs one more `rope-type-ops` value to pick up every benchmark in this suite unmodified. This also means the exact same code runs, unmodified, before and after an implementation change, which is what makes an A/B comparison meaningful.
 
