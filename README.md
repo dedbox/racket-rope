@@ -31,10 +31,10 @@ If you are building an editor, ropes are an efficient alternative to strings.
   for manipulating arbitrary spans and offsets in real time, so these
   processes can efficiently target only the portion of the buffer that
   actually changed.
-- **Structured or semi-structured editors** such as rich text editors and
-  tabular GUI widgets can leverage the `define-rope-type` macro to generate
+- **Structured or semi-structured editors**, such as rich text editors and
+  tabular GUI widgets, can leverage the `define-rope-type` macro to generate
   the same machinery over custom chunk types for managing runs of styled
-  spans, or a row of cells.
+  spans or rows of cells.
 
 ## An Example
 
