@@ -20,6 +20,7 @@
          racket/date
          racket/format
          racket/list
+         racket/match
          racket/math
          racket/string)
 
@@ -44,6 +45,32 @@
   (for/list ([key (in-hash-keys grouped)])
     (series (car key) (cdr key) (sort (hash-ref grouped key) < #:key point-size))))
 
+(struct delta-point (size pct noise-pct) #:transparent)
+(struct delta-series (group name points) #:transparent)
+
+;; Only rows present in *both* runs are drawn (NEW/REMOVED belong to
+;; report.rkt's textual output, not this chart).
+(define (records->delta-series before-records after-records)
+  (define (index rs)
+    (for/hash ([r (in-list rs)])
+      (values (list (hash-ref r 'group) (hash-ref r 'name) (hash-ref r 'size)) r)))
+  (define bi (index before-records))
+  (define ai (index after-records))
+  (define grouped
+    (for/fold ([acc (hash)]) ([k (in-list (hash-keys bi))] #:when (hash-has-key? ai k))
+      (match-define (list g n sz) k)
+      (define b (hash-ref bi k)) (define a (hash-ref ai k))
+      (define bm (hash-ref b 'mean)) (define am (hash-ref a 'mean))
+      (define pct (* 100.0 (/ (- am bm) (max bm 1e-12))))
+      ;; ~2 stddevs on each side, expressed as a % of the baseline mean: a
+      ;; delta smaller than this is indistinguishable from noise given what
+      ;; these two runs actually measured.
+      (define noise-pct
+        (* 100.0 (/ (+ (* 2 (hash-ref b 'stddev)) (* 2 (hash-ref a 'stddev))) (max bm 1e-12))))
+      (hash-update acc (cons g n) (λ (pts) (cons (delta-point sz pct noise-pct) pts)) '())))
+  (for/list ([key (in-hash-keys grouped)])
+    (delta-series (car key) (cdr key) (sort (hash-ref grouped key) < #:key delta-point-size))))
+
 ;; Geometric mean of a series' per-size means -- appropriate for ranking
 ;; log-scale data by overall speed, since it weighs each order of magnitude
 ;; equally rather than letting the largest size dominate the way an arithmetic
@@ -51,6 +78,65 @@
 (define (series-geomean s)
   (define floored (map (λ (p) (max (point-mean p) 1e-9)) (series-points s)))
   (exp (/ (apply + (map log floored)) (length floored))))
+
+;; The trailing "/"-separated component of a name, e.g. "differ-at-end" from
+;; "hash-code.warm/string/differ-at-end", or "append1" from "string/append1".
+;; Used as a cross-family, cross-type grouping key.
+(define (trailing-keyword name)
+  (define parts (string-split name "/"))
+  (if (null? parts) name (last parts)))
+
+(define (name<?      a b) (string<? (series-name a) (series-name b)))
+(define (group<?     a b) (string<? (series-group a) (series-group b)))
+(define (geomean<?   a b) (< (series-geomean a) (series-geomean b)))
+(define (keyword<?   a b) (string<? (trailing-keyword (series-name a))
+                                    (trailing-keyword (series-name b))))
+
+;; Lexicographic comparator combinator: try each in turn, falling through
+;; to the next only on an exact tie. name<? is included last in every
+;; mode below so no two distinct series can ever tie completely — that's
+;; what makes every non-"speed" mode 100% run-invariant.
+(define ((chain . cmps) a b)
+  (cond [(null? cmps) #f]
+        [((car cmps) a b) #t]
+        [((car cmps) b a) #f]
+        [else ((apply chain (cdr cmps)) a b)]))
+
+(define (order-series all-series mode)
+  (sort all-series
+        (case mode
+          ;; current default, now tie-broken deterministically
+          [(speed) (chain geomean<? group<? name<?)]
+          ;; family+type together, alphabetically
+          [(alpha) (chain group<? name<?)]
+          ;; color blocks fully contiguous, fastest-first within each
+          [(group) (chain group<? geomean<? name<?)]
+          ;; same trailing keyword clustered across all families/types
+          [(scenario) (chain keyword<? group<? name<?)]
+          [else
+           (raise-user-error
+            'visualize
+            "unknown --order mode ~a (expected speed, alpha, group, or scenario)" mode)])))
+
+(define (delta-severity s)
+  (apply max (map (λ (p) (abs (delta-point-pct p))) (delta-series-points s))))
+
+(define (dname<?     a b) (string<? (delta-series-name a) (delta-series-name b)))
+(define (dgroup<?    a b) (string<? (delta-series-group a) (delta-series-group b)))
+(define (dseverity<? a b) (< (delta-severity a) (delta-severity b)))
+(define (dkeyword<?  a b) (string<? (trailing-keyword (delta-series-name a))
+                                    (trailing-keyword (delta-series-name b))))
+
+(define (order-delta-series all-series mode)
+  (sort all-series
+        (case mode
+          [(speed)    (chain dseverity<? dgroup<? dname<?)]  ; biggest |Δ| first
+          [(alpha)    (chain dgroup<? dname<?)]
+          [(group)    (chain dgroup<? dseverity<? dname<?)]
+          [(scenario) (chain dkeyword<? dgroup<? dname<?)]
+          [else
+           (raise-user-error
+            'visualize "unknown --order mode ~a (expected speed, alpha, group, or scenario)" mode)])))
 
 ;; ---------------------------------------------------------------------------
 ;; Formatting
@@ -140,11 +226,14 @@
 ;; Layout & rendering
 ;; ---------------------------------------------------------------------------
 
-(define (render-svg run-jsexpr #:canvas-width [canvas-width 1400] #:row-height [row-height 20])
+(define (render-svg run-jsexpr
+                    #:canvas-width [canvas-width 1400]
+                    #:row-height [row-height 20]
+                    #:order [order 'speed])
   (define records (hash-ref run-jsexpr 'records))
   (when (null? records) (error 'visualize "no records in this run"))
 
-  (define all-series (sort (records->series records) < #:key series-geomean))
+  (define all-series (order-series (records->series records) order))
   (define n-rows (length all-series))
   (define groups (remove-duplicates (map series-group all-series)))
   (define colors
@@ -272,6 +361,136 @@
                (svg-frame plot-x0 top-margin plot-w plot-h #:stroke "#c7cacf")
                "</svg>\n")))
 
+(define (format-pct p)
+  (string-append (if (>= p 0) "+" "") (~r p #:precision (list '= 1)) "%"))
+
+(define (delta-color pct threshold noise)
+  (cond [(and (> pct 0) (> pct threshold) (> pct noise)) "#c0392b"]   ; regression
+        [(and (< pct 0) (< pct (- threshold)) (< pct (- noise))) "#1e8449"] ; improvement
+        [else "#9aa0a6"]))                                            ; not significant
+
+(define (render-delta-svg after-jsexpr before-jsexpr
+                          #:canvas-width [canvas-width 1400]
+                          #:row-height [row-height 20]
+                          #:order [order 'scenario]
+                          #:threshold [threshold 10])
+  (define after-records (hash-ref after-jsexpr 'records))
+  (define before-records (hash-ref before-jsexpr 'records))
+  (define all-series (order-delta-series (records->delta-series before-records after-records) order))
+  (when (null? all-series) (error 'visualize "no (group,name,size) rows in common between the two runs"))
+  (define n-rows (length all-series))
+  (define groups (remove-duplicates (map delta-series-group all-series)))
+  (define colors
+    (for/hash ([g (in-list groups)] [c (in-list (palette (length groups)))]) (values g c)))
+
+  ;; linear domain, symmetric around 0%, padded 15%
+  (define all-mags
+    (append* (for/list ([s (in-list all-series)])
+               (for/list ([p (in-list (delta-series-points s))])
+                 (max (abs (delta-point-pct p)) (delta-point-noise-pct p))))))
+  (define span (* 1.15 (apply max 1.0 all-mags)))
+
+  (define label-w
+    (clamp 220 (+ 40 (* 6.4 (apply max (map (λ (s) (string-length (delta-series-name s))) all-series)))) 560))
+  (define label-x0 16)
+  (define plot-x0 (+ label-x0 14 label-w))
+  (define right-margin 90)
+  (define plot-x1 (- canvas-width right-margin))
+  (define plot-w (- plot-x1 plot-x0))
+  (define items-per-legend-row (max 1 (quotient (exact-round plot-w) 160)))
+  (define legend-rows (ceiling (/ (length groups) items-per-legend-row)))
+  (define title-h 40)
+  (define legend-h (+ (* legend-rows 18) 8))
+  (define top-margin (+ title-h legend-h 14))
+  (define bottom-margin 46)
+  (define plot-h (* n-rows row-height))
+  (define canvas-height (+ top-margin plot-h bottom-margin))
+
+  (define (xpos pct) (+ plot-x0 (* (/ (+ pct span) (* 2 span)) plot-w)))
+
+  (define row-elems
+    (for/list ([s (in-list all-series)] [i (in-range n-rows)])
+      (define row-y (+ top-margin (* i row-height)))
+      (define cy (+ row-y (/ row-height 2)))
+      (define color (hash-ref colors (delta-series-group s)))
+      (define pts (delta-series-points s))
+      (define zebra
+        (if (even? i) (svg-rect plot-x0 row-y plot-w row-height #:fill "#f4f5f7") ""))
+      (define noise-ticks
+        (apply string-append
+               (for/list ([p (in-list pts)])
+                 (svg-line (xpos (- (delta-point-pct p) (delta-point-noise-pct p))) cy
+                           (xpos (+ (delta-point-pct p) (delta-point-noise-pct p))) cy
+                           #:stroke "#9aa0a6" #:width 1 #:opacity 0.35))))
+      (define connector
+        (if (> (length pts) 1)
+            (apply string-append
+                   (for/list ([a (in-list pts)] [b (in-list (cdr pts))])
+                     (svg-line (xpos (delta-point-pct a)) cy (xpos (delta-point-pct b)) cy
+                               #:stroke color #:width 1.2 #:opacity 0.45)))
+            ""))
+      (define dots
+        (apply string-append
+               (for/list ([p (in-list pts)])
+                 (svg-circle (xpos (delta-point-pct p)) cy
+                             (clamp 2.5 (+ 2.5 (* 1.3 (log10 (add1 (delta-point-size p))))) 8)
+                             #:fill (delta-color (delta-point-pct p) threshold (delta-point-noise-pct p))
+                             #:opacity 0.92))))
+      (define swatch (svg-rect label-x0 (- cy 5) 10 10 #:fill color))
+      (define label (svg-text (- plot-x0 12) (+ cy 4) (delta-series-name s) #:size 11 #:anchor "end"))
+      (define worst (argmax (λ (p) (abs (delta-point-pct p))) pts))
+      (define worst-label
+        (svg-text (+ (xpos (delta-point-pct worst))
+                     (if (>= (delta-point-pct worst) 0) 6 -6))
+                  (+ cy -6) (format-pct (delta-point-pct worst))
+                  #:size 9 #:anchor (if (>= (delta-point-pct worst) 0) "start" "end") #:fill "#555555"))
+      (apply string-append (list zebra noise-ticks connector dots swatch label worst-label))))
+
+  (define axis-elems
+    (append
+     (for/list ([frac (in-list '(-1.0 -0.5 0.0 0.5 1.0))])
+       (define pct (* frac span))
+       (define x (xpos pct))
+       (string-append
+        (svg-line x top-margin x (+ top-margin plot-h)
+                  #:stroke (if (zero? frac) "#9aa0a6" "#d8dadd") #:width (if (zero? frac) 1.4 1))
+        (svg-text x (+ top-margin plot-h 18) (format-pct pct) #:size 10 #:anchor "middle" #:fill "#555555")))
+     (list (svg-line plot-x0 (+ top-margin plot-h) plot-x1 (+ top-margin plot-h) #:stroke "#9aa0a6" #:width 1.2)
+           (svg-text (/ (+ plot-x0 plot-x1) 2) (+ top-margin plot-h 34)
+                     "% change in mean time (after vs before); gray = not significant"
+                     #:size 10 #:anchor "middle" #:fill "#555555"))))
+
+  (define legend-elems
+    (for/list ([g (in-list groups)] [i (in-naturals)])
+      (define col (remainder i items-per-legend-row))
+      (define row (quotient i items-per-legend-row))
+      (define lx (+ plot-x0 (* col 160)))
+      (define ly (+ title-h 6 (* row 18)))
+      (string-append (svg-rect lx ly 11 11 #:fill (hash-ref colors g))
+                     (svg-text (+ lx 16) (+ ly 10) g #:size 10 #:anchor "start" #:fill "#333333"))))
+
+  (define after-label (hash-ref after-jsexpr 'label "after"))
+  (define before-label (hash-ref before-jsexpr 'label "before"))
+  (define title-elems
+    (list
+     (svg-text 16 24 (format "Rope Benchmark Delta - ~a vs ~a" after-label before-label)
+               #:size 17 #:anchor "start" #:weight "bold")
+     (svg-text 16 40 (format "~a rows in common - threshold ±~a% - gray band = within noise"
+                             n-rows threshold)
+               #:size 11 #:anchor "start" #:fill "#555555")))
+
+  (define fmt
+    "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"~a\" height=\"~a\" viewBox=\"0 0 ~a ~a\">\n")
+  (apply string-append
+         (list (format fmt (n0 canvas-width) (n0 canvas-height) (n0 canvas-width) (n0 canvas-height))
+               (svg-rect 0 0 canvas-width canvas-height #:fill "#ffffff")
+               (apply string-append title-elems)
+               (apply string-append legend-elems)
+               (apply string-append axis-elems)
+               (apply string-append row-elems)
+               (svg-frame plot-x0 top-margin plot-w plot-h #:stroke "#c7cacf")
+               "</svg>\n")))
+
 ;; ---------------------------------------------------------------------------
 ;; CLI
 ;; ---------------------------------------------------------------------------
@@ -284,24 +503,53 @@
 (module+ main
   (define in-path #f)
   (define out-path #f)
+  (define baseline-path #f)
   (define canvas-width 1400)
   (define row-height 20)
+  (define order-mode 'speed)
+  (define threshold 10)
 
   (command-line
    #:program "rope-bench-visualize"
    #:once-each
-   [("--in") path "Input benchmark JSON file (from main.rkt --save)"
+   [("--in")
+    path "Input benchmark JSON file (from main.rkt --save)"
     (set! in-path path)]
-   [("--out") path "Output SVG path (default: <in>.svg)"
+   [("--out")
+    path "Output SVG path (default: <in>.svg)"
     (set! out-path path)]
-   [("--width") w "Canvas width in px (default: 1400)"
+   [("--baseline")
+    path "Second JSON file; switches to delta-vs-baseline mode"
+    (set! baseline-path path)]
+   [("--order")
+    mode "Row ordering: speed (default), alpha, group, or scenario"
+    (set! order-mode (string->symbol mode))]
+   [("--threshold")
+    pct "Percent-change floor for coloring a delta significant (default 10)"
+    (set! threshold (string->number pct))]
+   [("--width")
+    w "Canvas width in px (default: 1400)"
     (set! canvas-width (string->number w))]
-   [("--row-height") h "Pixels per operation row (default: 20)"
+   [("--row-height")
+    h "Pixels per operation row (default: 20)"
     (set! row-height (string->number h))])
 
   (unless in-path (error 'visualize "missing required --in PATH"))
   (define run-jsexpr (call-with-input-file in-path read-json))
-  (define svg (render-svg run-jsexpr #:canvas-width canvas-width #:row-height row-height))
-  (define final-out (or out-path (default-out-path in-path)))
+  (define svg
+    (if baseline-path
+        (render-delta-svg run-jsexpr (call-with-input-file baseline-path read-json)
+                          #:canvas-width canvas-width
+                          #:row-height row-height
+                          #:order order-mode
+                          #:threshold threshold)
+        (render-svg run-jsexpr
+                    #:canvas-width canvas-width
+                    #:row-height row-height
+                    #:order order-mode)))
+
+  (define final-out
+    (or out-path
+        (default-out-path (if baseline-path (string-append in-path ".delta.svg") in-path))))
   (call-with-output-file final-out #:exists 'replace (λ (out) (display svg out)))
   (printf "Wrote ~a\n" final-out))
