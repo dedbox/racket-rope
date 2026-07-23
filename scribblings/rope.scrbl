@@ -51,6 +51,16 @@ new content into a rope costs @math{O(log n)} to find the split points plus the 
 of building a subtree for the inserted text, rather than @math{O(n)} to rebuild the
 whole sequence.
 
+Asymptotic complexity is only half the story---real-world performance matters, too.
+On the benchmark suite bundled with this package (see
+@secref{Measured_Performance}), a splice or slice into a rope of 32,768
+characters completes in microseconds, regardless of where in the rope it happens.
+Appending two ropes typically costs about 100 nanoseconds. Because ropes compare whole
+chunks at once rather than one element at a time, @racket[equal?] on two content-identical
+ropes completes in a few hundred microseconds. Recomputing @racket[equal-hash-code]
+on a rope that has already been hashed costs under 60 nanoseconds @emph{independent
+ of its size}, because hashes are memoized as a composable polynomial hash.
+
 This library separates the tree structure from what it holds. The @racket[rope]
 type itself only knows about leaves and nodes---it has no idea whether a leaf's
 payload is a string, a byte string, or something else entirely. A generic
@@ -1107,5 +1117,88 @@ on a single call, when a rebalancing rebuild is triggered, but never more than
 Here @math{m} is the count of the chunk being spliced in, @math{k} is the
 number of leaves spanned by an extracted slice, and @math{d} is the position of
 the first difference.
+
+@; -------------------------------------------------------------------------------------------------
+
+@section[#:tag "Measured_Performance"]{Measured Performance}
+
+The numbers below come from this package's own benchmark suite
+(documented in @tt{benchmark/README.md}), run against a freshly built
+package so results reflect compiled (not interpreted) code.
+
+@bold{Test machine:} benchmarks were performed on a desktop PC with a
+@italic{12th Gen Intel(R) Core(TM) i7-12700K with 12 cores (8 P-cores,
+4 E-cores) and 20 threads, 32GiB DDR5 DRAM at 4800 MT/s, on Arch linux
+(July 2026) with Racket v9.2 [cs].}
+
+@bold{Methodology:} default suite settings unless noted---sizes
+@tt{0, 8, 64, 512, 4096, 32768}, 15 measured trials per benchmark after 5
+untimed warmup calls, forced GC before each trial. Warm benchmarks are
+batch-calibrated to at least 5ms per batch before timing (see
+@tt{benchmark/README.md}'s @italic{Timer resolution and batching}
+section); cold benchmarks are measured unbatched, one fresh fixture per
+trial. Every number below is a mean over its trials, not a single
+sample.
+
+@bold{Reproducing these numbers:}
+@verbatim{
+ racco setup rope
+ racket benchmark/main.rkt --save /tmp/run.json
+ racket benchmark/visualize.rkt --in /tmp/run.json --order scenario
+}
+
+@image["images/benchmark-overview.svg" #:scale 1.0]{Every benchmarked
+ operation, one row each, sorted fastest to slowest, one dot per input
+ size on a shared log-scale time axis. Color indicates operation category.}
+
+Here are some of the more impactful figures from that chart, at the largest
+test size (32,768 elements):
+
+@tabular[
+ #:style 'boxed
+ #:column-properties '(left center)
+ #:row-properties '(bottom-border ())
+ (list
+  (list @bold{Operation}                        @bold{Time at n = 32,768})
+  (list "append1 (leaf-level)"                   "~110-120ns")
+  (list "split at midpoint"                      "~3us")
+  (list "slice, one quarter of the rope"         "~5-6us")
+  (list "splice 4 elements at the midpoint"       "~9us")
+  (list "offset-index at the midpoint"             "~10-11us")
+  (list "build from a flat raw chunk"               "~30-170us")
+  (list "equal-hash-code, already hashed (warm)"      "<60ns, flat across all sizes")
+  (list "equal-hash-code, never hashed before (cold)" "~5.8-6.0ms")
+  (list "equal?, same content (post-optimization, see below)" "~200-550us"))]
+
+The @tt{*-build} rows in the full chart (@tt{typed-build},
+@tt{fragmented-build}, @tt{edited-build}) are the slowest operations
+measured, at tens to hundreds of milliseconds. This is expected, since
+they simulate building a rope by thousands of individual edits, which
+dominates the elapsed real time cost of running the full suite.
+Everything else in the table is a single operation on an already-built rope.
+
+@subsection{Case study: optimizing @racket[equal?]}
+
+As a concrete example of how the benchmarking suite is used, here are the
+results of a real optimization made during development. The original
+content-equality check compared two ropes element by element, and
+it was changed to compare whole overlapping chunks at once. This was the
+same strategy @racket[rope-compare] already used, and we hypothesized that
+one @racket[equal?] call per chunk would beat many individual per-character
+calls.
+
+@image["images/benchmark-equal-optimization-delta.svg" #:scale 1.0]{
+ Percent change in mean time, new implementation vs. old, one row per
+ operation/scenario, one dot per input size. Green = a significant
+ improvement, red = a significant regression, gray = within measurement
+ noise (a shaded band around each dot spans roughly two standard
+ deviations either side, scaled to percent of the baseline mean).}
+
+The result was 74-98% reductions (roughly 8-13x) across every scenario
+that requires walking real content, with no measurable effect on
+unrelated operations. We also observed a regression---immediate-mismatch
+cases became a few microseconds slower. This was expected, since the new
+strategy pays for slicing a whole chunk up front. See @tt{benchmark/README.md}
+for how to produce the same kind of before/after comparison for your own patches.
 
 @(close-eval rope-eval)
