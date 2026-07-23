@@ -271,8 +271,10 @@
                          (define na (- (*-raw-count ra) pa))
                          (define nb (- (*-raw-count rb) pb))
                          (define k  (min na nb))
-                         (and (for/and ([i (in-range k)])
-                                (equal? (*-raw-ref ra (+ pa i)) (*-raw-ref rb (+ pb i))))
+                         ;; one bulk equal? over the whole overlapping chunk,
+                         ;; instead of k individual raw-ref/equal? dispatches
+                         (and (equal? (*-raw-slice ra pa (+ pa k))
+                                      (*-raw-slice rb pb (+ pb k)))
                               (loop (if (= k na) (*-rope->cursor afa) (cursor ra (+ pa k) afa))
                                     (if (= k nb) (*-rope->cursor afb) (cursor rb (+ pb k) afb))))))))))
 
