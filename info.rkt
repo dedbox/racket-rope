@@ -1,7 +1,7 @@
 #lang info
 
 (define collection "rope")
-(define version "0.1")
+(define version "1.0")
 (define pkg-authors '("Eric Griffis <dedbox@gmail.com>"))
 (define pkg-desc "An alternative to strings.")
 (define license '(MIT OR Apache-2.0))
