@@ -16,7 +16,7 @@ chunks, and a `define-rope-type` macro for building new types over any other
 chunk representation with a notion of slice, append, and index.
 
 Full documentation is available via `raco docs rope`, on
-[`https://docs.racket-lang.org/rope/`](docs.racket-lang.org/rope/), or in
+[`https://docs.racket-lang.org/rope/`](https://docs.racket-lang.org/rope/), or in
 [`rope.scrbl`](./scribblings/rope.scrbl).
 
 ## Why Ropes?
