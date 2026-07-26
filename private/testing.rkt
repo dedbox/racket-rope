@@ -1,6 +1,6 @@
 #lang racket/base
-;; Shared test-only infrastructure for this package's `module+ test`
-;; submodules. Not part of the public API.
+;; private/testing.rkt: Shared test-only infrastructure for this package's
+;; `module+ test` submodules. Not part of the public API.
 
 (require (for-syntax racket/base
                      syntax/parse)
