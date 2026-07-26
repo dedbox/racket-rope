@@ -105,6 +105,27 @@
         (check-equal? (sequence->list (in-sym-rope-runtime r)) via-for)
         (check-exn exn:fail:contract? (λ () (sequence->list (in-sym-rope-runtime 5)))))
 
+      (test-case "*-rope-ropeable is a usable, instance-specific gen:ropeable witness"
+        (check-true (ropeable? sym-rope-ropeable))
+        (check-true (ropeable? gen-rope-ropeable))
+        ;; Driving the generic rope/rope operations directly through the
+        ;; witness agrees with the type-specific wrappers define-rope-type
+        ;; generates on top of it.
+        (define v1 (vector 'a 'b 'c))
+        (define v2 (vector 'd 'e))
+        (define r1 (sym->rope v1))
+        (define r2 (sym->rope v2))
+        (check-equal? (rope->sym (rope-append1 sym-rope-ropeable r1 r2))
+                      (rope->sym (sym-rope-append1 r1 r2)))
+        (define-values (gl gr)   (rope-split sym-rope-ropeable r1 2))
+        (define-values (sl sr)   (sym-rope-split r1 2))
+        (check-equal? (rope->sym gl) (rope->sym sl))
+        (check-equal? (rope->sym gr) (rope->sym sr))
+        (define c (rope->cursor sym-rope-ropeable r1))
+        (check-equal? (cursor-peek sym-rope-ropeable c) (sym-cursor-peek (sym-rope->cursor r1)))
+        ;; Each instantiation gets its own witness, not a shared/aliased one.
+        (check-false (eq? sym-rope-ropeable gen-rope-ropeable)))
+
       (test-case "instance predicates tag their own leaves and nodes, not each other's"
         (define sym-r (sym->rope (vector 'a 'b)))
         (define gen-r (gen->rope (vector 1 2)))
@@ -200,6 +221,12 @@
       (test-case "rope-type-out/contract enforces argument types on *rope=?"
         (define r (c:sym->rope (vector 'a 'b)))
         (check-not-exn (λ () (c:sym-rope=? r r)))
-        (check-exn exn:fail:contract? (λ () (c:sym-rope=? r "not a rope"))))))
+        (check-exn exn:fail:contract? (λ () (c:sym-rope=? r "not a rope"))))
+
+      (test-case "rope-type-out/contract re-exports the ropeable witness bare and usable"
+        (check-true (ropeable? c:sym-rope-ropeable))
+        (define r (c:sym->rope (vector 'a 'b 'c)))
+        (check-equal? (rope->sym (rope-slice c:sym-rope-ropeable r 1 2))
+                      (rope->sym (c:sym-rope-slice r 1 2))))))
 
   (run-suite! (test-suite "define-rope-type.rkt" instantiation-suite contract-suite)))

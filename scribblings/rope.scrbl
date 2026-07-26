@@ -204,6 +204,18 @@ directly;
 a complete, type-specific API like the one @racketmodname[rope/string] exposes for
 strings.
 
+Alongside the type-specific API, @racket[define-rope-type] also binds  the
+@racket[gen:ropeable] instance itself, e.g. @racket[string-rope-ropeable] and
+@racket[bytes-rope-ropeable]. And, with
+@racket[rope-type-out]/@racket[rope-type-out/contract], these bindings can be
+exported automatically. This witness value enables code written
+directly against @racketmodname[rope/rope] generically across any chunk
+type---for example, operations on either @racket[string-rope]s or @racket[bytes-rope]s
+can be written without going through the type-specific wrappers at all:
+
+@examples[#:eval rope-eval #:label #f
+ (rope-append1 string-rope-ropeable (string->rope "abc") (string->rope "def"))]
+
 @subsection{Content-Based Equality and Hashing}
 
 Every rope produced by @racket[define-rope-type] implements
@@ -629,6 +641,17 @@ explicitly.
  Returns @racket[#t] if @racket[v] is a @racket[string-rope-leaf?] or
  @racket[string-rope-node?].}
 
+@defthing[string-rope-ropeable ropeable?]{
+
+ The @racket[gen:ropeable] instance for @racket[string-rope]s. Passing this to
+ an operation from @racketmodname[rope/rope], such as @racket[rope-append1] or
+ @racket[rope->cursor], behaves exactly like the corresponding
+ @racket[string-rope-*] operation documented below.
+
+@examples[#:eval rope-eval
+ (rope-count (string->rope "abc"))
+ (rope-append1 string-rope-ropeable (string->rope "abc") (string->rope "def"))]}
+
 @defproc[(string-raw? [v any/c]) boolean?]{ An alias for @racket[string?]. }
 
 @defproc[(string-raw-limit) exact-nonnegative-integer?]{
@@ -808,6 +831,13 @@ the corresponding string-rope operation described in the previous section.
  Returns @racket[#t] if @racket[v] is a @racket[bytes-rope-leaf?] or
  @racket[bytes-rope-node?].}
 
+@defthing[bytes-rope-ropeable ropeable?]{
+
+ The @racket[gen:ropeable] instance for @racket[bytes-rope]s. Passing this to
+ an operation from @racketmodname[rope/rope], such as @racket[rope-append1] or
+ @racket[rope->cursor], behaves exactly like the corresponding
+ @racket[bytes-rope-*] operation documented below.}
+
 @defproc[(bytes-raw? [v any/c]) boolean?]{ An alias for @racket[bytes?]. }
 @defproc[(bytes-raw-limit) exact-nonnegative-integer?]{
  Returns the maximum number of bytes a single leaf may hold: @racket[512].}
@@ -965,6 +995,11 @@ the corresponding string-rope operation described in the previous section.
 @itemlist[
  @item{structs @racket[_type-rope-leaf] and @racket[_type-rope-node], both
    subtypes of @racket[rope], and a predicate @racket[_type-rope?];}
+ @item{@racket[_type-rope-ropeable], the @racket[gen:ropeable] instance itself---a
+   first-class witness suitable for passing as the @racket[ropeable] argument to
+   any operation in @secref{Generic_Rope_Operations}, for callers that want
+   to work through the generic @racketmodname[rope/rope] API directly instead of
+   the type-specific wrappers below;}
  @item{@racket[_type-raw?], @racket[_type-raw-limit], @racket[_type-raw-empty],
    @racket[_type-raw-count], @racket[_type-raw-width], @racket[_type-raw-slice],
    @racket[_type-raw-append], and @racket[_type-raw-ref], each specialized
@@ -998,11 +1033,12 @@ the corresponding string-rope operation described in the previous section.
 
  A @racket[provide] sub-form. Re-exports every public binding
  @racket[define-rope-type] introduces for @racket[type]---the structs,
- predicates, raw operations, rope operations, cursor operations, folds, and
- @racket[in-_type-rope]---under their generated names, with @emph{no} contracts
- attached. Implementation plumbing (@racket[_type-rope-gen], the leaf/node
- constructor selectors, and @racket[in-_type-rope-runtime]) is excluded; none of
- it is meant to be called directly.
+ predicates, raw operations, rope operations, cursor operations, folds,
+ @racket[in-_type-rope], and the @racket[gen:ropeable] witness
+ @racket[_type-rope-ropeable]---under their generated names, with @emph{no}
+ contracts attached. Implementation plumbing (@racket[_type-rope-gen], the
+ leaf/node constructor selectors, and @racket[in-_type-rope-runtime]) is
+ excluded; none of it is meant to be called directly.
 
  Use this inside a trusted module where paying for contract checks at every
  rope operation isn't worthwhile.}
@@ -1028,7 +1064,11 @@ the corresponding string-rope operation described in the previous section.
  useful contract. Its runtime fallback @racket[in-_type-rope-runtime], which is used
  when the sequence is handed to a higher-order function like
  @racket[sequence-map] instead of appearing directly in a @racket[for] clause,
- @emph{is} contracted and re-exported alongside it.}
+ @emph{is} contracted and re-exported alongside it.
+
+ @racket[_type-rope-ropeable] is likewise re-exported bare. It is a first-class
+ @racket[gen:ropeable] witness, meant to be handed to the generic operations in
+ @racketmodname[rope/rope].}
 
  Note that @racket[_type-cursor-peek]'s contract always admits @racket[#f] in
  addition to @racket[element-contract-expr], since @racket[#f] signals that the
@@ -1072,9 +1112,14 @@ its string and byte-string counterparts, at the same complexity, without any
 further code.
 
 The @racket[provide] clause above spells out each binding's contract by hand,
-which is worth doing for a small, curated surface like this one. A type that
-wants to expose everything @racket[define-rope-type] generates can skip the
-boilerplate:
+which is worth doing for a small, curated surface like this one. It omits
+@racket[vector-rope-ropeable]; a module that wants callers to be able to drop
+down to the generic @racketmodname[rope/rope] operations would add
+@racket[(contract-out [vector-rope-ropeable ropeable?])] to its
+@racket[provide] clause, or simply re-export it bare, as
+@racket[rope-type-out]/@racket[rope-type-out/contract] do. A type that wants
+to expose everything @racket[define-rope-type] generates can skip the
+boilerplate entirely:
 
 @racketblock[
  (provide (rope-type-out/contract vector #:raw vector?))
