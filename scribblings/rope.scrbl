@@ -1066,9 +1066,9 @@ the corresponding string-rope operation described in the previous section.
  @racket[sequence-map] instead of appearing directly in a @racket[for] clause,
  @emph{is} contracted and re-exported alongside it.
 
- @racket[_type-rope-ropeable] is likewise re-exported bare. It is a first-class
- @racket[gen:ropeable] witness, meant to be handed to the generic operations in
- @racketmodname[rope/rope].}
+ @racket[_type-rope-ropeable] is contracted with @racket[ropeable?]. It is a
+ first-class @racket[gen:ropeable] witness, meant to be handed to those operations
+ directly.}
 
  Note that @racket[_type-cursor-peek]'s contract always admits @racket[#f] in
  addition to @racket[element-contract-expr], since @racket[#f] signals that the
@@ -1112,9 +1112,9 @@ its string and byte-string counterparts, at the same complexity, without any
 further code.
 
 The @racket[provide] clause above spells out each binding's contract by hand,
-which is worth doing for a small, curated surface like this one. It omits
-@racket[vector-rope-ropeable]; a module that wants callers to be able to drop
-down to the generic @racketmodname[rope/rope] operations would add
+which is worth doing for a small, curated surface like this one. However, it omits
+@racket[vector-rope-ropeable]. If a module wants callers to be able to drop
+down to the generic @racketmodname[rope/rope] operations, it would add
 @racket[(contract-out [vector-rope-ropeable ropeable?])] to its
 @racket[provide] clause, or simply re-export it bare, as
 @racket[rope-type-out]/@racket[rope-type-out/contract] do. A type that wants

@@ -223,7 +223,7 @@
         (check-not-exn (λ () (c:sym-rope=? r r)))
         (check-exn exn:fail:contract? (λ () (c:sym-rope=? r "not a rope"))))
 
-      (test-case "rope-type-out/contract re-exports the ropeable witness bare and usable"
+      (test-case "rope-type-out/contract re-exports the ropeable witness under a ropeable? contract"
         (check-true (ropeable? c:sym-rope-ropeable))
         (define r (c:sym->rope (vector 'a 'b 'c)))
         (check-equal? (rope->sym (rope-slice c:sym-rope-ropeable r 1 2))

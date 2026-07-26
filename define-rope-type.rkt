@@ -383,7 +383,6 @@
         #:with raw/c              (if (attribute raw-ctc) #'raw-ctc #'*raw?)
         (pre-expand-export
          #'(combine-out
-            *rope-ropeable
             (contract-out
              (struct *rope-leaf ([count exact-nonnegative-integer?]
                                  [width exact-nonnegative-integer?]
@@ -392,6 +391,7 @@
                                  [width exact-nonnegative-integer?]
                                  [left  *rope?]
                                  [right *rope?]))
+             [*rope-ropeable     ropeable?]
              [*rope?             (-> any/c boolean?)]
              [*raw?              (-> any/c boolean?)]
              [*raw-limit         (-> exact-nonnegative-integer?)]
