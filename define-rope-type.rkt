@@ -20,6 +20,7 @@
     (define (mk  fmt) (format-id type-stx fmt (syntax-e type-stx)))
     (hasheq
      'rope-gen          (mk "~a-rope-gen")
+     'rope-ropeable     (mk "~a-rope-ropeable")
      'rope-leaf         (mk "~a-rope-leaf")
      'rope-node         (mk "~a-rope-node")
      'rope-leaf?        (mk "~a-rope-leaf?")
@@ -66,8 +67,7 @@
      'in-rope           (mk "in-~a-rope")))
 
   (define public-key-order
-    '(rope-leaf
-      rope-node rope-leaf? rope-node? rope?
+    '(rope-ropeable rope-leaf rope-node rope-leaf? rope-node? rope?
       raw? raw-limit raw-empty raw-count raw-width raw-slice raw-append raw-ref
       make-rope-leaf make-empty-rope
       rope-append1 rope-append rope-split rope-ref rope-offset-index rope-splice rope-slice
@@ -96,6 +96,7 @@
   #:do [(define ids (rope-type-ids (attribute type)))
         (define (id* key) (hash-ref ids key))]
   #:with *-rope-gen          (id* 'rope-gen)
+  #:with *-rope-ropeable     (id* 'rope-ropeable)
   #:with *-rope-leaf         (id* 'rope-leaf)
   #:with *-rope-node         (id* 'rope-node)
   #:with *-rope-leaf?        (id* 'rope-leaf?)
@@ -173,44 +174,45 @@
 
     (define (*-rope? obj) (or (*-rope-leaf? obj) (*-rope-node? obj)))
 
-    (splicing-let ([gen (*-rope-gen)])
-      (define (*-raw? obj)                       (raw?              gen obj))
-      (define (*-raw-limit)                      (raw-limit         gen))
-      (define (*-raw-empty)                      (raw-empty         gen))
-      (define (*-raw-count         raw)          (raw-count         gen raw))
-      (define (*-raw-width         raw)          (raw-width         gen raw))
-      (define (*-raw-slice         raw pos end)  (raw-slice         gen raw pos end))
-      (define (*-raw-ref           raw pos)      (raw-ref           gen raw pos))
-      (define (*-raw-append    .   raws)         (apply raw-append  gen raws))
-      (define (*-rope-leaf-ctor)                 (rope-leaf-ctor    gen))
-      (define (*-rope-node-ctor)                 (rope-node-ctor    gen))
-      (define (make-*-rope-leaf    raw)          (make-rope-leaf    gen raw))
-      (define (make-empty-*-rope)                (make-empty-rope   gen))
-      (define (*-rope-append1      left right)   (rope-append1      gen left right))
-      (define (*-rope-append   .   ropes)        (apply rope-append gen ropes))
-      (define (*-rope-split        rope i)       (rope-split        gen rope i))
-      (define (*-rope-ref          rope i)       (rope-ref          gen rope i))
-      (define (*-rope-offset-index rope pos)     (rope-offset-index gen rope pos))
-      (define (*-rope-splice       rope s ol nt) (rope-splice       gen rope s ol nt))
-      (define (*-rope-slice        rope s l)     (rope-slice        gen rope s l))
-      (define (*->rope             raw)          (raw->rope         gen raw))
-      (define (rope->*             rope)         (rope->raw         gen rope))
-      (define (*-cursor-at-end?    cur)          (cursor-at-end?    gen cur))
-      (define (*-cursor-peek       cur)          (cursor-peek       gen cur))
-      (define (*-cursor-advance    cur)          (cursor-advance    gen cur))
-      (define (*-cursor-drop       cur k)        (cursor-drop       gen cur k))
-      (define (*-cursor-take       cur k)        (cursor-take       gen cur k))
-      (define (*-rope->cursor      rope)         (rope->cursor      gen rope))
-      (define (cursor->*-rope      cur)          (cursor->rope      gen cur))
-      (define (*-rope-foldl proc init rope0 . ropes) (apply rope-foldl gen proc init rope0 ropes))
-      (define (*-rope-foldr proc init rope0 . ropes) (apply rope-foldr gen proc init rope0 ropes))
-      (define (*-rope-compare-with cmp a b) (rope-compare-with gen cmp a b))
-      (define (*-rope-compare a b) (rope-compare gen a b))
-      (define (*-rope=?       a b) (rope=?       gen a b))
-      (define (*-rope<?       a b) (rope<?       gen a b))
-      (define (*-rope>?       a b) (rope>?       gen a b))
-      (define (*-rope<=?      a b) (rope<=?      gen a b))
-      (define (*-rope>=?      a b) (rope>=?      gen a b))
+    (splicing-let ([ρ (*-rope-gen)])
+      (define *-rope-ropeable ρ)
+      (define (*-raw? obj)                       (raw?              ρ obj))
+      (define (*-raw-limit)                      (raw-limit         ρ))
+      (define (*-raw-empty)                      (raw-empty         ρ))
+      (define (*-raw-count         raw)          (raw-count         ρ raw))
+      (define (*-raw-width         raw)          (raw-width         ρ raw))
+      (define (*-raw-slice         raw pos end)  (raw-slice         ρ raw pos end))
+      (define (*-raw-ref           raw pos)      (raw-ref           ρ raw pos))
+      (define (*-raw-append    .   raws)         (apply raw-append  ρ raws))
+      (define (*-rope-leaf-ctor)                 (rope-leaf-ctor    ρ))
+      (define (*-rope-node-ctor)                 (rope-node-ctor    ρ))
+      (define (make-*-rope-leaf    raw)          (make-rope-leaf    ρ raw))
+      (define (make-empty-*-rope)                (make-empty-rope   ρ))
+      (define (*-rope-append1      left right)   (rope-append1      ρ left right))
+      (define (*-rope-append   .   ropes)        (apply rope-append ρ ropes))
+      (define (*-rope-split        rope i)       (rope-split        ρ rope i))
+      (define (*-rope-ref          rope i)       (rope-ref          ρ rope i))
+      (define (*-rope-offset-index rope pos)     (rope-offset-index ρ rope pos))
+      (define (*-rope-splice       rope s ol nt) (rope-splice       ρ rope s ol nt))
+      (define (*-rope-slice        rope s l)     (rope-slice        ρ rope s l))
+      (define (*->rope             raw)          (raw->rope         ρ raw))
+      (define (rope->*             rope)         (rope->raw         ρ rope))
+      (define (*-cursor-at-end?    cur)          (cursor-at-end?    ρ cur))
+      (define (*-cursor-peek       cur)          (cursor-peek       ρ cur))
+      (define (*-cursor-advance    cur)          (cursor-advance    ρ cur))
+      (define (*-cursor-drop       cur k)        (cursor-drop       ρ cur k))
+      (define (*-cursor-take       cur k)        (cursor-take       ρ cur k))
+      (define (*-rope->cursor      rope)         (rope->cursor      ρ rope))
+      (define (cursor->*-rope      cur)          (cursor->rope      ρ cur))
+      (define (*-rope-foldl proc init rope0 . ropes) (apply rope-foldl ρ proc init rope0 ropes))
+      (define (*-rope-foldr proc init rope0 . ropes) (apply rope-foldr ρ proc init rope0 ropes))
+      (define (*-rope-compare-with cmp a b) (rope-compare-with ρ cmp a b))
+      (define (*-rope-compare a b) (rope-compare ρ a b))
+      (define (*-rope=?       a b) (rope=?       ρ a b))
+      (define (*-rope<?       a b) (rope<?       ρ a b))
+      (define (*-rope>?       a b) (rope>?       ρ a b))
+      (define (*-rope<=?      a b) (rope<=?      ρ a b))
+      (define (*-rope>=?      a b) (rope>=?      ρ a b))
 
       ;; A Composable Polynomial Hash
       ;;
@@ -337,6 +339,7 @@
            (~optional (~seq #:element elem-ctc:expr) #:defaults ([elem-ctc #'any/c])))
         #:do [(define ids (rope-type-ids #'type))
               (define (id* key) (hash-ref ids key))]
+        #:with *rope-ropeable     (id* 'rope-ropeable)
         #:with *rope-leaf         (id* 'rope-leaf)
         #:with *rope-node         (id* 'rope-node)
         #:with *rope-leaf?        (id* 'rope-leaf?)
@@ -380,6 +383,7 @@
         #:with raw/c              (if (attribute raw-ctc) #'raw-ctc #'*raw?)
         (pre-expand-export
          #'(combine-out
+            *rope-ropeable
             (contract-out
              (struct *rope-leaf ([count exact-nonnegative-integer?]
                                  [width exact-nonnegative-integer?]
