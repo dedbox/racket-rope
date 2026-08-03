@@ -74,7 +74,13 @@
 (module* uncontracted #f
   (provide (rope-type-out string)
            empty-string-rope
-           open-input-string-rope))
+           open-input-string-rope
+           string-rope-ci-compare
+           string-rope-ci<?
+           string-rope-ci>?
+           string-rope-ci<=?
+           string-rope-ci>=?))
+
 
 ;;; ---------------------------------------------------------------------------------------------
 ;;; Tests

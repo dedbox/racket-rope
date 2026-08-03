@@ -476,3 +476,21 @@
                              "first rope length" len1
                              "other rope length" len2
                              "procedure" proc))))
+
+
+(module* uncontracted #f
+  (provide
+   gen:ropeable
+   gen:rope-equatable
+   (struct-out rope)
+   (struct-out rope-leaf)
+   (struct-out rope-node)
+   rope-equal? rope-hash rope-count rope-width rope-length rope-depth rope-empty?
+   rope-balanced? rope-flatten raw? raw-limit raw-empty raw-count raw-width raw-slice
+   raw-append raw-ref raw-compare ropeable? rope-leaf-ctor rope-node-ctor
+   make-rope-leaf make-rope-node make-empty-rope rope-concat rope-append1 rope-append
+   rope-split rope-ref rope-offset-index rope-splice rope-slice raw->rope rope->raw
+   rope-compare-with rope-compare rope=? rope<? rope<=? rope>? rope>=?
+   (struct-out cursor)
+   cursor-at-end? cursor-peek cursor-advance cursor-drop cursor-take rope->cursor
+   cursor->rope rope-foldl rope-foldr))
