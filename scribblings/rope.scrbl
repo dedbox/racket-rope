@@ -149,9 +149,10 @@ balance, this happens at most @math{O(log n)} times over the course of
 
 @subsection[#:tag "Count_and_Width"]{Count and Width}
 
-Every rope tracks two numbers: its @deftech{count}, the number of elements it
-holds, and its @deftech{width}, the total extent of those elements along some
-other axis. For the string and byte-string ropes in this library, every element
+Every rope tracks three numbers: its @deftech{count}, the number of elements it
+holds, its @deftech{width}, the total extent of those elements along some
+other axis, and its @deftech{depth}, the distance from it to the furthest leaf.
+For the string and byte-string ropes in this library, every element
 occupies exactly one unit of width---a character is one character wide, and a byte is
 one byte wide---so @racket[rope-count] and @racket[rope-width] always agree.
 @racket[rope-length] is simply an alias for the latter.
@@ -265,17 +266,20 @@ what the type-specific operations reduce to underneath.
                               [raw any/c])]{
 
  A rope holding a single chunk of raw data. @racket[count] and @racket[width] are
- the chunk's @tech{count} and @tech{width}; @racket[raw] is the chunk itself,
- whose type depends on the @racket[gen:ropeable] implementation that produced it.}
+ the chunk's @tech{count} and @tech{width} (the @tech{depth} of a leaf is always 0);
+ @racket[raw] is the chunk itself, whose type depends on the @racket[gen:ropeable]
+ implementation that produced it.}
 
 @defstruct*[(rope-node rope) ([count exact-nonnegative-integer?]
                               [width exact-nonnegative-integer?]
+                              [depth exact-nonnegative-integer?]
                               [left rope?]
                               [right rope?])]{
 
  A rope formed by concatenating @racket[left] and @racket[right]. @racket[count]
  and @racket[width] are the sums of the corresponding fields of @racket[left] and
- @racket[right], cached to avoid recomputation on every query.}
+ @racket[right], cached to avoid recomputation on every query. @racket[depth] is
+ one more than the deeper of @racket[left] and @racket[right].}
 
 @defproc[(rope-count [rope rope?]) exact-nonnegative-integer?]{
 
@@ -295,8 +299,7 @@ what the type-specific operations reduce to underneath.
 
  Returns the height of @racket[rope]'s tree: @racket[0] for a leaf, and one more
  than the deeper of its two children for a node. Constant time, since every node
- could in principle cache its own depth, though the current implementation
- recomputes it by walking down the tree.}
+ caches its own depth.}
 
 @defproc[(rope-empty? [rope rope?]) boolean?]{
 

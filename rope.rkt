@@ -15,6 +15,7 @@
                      [raw   any/c]))
   (struct rope-node ([count exact-nonnegative-integer?]
                      [width exact-nonnegative-integer?]
+                     [depth exact-nonnegative-integer?]
                      [left  rope?]
                      [right rope?]))
   ;; Rupe Equatability
@@ -98,14 +99,14 @@
           (= (rope-count a) (rope-count b))
           (= (rope-width a) (rope-width b))
           (match* (a b)
-            [((rope-leaf _ _ ra) (rope-leaf _ _ rb)) (equal? ra rb)]
-            [((rope-node _ _ la ra) (rope-node _ _ lb rb))
+            [((rope-leaf _ _ ra)      (rope-leaf _ _ rb)) (equal? ra rb)]
+            [((rope-node _ _ _ la ra) (rope-node _ _ _ lb rb))
              (and (rope-equal? la lb) (rope-equal? ra rb))]
             [(_ _) #f])))
    (define (rope-hash a)
      (match a
        [(rope-leaf _ _ r) (cons (equal-hash-code r) (equal-secondary-hash-code r))]
-       [(rope-node _ _ l r)
+       [(rope-node _ _ _ l r)
         (match-define (cons hl sl) (rope-hash l))
         (match-define (cons hr sr) (rope-hash r))
         (cons (+ (* 31 hl) hr) (+ (* 31 sl) sr))]))])
@@ -135,7 +136,7 @@
    (define (hash2-proc a _)   (cdr (rope-hash a)))])
 
 (struct rope-leaf rope (count width raw)        #:transparent)
-(struct rope-node rope (count width left right) #:transparent)
+(struct rope-node rope (count width depth left right) #:transparent)
 
 ;; O(1)
 (define (rope-count r) (if (rope-leaf? r) (rope-leaf-count r) (rope-node-count r)))
@@ -146,9 +147,9 @@
 
 ;; O(1)
 (define (rope-depth r)
-  (if (rope-leaf? r)
-      0
-      (add1 (max (rope-depth (rope-node-left r)) (rope-depth (rope-node-right r))))))
+  (cond
+    [(rope-leaf? r) 0]
+    [(rope-node? r) (rope-node-depth r)]))
 
 ;; O(1)
 (define (rope-empty? r) (zero? (rope-length r)))
@@ -284,6 +285,7 @@
    (define (make-rope-node self left right)
      ((rope:node-ctor self) (+ (rope-count left) (rope-count right))
                             (+ (rope-width left) (rope-width right))
+                            (add1 (max (rope-depth left) (rope-depth right)))
                             left right))
 
    (define (make-empty-rope self)

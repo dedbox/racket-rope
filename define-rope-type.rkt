@@ -389,6 +389,7 @@
                                  [raw   raw/c]))
              (struct *rope-node ([count exact-nonnegative-integer?]
                                  [width exact-nonnegative-integer?]
+                                 [depth exact-nonnegative-integer?]
                                  [left  *rope?]
                                  [right *rope?]))
              [*rope-ropeable     ropeable?]
