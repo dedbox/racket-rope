@@ -1128,7 +1128,48 @@ boilerplate entirely:
  (provide (rope-type-out/contract vector #:raw vector?))
 ]
 
-@; -------------------------------------------------------------------------------------------------
+@; -----------------------------------------------------------------------------
+
+@section[#:tag "Uncontracted_API"]{The Uncontracted API}
+
+@racketmodname[rope], @racketmodname[rope/string], and @racketmodname[rope/bytes]
+each attach @racket[contract-out] to their exports, following the
+@racket[rope-type-out/contract] pattern described above. Contract violations on a
+rope built out of these types are reported with precise blame, but every operation
+pays for a contract check on every call.
+
+The @racketmodname[rope/rope], @racketmodname[rope/string], and
+@racketmodname[rope/bytes] modules each provide their complete surface, uncontracted,
+from a submodule named @racket[uncontracted]. These submodules provide exactly what
+their contracted counterparts provide, minus the @racket[contract-out] wrapper.
+Requiring a submodule directly requires naming its enclosing module, e.g.,
+@racket[(require (submod rope/rope uncontracted))].
+
+@defmodule[rope/uncontracted]
+
+For convenience, all three submodules are reprovided together from a single module,
+@racketmodname[rope/uncontracted], along with @racketmodname[rope/define-rope-type].
+
+The recommended workflow is to develop against @racketmodname[rope] (or
+@racketmodname[rope/string], @racketmodname[rope/bytes]) so that mistakes are
+discovered early as contract violations, then switch to
+@racketmodname[rope/uncontracted] once the code is correct, to avoid paying for
+contract checks on every rope operation in production. Because both APIs export
+the same names, this is normally a one-line change:
+
+@racketblock[
+ (require rope)              (code:comment "development")
+ (require rope/uncontracted) (code:comment "production")
+]
+
+@bold{This trades runtime safety for speed.} Passing an argument that violates a
+binding's contract will not raise a contract error under
+@racketmodname[rope/uncontracted]. Depending on the operation, this can produce
+a wrong answer, an uninformative low-level error far from the actual mistake, or
+a struct in an inconsistent state. Only switch once the calling code has been
+exercised (e.g. by a test suite) against the contracted API.
+
+@; -----------------------------------------------------------------------------
 
 @section{Performance Summary}
 

@@ -55,6 +55,29 @@ If you are building an editor, ropes are an efficient alternative to strings.
 ;; => '(#\H #\W)
 ```
 
+## Contracted vs. Uncontracted
+
+By default, rope, rope/string, and rope/bytes attach contracts to every
+operation they export, so misuse (an out-of-range index, the wrong raw type,
+etc.) is reported immediately with precise blame. Each of those modules also
+provides its whole surface, uncontracted, from a (submod ... uncontracted)
+submodule, and all three are reprovided together as rope/uncontracted for
+convenience.
+
+The intended workflow is to develop against rope to get the benefit of
+contracts, then switch to rope/uncontracted once the code is known to be
+correct, to avoid paying for contract checks on every rope operation in
+production:
+
+``` racket
+(require rope)                  ; development
+(require rope/uncontracted)     ; production
+```
+
+Both APIs export the same bindings under the same names, so this is normally a
+one-line change. See the "Uncontracted API" section of the documentation for
+details and caveats.
+
 ## Installation
 
 ```sh

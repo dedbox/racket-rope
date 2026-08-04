@@ -320,16 +320,18 @@
         #:with (pub ...) (map (λ (k) (hash-ref ids k)) public-key-order)
         #'(combine-out pub ...)]))))
 
-;; The macro only knows the shape of a rope type generically: ~a-raw? classifies raw payloads and
-;; ~a-rope? classifies ropes, so those predicates are the honest default contracts for anything
-;; raw-shaped or rope-shaped. It cannot know, e.g., that a string-rope raw is specifically string?
-;; rather than merely string-raw?, or that raw-ref on it returns char? rather than an opaque
-;; element — that concrete knowledge belongs to the instantiating module. #:raw and #:element let
-;; the caller tighten those two contracts.
+;; The macro only knows the shape of a rope type generically: ~a-raw?
+;; classifies raw payloads and ~a-rope? classifies ropes, so those predicates
+;; are the honest default contracts for anything raw-shaped or rope-shaped. It
+;; cannot know, e.g., that a string-rope raw is specifically string? rather
+;; than merely string-raw?, or that raw-ref on it returns char? rather than an
+;; opaque element — that concrete knowledge belongs to the instantiating
+;; module. #:raw and #:element let the caller tighten those two contracts.
 ;;
-;; Struct field names/types (count, width, raw / count, width, left, right) are taken from the
-;; observed shape of rope-leaf / rope-node in rope/rope — if that base layout ever changes, this
-;; clause must change with it.
+;; Struct field names/types (count, width, raw / count, width, depth, left,
+;; right) are taken from the observed shape of rope-leaf / rope-node in
+;; rope/rope — if that base layout ever changes, this clause must change with
+;; it.
 (define-syntax rope-type-out/contract
   (make-provide-pre-transformer
    (λ (stx modes)
