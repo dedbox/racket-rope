@@ -1,12 +1,3 @@
-#lang reprovide
+#lang racket/base
 
-;;; Generic Constructs
-rope/rope
-
-;;; Instantiator
-rope/define-rope-type
-
-;;; Type-specific Instances
-rope/bytes
-rope/string
-
+(provide (all-defined-out))
