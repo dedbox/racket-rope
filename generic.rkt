@@ -138,20 +138,19 @@
            (loop (rope-node-right a) (- i n)))])))
 
 ;; Finds the left-most element index containing offset p0, clamped to the end
-;; of the rope. O(log n)
+;; of the rope. O(1) if elem-size is is a numeric literal. Otherwise, O(log n)
 (define-rope-operation (rope-offset-index a0 p0)
-  (let loop ([a a0] [p p0])
-    (if (rope-leaf? a)
-        (cond
-          [(>= p (rope-leaf-size a)) (sub1 (rope-leaf-count a))]
-          [(number? elem-size) (quotient p elem-size)]
-          [else (let chunk-loop ([p p] [i 0])
-                  (let ([k (elem-size (rope-leaf-chunk a) i)])
-                    (if (<= p k) i (chunk-loop (- p k) (add1 i)))))])
-        (let ([l (rope-node-left a)])
-          (if (< p (rope-size l))
-              (loop l p)
-              (+ (rope-count l) (loop (rope-node-right a) (- p (rope-size l)))))))))
+  (if (number? elem-size)
+      (min (quotient p0 elem-size) (sub1 (rope-count a0)))
+      (let loop ([a a0] [p p0])
+        (if (rope-leaf? a)
+            (let chunk-loop ([p p] [i 0])
+              (let ([k (elem-size (rope-leaf-chunk a) i)])
+                (if (<= p k) i (chunk-loop (- p k) (add1 i)))))
+            (let ([l (rope-node-left a)])
+              (if (< p (rope-size l))
+                  (loop l p)
+                  (+ (rope-count l) (loop (rope-node-right a) (- p (rope-size l))))))))))
 
 (define-rope-operation (rope-splice a i k chunk)
   (let*-values ([(before rest) (rope-split ρ a i)]

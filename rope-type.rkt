@@ -112,9 +112,10 @@
         [(elem-size)
          (unless (syntax-parse def-stx
                    #:literals (lambda λ)
-                   [(~or :number (lambda (:id :id) . _) (λ (:id :id) . _)) #t]
+                   [(~or :number :id (lambda (:id :id) . _) (λ (:id :id) . _)) #t]
                    [_ #f])
-           (raise-def-error "expected a number or a two-argument lambda" src-stx def-stx))]
+           (raise-def-error "expected a number, an identifier, or a two-argument lambda"
+                            src-stx def-stx))]
         [else
          (unless (syntax-parse def-stx
                    #:literals (lambda λ)
