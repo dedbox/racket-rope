@@ -99,7 +99,7 @@
       (define def-stx (cadr stxs))
       (define kw-sym
         (syntax-parse kw-stx
-          [(~or #:chunk? #:elem-width #:chunk-limit #:chunk-empty #:chunk-count
+          [(~or #:chunk? #:elem-size #:chunk-limit #:chunk-empty #:chunk-count
                 #:chunk-size #:chunk-slice #:chunk-append #:chunk-ref
                 #:chunk-compare #:chunk-overlap=?)
            (string->symbol (keyword->string (syntax-e kw-stx)))]
@@ -108,18 +108,26 @@
               src-stx kw-stx)]))
       (when (hash-has-key? def-map kw-sym)
         (raise-def-error "rope-specification keyword already defined" src-stx kw-stx))
-      (unless (syntax-parse def-stx
-                #:literals (lambda λ)
-                [(~or :id (lambda . _) (λ . _)) #t]
-                [_ #f])
-        (raise-def-error "expected an identifier or a lambda" src-stx def-stx))
+      (case kw-sym
+        [(elem-size)
+         (unless (syntax-parse def-stx
+                   #:literals (lambda λ)
+                   [(~or :number (lambda (:id :id) . _) (λ (:id :id) . _)) #t]
+                   [_ #f])
+           (raise-def-error "expected a number or a two-argument lambda" src-stx def-stx))]
+        [else
+         (unless (syntax-parse def-stx
+                   #:literals (lambda λ)
+                   [(~or :id (lambda . _) (λ . _)) #t]
+                   [_ #f])
+           (raise-def-error "expected an identifier or a lambda" src-stx def-stx))])
       (hash-set! def-map kw-sym def-stx)
       (unless (null? (cddr stxs)) (loop (cddr stxs))))
     (define (raise-missing-kw-error kw-sym)
       (raise-def-error (format "missing required rope-specification keyword: #:~a" kw-sym)
                        src-stx))
     (define defs
-      (for/list ([kw-sym (in-list '(chunk? elem-width chunk-limit chunk-empty chunk-count
+      (for/list ([kw-sym (in-list '(chunk? elem-size chunk-limit chunk-empty chunk-count
                                            chunk-size chunk-slice chunk-append chunk-ref
                                            chunk-compare chunk-overlap=?))])
         (hash-ref def-map kw-sym (λ () (if (or (eq? kw-sym 'chunk-compare)
@@ -129,7 +137,7 @@
     (remove* (list #f) defs)))
 
 (define-syntax-parse-rule (define-rope-type type-id:id defs ...)
-  #:with (chunk? elem-width chunk-limit chunk-empty chunk-count
+  #:with (chunk? elem-size chunk-limit chunk-empty chunk-count
                  chunk-size chunk-slice chunk-append chunk-ref
                  (~optional chunk-compare)
                  (~optional chunk-overlap=?))
@@ -138,7 +146,7 @@
         (define (id* key) (hash-ref ids key))]
   #:with (~var rope:type-id) (format-id (attribute type-id) "rope:~a" (syntax-e #'type-id))
   #:with *-rope-chunk?          (id* '*-rope-chunk?)
-  #:with *-rope-elem-width     (id* '*-rope-elem-width)
+  #:with *-rope-elem-size       (id* '*-rope-elem-size)
   #:with *-rope-chunk-limit     (id* '*-rope-chunk-limit)
   #:with *-rope-chunk-count     (id* '*-rope-chunk-count)
   #:with *-rope-chunk-size      (id* '*-rope-chunk-size)
@@ -161,17 +169,17 @@
   #:with make-empty-*-rope      (id* 'make-empty-*-rope)
   #:with *-rope-concat          (id* '*-rope-concat)
   #:with *-rope-append2         (id* '*-rope-append2)
-  #:with *-rope-append          (id* "*-rope-append")
-  #:with *-rope-split           (id* "*-rope-split")
-  #:with *-rope-ref             (id* "*-rope-ref")
-  #:with *-rope-offset-index    (id* "*-rope-offset-index")
-  #:with *-rope-splice          (id* "*-rope-splice")
-  #:with *-rope-slice           (id* "*-rope-slice")
+  #:with *-rope-append          (id* '*-rope-append)
+  #:with *-rope-split           (id* '*-rope-split)
+  #:with *-rope-ref             (id* '*-rope-ref)
+  #:with *-rope-offset-index    (id* '*-rope-offset-index)
+  #:with *-rope-splice          (id* '*-rope-splice)
+  #:with *-rope-slice           (id* '*-rope-slice)
   #:with *->rope                (id* '*->rope)
   #:with rope->*                (id* 'rope->*)
   (begin
     (define-syntax rope:type-id
-      (rope-type-descriptor #'chunk? #'elem-width #'chunk-limit #'chunk-empty #'chunk-count
+      (rope-type-descriptor #'chunk? #'elem-size #'chunk-limit #'chunk-empty #'chunk-count
                             #'chunk-size #'chunk-slice #'chunk-append #'chunk-ref
                             (~? #'chunk-compare #f)
                             ;; The default overlap equality check loops over
@@ -181,7 +189,7 @@
                             #'*-rope-leaf #'*-rope-node))
     ;; fundamental operations
     (define (*-rope-chunk?        a)     (rope-chunk?        type-id a))
-    (define (*-rope-elem-width    a i)   (rope-elem-width    type-id a i))
+    (define (*-rope-elem-size     a i)   (rope-elem-size     type-id a i))
     (define (*-rope-chunk-limit)         (rope-chunk-limit   type-id))
     (define (*-rope-chunk-empty)         (rope-chunk-empty   type-id))
     (define (*-rope-chunk-count   a)     (rope-chunk-count   type-id a))
@@ -306,7 +314,7 @@
     (define (*-rope-ref          a i)      (rope-ref          type-id a i))
     (define (*-rope-offset-index a p)      (rope-offset-index type-id a p))
     (define (*-rope-splice       a i k es) (rope-splice       type-id a i k es))
-    (define (*-rope-slice        a k)      (rope-slice        type-id a k))
+    (define (*-rope-slice        a i k)    (rope-slice        type-id a i k))
 
     (define (*->rope chunk) (chunk->rope type-id chunk))
     (define (rope->* rope) (rope->chunk type-id rope))

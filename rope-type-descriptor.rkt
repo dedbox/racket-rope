@@ -4,7 +4,7 @@
 
 (struct rope-type-descriptor
   ;; user-defined operations
-  (chunk? elem-width chunk-limit chunk-empty chunk-count
+  (chunk? elem-size chunk-limit chunk-empty chunk-count
           chunk-size chunk-slice chunk-append chunk-ref
           chunk-compare chunk-overlap=?
           ;; automatically generated operations

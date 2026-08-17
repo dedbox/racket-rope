@@ -12,7 +12,7 @@
 (define-syntax-parse-rule (define-rope-operation (gen-id . args) body ...)
   #:with ρ                (format-id this-syntax "ρ")
   #:with chunk?           (format-id this-syntax "chunk?")
-  #:with elem-width       (format-id this-syntax "elem-width")
+  #:with elem-size        (format-id this-syntax "elem-size")
   #:with chunk-limit      (format-id this-syntax "chunk-limit")
   #:with chunk-empty      (format-id this-syntax "chunk-empty")
   #:with chunk-count      (format-id this-syntax "chunk-count")
@@ -42,7 +42,7 @@
           (unless (rope-type-descriptor? desc)
             (raise-gen-error "expected a rope type descriptor" ρ-stx))]
     #:with chunk?        (rope-type-descriptor-chunk?       desc)
-    #:with elem-width    (rope-type-descriptor-elem-width   desc)
+    #:with elem-size     (rope-type-descriptor-elem-size    desc)
     #:with chunk-limit   (rope-type-descriptor-chunk-limit  desc)
     #:with chunk-empty   (rope-type-descriptor-chunk-empty  desc)
     #:with chunk-count   (rope-type-descriptor-chunk-count  desc)
@@ -66,7 +66,6 @@
     (begin body ...)))
 
 (define-rope-operation (rope-chunk?           a)             (chunk?          a))
-(define-rope-operation (rope-elem-width       a i)           (elem-width      a i))
 (define-rope-operation (rope-chunk-limit)                    (chunk-limit))
 (define-rope-operation (rope-chunk-empty)                    (chunk-empty))
 (define-rope-operation (rope-chunk-count      a)             (chunk-count     a))
@@ -76,6 +75,9 @@
 (define-rope-operation (rope-chunk-ref        a k)           (chunk-ref       a k))
 (define-rope-operation (rope-chunk-compare    a b)           (chunk-compare   a b))
 (define-rope-operation (rope-chunk-overlap=?  ac bc ap bp k) (chunk-overlap=? ac bc ap bp k))
+
+(define-rope-operation (rope-elem-size a i)
+  (if (number? elem-size) elem-size (elem-size a i)))
 
 (define-rope-operation (make-rope-leaf chunk)
   (leaf-constructor (chunk-count chunk) (chunk-size chunk) chunk))
@@ -88,7 +90,7 @@
 
 (define-rope-operation (make-empty-rope) (make-rope-leaf ρ (chunk-empty)))
 
-;; ;; Naive concatenation. O(1)
+;; Naive concatenation. O(1)
 (define-rope-operation (rope-concat l r) (make-rope-node ρ l r))
 
 ;; Concatenation with rebalancing. O(log n) amortized.
@@ -102,24 +104,27 @@
          combined
          (chunk->rope ρ (rope->chunk ρ combined)))]))
 
+;; O(|as| log n) amortized
 (define-rope-operation (rope-append as)
   (for/fold ([l (make-empty-rope ρ)]) ([r (in-list as)])
     (rope-append2 ρ l r)))
 
-(define-rope-operation (rope-split a i)
-  (if (rope-leaf? rope)
-      (let ([count (rope-leaf-count a)]
-            [chunk (rope-leaf-chunk a)])
-        (values (make-rope-leaf ρ (chunk-slice chunk 0 i))
-                (make-rope-leaf ρ (chunk-slice chunk i count))))
-      (let ([l (rope-node-left a)]
-            [r (rope-node-right a)])
-        (let ([n (rope-count l)])
-          (if (<= i n)
-              (let-values ([(ll lr) (rope-split ρ l i)])
-                (values ll (rope-append2 ρ l i)))
-              (let-values ([(rl rr) (rope-split ρ r (- i n))])
-                (values (rope-append2 ρ l rl) rr)))))))
+;; Splits at an element index. O(log n) amortized
+(define-rope-operation (rope-split a0 i0)
+  (let loop ([a a0] [i i0])
+    (if (rope-leaf? a)
+        (let ([count (rope-leaf-count a)]
+              [chunk (rope-leaf-chunk a)])
+          (values (make-rope-leaf ρ (chunk-slice chunk 0 i))
+                  (make-rope-leaf ρ (chunk-slice chunk i count))))
+        (let ([l (rope-node-left a)]
+              [r (rope-node-right a)])
+          (let ([n (rope-count l)])
+            (if (<= i n)
+                (let-values ([(ll lr) (loop l i)])
+                  (values ll (rope-append2 ρ lr r)))
+                (let-values ([(rl rr) (loop r (- i n))])
+                  (values (rope-append2 ρ l rl) rr))))))))
 
 ;;; O(log n)
 (define-rope-operation (rope-ref a0 i0)
@@ -132,31 +137,31 @@
            (loop (rope-node-left a) i)
            (loop (rope-node-right a) (- i n)))])))
 
-;; FInds the left-most element index containing offset p0, clamped to the end
-;; of the rope. O(log n).
+;; Finds the left-most element index containing offset p0, clamped to the end
+;; of the rope. O(log n)
 (define-rope-operation (rope-offset-index a0 p0)
-  ;; (let loop ([a a0] [p p0])
-  ;;   (cond
-  ;;     [(rope-leaf? a)
-  ;;      (define c     (rope-leaf-count a))
-  ;;      (define s     (rope-leaf-size  a))
-  ;;      (define chunk (rope-leaf-chunk a))
-  ;;      (if (>= p (rope-leaf-size a))
-  ;;          (sub1 c)
-  ;;          (let chunk-loop ([p p] [i 0])
-  ;;            (let ([k (elem-width chunk i)])
-  ;;              (if (<= p k) i (chunk-loop (- p k) (add1 i))))))]
-  ;;     [(rope-node? a)
-  ;;      456]
-  ;;     [else
-  ;;      (error 'rope-offset-index "expected a rope, got ~v" a)])
-  ;;   )
-  (void)
-  )
+  (let loop ([a a0] [p p0])
+    (if (rope-leaf? a)
+        (cond
+          [(>= p (rope-leaf-size a)) (sub1 (rope-leaf-count a))]
+          [(number? elem-size) (quotient p elem-size)]
+          [else (let chunk-loop ([p p] [i 0])
+                  (let ([k (elem-size (rope-leaf-chunk a) i)])
+                    (if (<= p k) i (chunk-loop (- p k) (add1 i)))))])
+        (let ([l (rope-node-left a)])
+          (if (< p (rope-size l))
+              (loop l p)
+              (+ (rope-count l) (loop (rope-node-right a) (- p (rope-size l)))))))))
 
-;; (define (*-rope-offset-index a p)      (rope-offset-index type-id a p))
-;; (define (*-rope-splice       a i k es) (rope-splice       type-id a i k es))
-;; (define (*-rope-slice        a k)      (rope-slice        type-id a k))
+(define-rope-operation (rope-splice a i k chunk)
+  (let*-values ([(before rest) (rope-split ρ a i)]
+                [(_gone after) (rope-split ρ rest k)])
+    (rope-append2 ρ (rope-append2 ρ before (chunk->rope ρ chunk)) after)))
+
+(define-rope-operation (rope-slice a i k)
+  (let*-values ([(_before rest) (rope-split ρ a i)]
+                [(slice _after) (rope-split ρ rest k)])
+    slice))
 
 (define-rope-operation (chunk->rope chunk0)
   (let loop ([chunk chunk0])
