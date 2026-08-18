@@ -212,7 +212,7 @@
 
 ;; Replaces the interval [i, i + k) with chunk.
 (define-rope-operation (rope-splice a i k chunk)
-  (let ([b (let-values ([(l r) (rope-cut ρ a i (+ i k))])
+  (let ([b (let-values ([(l r) (rope-cut ρ a i k)])
              (rope-concat ρ (rope-concat ρ l (chunk->rope ρ chunk)) r))])
     (if (rope-balanced? b) b (rope-rebalance ρ b))))
 
