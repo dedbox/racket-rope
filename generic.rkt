@@ -104,7 +104,7 @@
      (define combined (rope-concat ρ l r))
      (if (rope-balanced? combined) combined (rope-rebalance ρ combined))]))
 
-;; O(|as| log n) amortized
+;; O(log n) amortized
 (define-rope-operation (rope-append as)
   (let ([b (for/fold ([l (make-empty-rope ρ)]) ([r (in-list as)])
              (rope-concat ρ l r))])
@@ -144,7 +144,7 @@
            (loop (rope-node-right a) (- i n)))])))
 
 ;; Finds the left-most element index containing offset p0, clamped to the end
-;; of the rope. O(1) if elem-size is is a numeric literal. Otherwise, O(log n)
+;; of the rope. O(1) if elem-size is a numeric literal, otherwise O(log n)
 (define-rope-operation (rope-offset-index a0 p0)
   (if (number? elem-size)
       (min (quotient p0 elem-size) (sub1 (rope-count a0)))
@@ -161,6 +161,7 @@
 ;; Efficient dual-split variant that throws away the interval [i, i + k).
 ;; Delays the actual splits until it finds the sub-tree(s) containing the
 ;; endpoints of the interval, limiting the number of rebalances to three.
+;; O(log n) amortized
 (define-rope-operation (rope-cut a0 i0 k0)
   (let-values
       ([(l r)
@@ -191,7 +192,8 @@
     (values (if (rope-balanced? l) l (rope-rebalance ρ l))
             (if (rope-balanced? r) r (rope-rebalance ρ r)))))
 
-;; The complement of rope-cut. Keeps only the interval [i, i + k). 
+;; The complement of rope-cut. Keeps only the interval [i, i + k). O(log n)
+;; amortized
 (define-rope-operation (rope-slice a0 i0 k0)
   (let ([b (let loop ([a a0] [i i0] [j (+ i0 k0)])
              (cond
@@ -210,7 +212,7 @@
                    (rope-concat ρ lr rl)])]))])
     (if (rope-balanced? b) b (rope-rebalance ρ b))))
 
-;; Replaces the interval [i, i + k) with chunk.
+;; Replaces the interval [i, i + k) with chunk. O(log n) amortized
 (define-rope-operation (rope-splice a i k chunk)
   (let ([b (let-values ([(l r) (rope-cut ρ a i k)])
              (rope-concat ρ (rope-concat ρ l (chunk->rope ρ chunk)) r))])
