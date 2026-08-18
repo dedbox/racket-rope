@@ -85,7 +85,7 @@
        [*-rope-slice           . ,(mk-id- "~arope-slice")]
        [*->rope                . ,(mk-id  "~a->rope")]
        [rope->*                . ,(mk-id  "rope->~a")]
-       )))
+       [*-rope-rebalance       . ,(mk-id- "~arope-rebalance")])))
 
   (define (raise-def-error msg src1 [src2 #f])
     (raise-syntax-error 'define-rope-type msg src1 src2))
@@ -178,6 +178,7 @@
   #:with *-rope-slice           (id* '*-rope-slice)
   #:with *->rope                (id* '*->rope)
   #:with rope->*                (id* 'rope->*)
+  #:with *-rope-rebalance       (id* '*-rope-rebalance)
   (begin
     (define-syntax rope:type-id
       (rope-type-descriptor #'chunk? #'elem-size #'chunk-limit #'chunk-empty #'chunk-count
@@ -185,7 +186,7 @@
                             (~? #'chunk-compare #f)
                             ;; The default overlap equality check loops over
                             ;; the elements in a chunk. This is generally
-                            ;; faster for string chunks 
+                            ;; faster for string chunks.
                             (~? #'chunk-overlap=? #f)
                             #'*-rope-leaf #'*-rope-node))
     ;; fundamental operations
@@ -316,8 +317,6 @@
     (define (*-rope-offset-index a p)      (rope-offset-index type-id a p))
     (define (*-rope-splice       a i k es) (rope-splice       type-id a i k es))
     (define (*-rope-slice        a i k)    (rope-slice        type-id a i k))
-
-    (define (*->rope chunk) (chunk->rope type-id chunk))
-    (define (rope->* rope) (rope->chunk type-id rope))
-
-    ))
+    (define (*->rope             c)        (chunk->rope       type-id c))
+    (define (rope->*             a)        (rope->chunk       type-id a))
+    (define (*-rope-rebalance    a)        (rope-rebalance    type-id a))))
