@@ -208,7 +208,7 @@
                    (define-values (_ll lr) (rope-split ρ l i))
                    (define-values (rl _rr) (rope-split ρ r (- j n)))
                    (rope-concat ρ lr rl)])]))])
-    (if (rope-balanced? b) b (rope-balance ρ b))))
+    (if (rope-balanced? b) b (rope-rebalance ρ b))))
 
 ;; Replaces the interval [i, i + k) with chunk.
 (define-rope-operation (rope-splice a i k chunk)
