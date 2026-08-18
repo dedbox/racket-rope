@@ -47,7 +47,7 @@
     #:with chunk-empty   (rope-type-descriptor-chunk-empty  desc)
     #:with chunk-count   (rope-type-descriptor-chunk-count  desc)
     #:with chunk-size    (rope-type-descriptor-chunk-size   desc)
-    #:with (chunk-slice chunk-slice-def)
+    #:with (chunk-slice-id chunk-slice-def)
     (let ([stx (rope-type-descriptor-chunk-slice desc)])
       (list (if (identifier? stx) stx (generate-temporary 'chunk-slice)) stx))
     #:with chunk-append  (rope-type-descriptor-chunk-append desc)
@@ -65,7 +65,7 @@
                                                 (loop (add1 i))))))))
     #:with leaf-constructor (rope-type-descriptor-leaf-constructor desc)
     #:with node-constructor (rope-type-descriptor-node-constructor desc)
-    (let ([chunk-slice chunk-slice-def]) body ...)))
+    (let ([chunk-slice-id chunk-slice-def]) body ...)))
 
 (define-rope-operation (rope-chunk?           a)             (chunk?          a))
 (define-rope-operation (rope-chunk-limit)                    (chunk-limit))
