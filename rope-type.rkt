@@ -81,8 +81,9 @@
        [*-rope-split           . ,(mk-id- "~arope-split")]
        [*-rope-ref             . ,(mk-id- "~arope-ref")]
        [*-rope-offset-index    . ,(mk-id- "~arope-offset-index")]
-       [*-rope-splice          . ,(mk-id- "~arope-splice")]
+       [*-rope-cut             . ,(mk-id- "~arope-cut")]
        [*-rope-slice           . ,(mk-id- "~arope-slice")]
+       [*-rope-splice          . ,(mk-id- "~arope-splice")]
        [*->rope                . ,(mk-id  "~a->rope")]
        [rope->*                . ,(mk-id  "rope->~a")]
        [*-rope-rebalance       . ,(mk-id- "~arope-rebalance")])))
@@ -315,8 +316,9 @@
     (define (*-rope-split        a i)      (rope-split        type-id a i))
     (define (*-rope-ref          a i)      (rope-ref          type-id a i))
     (define (*-rope-offset-index a p)      (rope-offset-index type-id a p))
-    (define (*-rope-splice       a i k es) (rope-splice       type-id a i k es))
+    (define (*-rope-cut          a i k)    (rope-cut          type-id a i k))
     (define (*-rope-slice        a i k)    (rope-slice        type-id a i k))
+    (define (*-rope-splice       a i k es) (rope-splice       type-id a i k es))
     (define (*->rope             c)        (chunk->rope       type-id c))
     (define (rope->*             a)        (rope->chunk       type-id a))
     (define (*-rope-rebalance    a)        (rope-rebalance    type-id a))))
