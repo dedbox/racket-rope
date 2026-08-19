@@ -1,6 +1,6 @@
 #lang racket/base
 
-;; rope/generic.rkt
+;; rope/private/generic-ops.rkt
 
 (require (for-syntax racket/base
                      racket/syntax
