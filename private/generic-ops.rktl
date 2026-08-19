@@ -92,13 +92,13 @@
     [(= 0 (rope-count r)) l]
     [else
      (define combined (rope-concat ρ l r))
-     (if (rope-balanced? combined) combined (rope-rebalance ρ combined))]))
+     (if (rope-balanced? combined) combined (rope-defrag ρ combined))]))
 
 ;; O(log n) amortized
 (define-rope-operation (rope-append as)
   (let ([b (for/fold ([l (make-empty-rope ρ)]) ([r (in-list as)])
              (rope-concat ρ l r))])
-    (if (rope-balanced? b) b (rope-rebalance ρ b))))
+    (if (rope-balanced? b) b (rope-defrag ρ b))))
 
 ;; Splits at an element index, returning the two halves [0, i) and [i, n).
 ;; O(log n) amortized
@@ -122,8 +122,8 @@
                [else
                 (define-values (rl rr) (loop r (^- i n)))
                 (values (rope-concat ρ l rl) rr)])]))])
-    (values (if (rope-balanced? l) l (rope-rebalance ρ l))
-            (if (rope-balanced? r) r (rope-rebalance ρ r)))))
+    (values (if (rope-balanced? l) l (rope-defrag ρ l))
+            (if (rope-balanced? r) r (rope-defrag ρ r)))))
 
 ;;; O(log n)
 (define-rope-operation (rope-ref a0 i0)
@@ -182,8 +182,8 @@
                 (define-values (ll _lr) (rope-split ρ l i))
                 (define-values (_rl rr) (rope-split ρ r (^- j n)))
                 (values ll rr)])]))])
-    (values (if (rope-balanced? l) l (rope-rebalance ρ l))
-            (if (rope-balanced? r) r (rope-rebalance ρ r)))))
+    (values (if (rope-balanced? l) l (rope-defrag ρ l))
+            (if (rope-balanced? r) r (rope-defrag ρ r)))))
 
 ;; The complement of rope-cut. Keeps only the interval [i, i + k). O(log n)
 ;; amortized
@@ -203,13 +203,13 @@
                    (define-values (_ll lr) (rope-split ρ l i))
                    (define-values (rl _rr) (rope-split ρ r (^- j n)))
                    (rope-concat ρ lr rl)])]))])
-    (if (rope-balanced? b) b (rope-rebalance ρ b))))
+    (if (rope-balanced? b) b (rope-defrag ρ b))))
 
 ;; Replaces the interval [i, i + k) with chunk. O(log n) amortized
 (define-rope-operation (rope-splice a i k chunk)
   (let ([b (let-values ([(l r) (rope-cut ρ a i k)])
              (rope-concat ρ (rope-concat ρ l (chunk->rope ρ chunk)) r))])
-    (if (rope-balanced? b) b (rope-rebalance ρ b))))
+    (if (rope-balanced? b) b (rope-defrag ρ b))))
 
 ;; Produces an optimally balanced rope.
 (define-rope-operation (chunk->rope chunk0)
@@ -226,4 +226,7 @@
   (chunk-append (rope-flatten a)))
 
 (define-rope-operation (rope-rebalance a)
+  (void))
+
+(define-rope-operation (rope-defrag a)
   (chunk->rope ρ (rope->chunk ρ a)))

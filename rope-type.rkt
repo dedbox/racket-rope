@@ -86,7 +86,8 @@
        [*-rope-splice          . ,(mk-id- "~arope-splice")]
        [*->rope                . ,(mk-id  "~a->rope")]
        [rope->*                . ,(mk-id  "rope->~a")]
-       [*-rope-rebalance       . ,(mk-id- "~arope-rebalance")])))
+       [*-rope-rebalance       . ,(mk-id- "~arope-rebalance")]
+       [*-rope-defrag          . ,(mk-id- "~arope-defrag")])))
 
   (define (raise-def-error msg src1 [src2 #f])
     (raise-syntax-error 'define-rope-type msg src1 src2))
@@ -182,6 +183,7 @@
   #:with *->rope                (id* '*->rope)
   #:with rope->*                (id* 'rope->*)
   #:with *-rope-rebalance       (id* '*-rope-rebalance)
+  #:with *-rope-defrag          (id* '*-rope-defrag)
   (begin
     (define-syntax rope:type-id
       (rope-type-descriptor #'*-rope-chunk?
@@ -335,4 +337,6 @@
     (define (*-rope-splice       a i k es) (rope-splice       type-id a i k es))
     (define (*->rope             c)        (chunk->rope       type-id c))
     (define (rope->*             a)        (rope->chunk       type-id a))
-    (define (*-rope-rebalance    a)        (rope-rebalance    type-id a))))
+    (define (*-rope-rebalance    a)        (rope-rebalance    type-id a))
+    (define (*-rope-defrag       a)        (rope-defrag       type-id a))
+    ))
