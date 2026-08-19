@@ -47,32 +47,31 @@
     #:with chunk-empty   (rope-type-descriptor-chunk-empty  desc)
     #:with chunk-count   (rope-type-descriptor-chunk-count  desc)
     #:with chunk-size    (rope-type-descriptor-chunk-size   desc)
-    #:with (chunk-slice-id chunk-slice-def)
-    (let ([stx (rope-type-descriptor-chunk-slice desc)])
-      (list (if (identifier? stx) stx (generate-temporary 'chunk-slice)) stx))
+    #:with chunk-slice   (rope-type-descriptor-chunk-slice  desc)
     #:with chunk-append  (rope-type-descriptor-chunk-append desc)
     #:with chunk-ref     (rope-type-descriptor-chunk-ref    desc)
-    #:with chunk-compare (let ([stx (rope-type-descriptor-chunk-compare desc)])
-                           (or stx
-                               #'(error 'chunk-compare "operation not defined for ~a-rope" 'ρ)))
-    #:with chunk-overlap=? (let ([stx (rope-type-descriptor-chunk-overlap=? desc)])
-                             (or stx
-                                 #'(λ (ac bc ap bp k)
-                                     (let loop ([i 0])
-                                       (or (= i k)
-                                           (and (equal? (chunk-ref ac (+ ap i))
-                                                        (chunk-ref bc (+ bp i)))
-                                                (loop (add1 i))))))))
+    #:with chunk-compare
+    (let ([stx (rope-type-descriptor-chunk-compare desc)])
+      (or stx #'(error 'chunk-compare "operation not defined for ~a-rope" 'ρ)))
+    #:with chunk-overlap=?
+    (let ([stx (rope-type-descriptor-chunk-overlap=? desc)])
+      (or stx
+          #'(λ (ac bc ap bp k)
+              (let loop ([i 0])
+                (or (= i k)
+                    (and (equal? (chunk-ref ac (+ ap i))
+                                 (chunk-ref bc (+ bp i)))
+                         (loop (add1 i))))))))
     #:with leaf-constructor (rope-type-descriptor-leaf-constructor desc)
     #:with node-constructor (rope-type-descriptor-node-constructor desc)
-    (let ([chunk-slice-id chunk-slice-def]) body ...)))
+    (begin body ...)))
 
 (define-rope-operation (rope-chunk?           a)             (chunk?          a))
 (define-rope-operation (rope-chunk-limit)                    (chunk-limit))
 (define-rope-operation (rope-chunk-empty)                    (chunk-empty))
 (define-rope-operation (rope-chunk-count      a)             (chunk-count     a))
 (define-rope-operation (rope-chunk-size       a)             (chunk-size      a))
-(define-rope-operation (rope-chunk-slice      a s e)         (chunk-slice     a s e))
+(define-rope-operation (rope-chunk-slice      a i k)         (chunk-slice     a i k))
 (define-rope-operation (rope-chunk-append     as)            (chunk-append    as))
 (define-rope-operation (rope-chunk-ref        a k)           (chunk-ref       a k))
 (define-rope-operation (rope-chunk-compare    a b)           (chunk-compare   a b))
@@ -116,19 +115,22 @@
   (let-values
       ([(l r)
         (let loop ([a a0] [i i0])
-          (if (rope-leaf? a)
-              (let ([count (rope-leaf-count a)]
-                    [chunk (rope-leaf-chunk a)])
-                (values (make-rope-leaf ρ (chunk-slice chunk 0 i))
-                        (make-rope-leaf ρ (chunk-slice chunk i count))))
-              (let ([l (rope-node-left a)]
-                    [r (rope-node-right a)])
-                (let ([n (rope-count l)])
-                  (if (<= i n)
-                      (let-values ([(ll lr) (loop l i)])
-                        (values ll (rope-concat ρ lr r)))
-                      (let-values ([(rl rr) (loop r (- i n))])
-                        (values (rope-concat ρ l rl) rr)))))))])
+          (cond
+            [(rope-leaf? a)
+             (define chunk (rope-leaf-chunk a))
+             (values (make-rope-leaf ρ (chunk-slice chunk 0 i))
+                     (make-rope-leaf ρ (chunk-slice chunk i (- (rope-leaf-count a) i))))]
+            [else
+             (define l (rope-node-left a))
+             (define r (rope-node-right a))
+             (define n (rope-count l))
+             (cond
+               [(<= i n)
+                (define-values (ll lr) (loop l i))
+                (values ll (rope-concat ρ lr r))]
+               [else
+                (define-values (rl rr) (loop r (- i n)))
+                (values (rope-concat ρ l rl) rr)])]))])
     (values (if (rope-balanced? l) l (rope-rebalance ρ l))
             (if (rope-balanced? r) r (rope-rebalance ρ r)))))
 
@@ -198,7 +200,7 @@
   (let ([b (let loop ([a a0] [i i0] [j (+ i0 k0)])
              (cond
                [(rope-leaf? a)
-                (make-rope-leaf ρ (chunk-slice (rope-leaf-chunk a) i j))]
+                (make-rope-leaf ρ (chunk-slice (rope-leaf-chunk a) i (- j i)))]
                [else
                 (define l (rope-node-left a))
                 (define r (rope-node-right a))
@@ -226,7 +228,7 @@
         (make-rope-leaf ρ chunk)
         (let ([mid (quotient n 2)])
           (define l (loop (chunk-slice chunk 0 mid)))
-          (define r (loop (chunk-slice chunk mid n)))
+          (define r (loop (chunk-slice chunk mid (- n mid))))
           (rope-concat ρ l r)))))
 
 (define-rope-operation (rope->chunk a)

@@ -155,7 +155,8 @@
   #:with *-rope-chunk-slice     (id* '*-rope-chunk-slice)
   #:with *-rope-chunk-append    (id* '*-rope-chunk-append)
   #:with *-rope-chunk-ref       (id* '*-rope-chunk-ref)
-  #:with *-rope-chunk-compare   (id* '*-rope-chunk-compare)
+  #:with ((~optional *-rope-chunk-compare))
+  (if (attribute chunk-compare) (list (id* '*-rope-chunk-compare)) null)
   #:with *-rope-chunk-overlap=? (id* '*-rope-chunk-overlap=?)
   #:with *-rope-hash-cache      (id* '*-rope-hash-cache)
   #:with *-leaf-poly-hash       (id* '*-leaf-poly-hash)
@@ -182,13 +183,20 @@
   #:with *-rope-rebalance       (id* '*-rope-rebalance)
   (begin
     (define-syntax rope:type-id
-      (rope-type-descriptor #'chunk? #'elem-size #'chunk-limit #'chunk-empty #'chunk-count
-                            #'chunk-size #'chunk-slice #'chunk-append #'chunk-ref
-                            (~? #'chunk-compare #f)
+      (rope-type-descriptor #'*-rope-chunk?
+                            #'*-rope-elem-size
+                            #'*-rope-chunk-limit
+                            #'*-rope-chunk-empty
+                            #'*-rope-chunk-count
+                            #'*-rope-chunk-size
+                            #'*-rope-chunk-slice
+                            #'*-rope-chunk-append
+                            #'*-rope-chunk-ref
+                            (~? #'*-rope-chunk-compare #f)
                             ;; The default overlap equality check loops over
                             ;; the elements in a chunk. This is generally
-                            ;; faster for string chunks.
-                            (~? #'chunk-overlap=? #f)
+                            ;; faster for strings but slower for bytes.
+                            #'*-rope-chunk-overlap=?
                             #'*-rope-leaf #'*-rope-node))
     ;; fundamental operations
     (define (*-rope-chunk?        a)     (rope-chunk?        type-id a))
@@ -200,10 +208,15 @@
     (define (*-rope-chunk-slice   a s e) (rope-chunk-slice   type-id a s e))
     (define (*-rope-chunk-append  as)    (rope-chunk-append  type-id as))
     (define (*-rope-chunk-ref     a k)   (rope-chunk-ref     type-id a k))
-    (define (*-rope-chunk-compare a b)   (rope-chunk-compare type-id a b))
-
-    (define (*-rope-chunk-overlap=? ac bc ap bp k)
-      (rope-chunk-overlap=? type-id ac bc ap bp k))
+    (~? (define (*-rope-chunk-compare a b) (rope-chunk-compare type-id a b)))
+    (~? (define (*-rope-chunk-overlap=? ac bc ap bp k)
+          (rope-chunk-overlap=? type-id ac bc ap bp k))
+        (define (*-rope-chunk-overlap=? ac bc ap bp k)
+          (let loop ([i 0])
+            (or (= i k)
+                (and (equal? (chunk-ref ac (+ ap i))
+                             (chunk-ref bc (+ bp i)))
+                     (loop (add1 i)))))))
 
     ;; the composable polynomial hash algorithm --------------------------------
 
