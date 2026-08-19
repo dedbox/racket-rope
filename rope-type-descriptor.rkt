@@ -1,5 +1,7 @@
 #lang racket/base
 
+;; rope/rope-type-descriptor.rkt
+
 (provide (all-defined-out))
 
 (struct rope-type-descriptor

@@ -1,5 +1,7 @@
 #lang racket
 
+;; rope/benchmarks/equal-bench.rkt
+
 ;; =============================================================================
 ;; Mock Implementations for Benchmarking (Assuming String Chunks)
 ;; =============================================================================
