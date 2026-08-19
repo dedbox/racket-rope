@@ -51,5 +51,8 @@ Dev Documentation To-Do
   on strings or collections of Racket-level (i.e., boxed) values,
   but can be astonishingly slower (e.g., than slicing) for special types
   (e.g., bytes - contiguous, unboxed C arrays).}
+ @item{there will be no generic function API,
+  since falling back to run-time dispatch defies the spirit of the library.
+  We will need good docs on how to use the macros instead.}
  ]
 @(close-eval rope-eval)
