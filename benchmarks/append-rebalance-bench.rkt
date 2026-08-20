@@ -53,21 +53,12 @@
 (define TRIALS          5)
 
 (define (run-benchmark)
-  (printf "| ~a | ~a | ~a | ~a | ~a | ~a | ~a | ~a | ~a | ~a | ~a | ~a | ~a | ~a |\n"
+  (printf "| ~a | ~a | ~a | ~a | ~a |\n"
           (~a "Ropes" #:min-width 8 #:align 'right)
           (~a "Chunks" #:min-width 8 #:align 'right)
-          (~a "A min" #:min-width 15 #:align 'right)
-          (~a "B min" #:min-width 15 #:align 'right)
-          (~a "Δ min (A - B)" #:min-width 15 #:align 'right)
-          (~a "Speedup min (A/B)" #:min-width 15 #:align 'right)
-          (~a "A max" #:min-width 15 #:align 'right)
-          (~a "B max" #:min-width 15 #:align 'right)
-          (~a "Δ max (A - B)" #:min-width 15 #:align 'right)
-          (~a "Speedup max (A/B)" #:min-width 15 #:align 'right)
-          (~a "A p99" #:min-width 15 #:align 'right)
-          (~a "B p99" #:min-width 15 #:align 'right)
-          (~a "Δ p99 (A - B)" #:min-width 15 #:align 'right)
-          (~a "Speedup p99 (A/B)" #:min-width 15 #:align 'right))
+          (~a "min" #:min-width 15 #:align 'right)
+          (~a "max" #:min-width 15 #:align 'right)
+          (~a "p99" #:min-width 15 #:align 'right))
   (printf "|-\n")
 
   (for* ([ropes  (in-list '(10 100 1000))]
@@ -82,44 +73,18 @@
 
     ;; 2. Tier-2 JIT Warmup
     (for ([_ (in-range (min active-iters 10000))])
-      (rope-append string as)
-      (rope-append-rebalance string as))
+      (rope-append string as))
 
     ;; 3. Strict Measurement
-    (define-values (a-min-ms a-max-ms a-p99-ms)
+    (define-values (min-ms max-ms p99-ms)
       (measure-time (λ () (rope-append string as)) active-iters TRIALS))
-    (define-values (b-min-ms b-max-ms b-p99-ms)
-      (measure-time (λ () (rope-append-rebalance string as)) active-iters TRIALS))
 
-    ;; 4. Statistical Analysis
-    (define speedup-min
-      (if (zero? b-min-ms)
-          "∞x"
-          (format "~ax" (real->decimal-string (/ a-min-ms b-min-ms) 2))))
-    (define speedup-max
-      (if (zero? b-max-ms)
-          "∞x"
-          (format "~ax" (real->decimal-string (/ a-max-ms b-max-ms) 2))))
-    (define speedup-p99
-      (if (zero? b-p99-ms)
-          "∞x"
-          (format "~ax" (real->decimal-string (/ a-p99-ms b-p99-ms) 2))))
-
-    (printf "| ~a | ~a | ~a | ~a | ~a | ~a | ~a | ~a | ~a | ~a | ~a | ~a | ~a | ~a |\n"
+    (printf "| ~a | ~a | ~a | ~a | ~a |\n"
             (~a ropes #:min-width 8 #:align 'right)
             (~a chunks #:min-width 8 #:align 'right)
-            (~a (format-result a-min-ms) #:min-width 15 #:align 'right)
-            (~a (format-result b-min-ms) #:min-width 15 #:align 'right)
-            (~a (format-result (- a-min-ms b-min-ms)) #:min-width 15 #:align 'right)
-            (~a speedup-min #:min-width 15 #:align 'right)
-            (~a (format-result a-max-ms) #:min-width 15 #:align 'right)
-            (~a (format-result b-max-ms) #:min-width 15 #:align 'right)
-            (~a (format-result (- a-max-ms b-max-ms)) #:min-width 15 #:align 'right)
-            (~a speedup-max #:min-width 15 #:align 'right)
-            (~a (format-result a-p99-ms) #:min-width 15 #:align 'right)
-            (~a (format-result b-p99-ms) #:min-width 15 #:align 'right)
-            (~a (format-result (- a-p99-ms b-p99-ms)) #:min-width 15 #:align 'right)
-            (~a speedup-p99 #:min-width 15 #:align 'right))))
+            (~a (format-result min-ms) #:min-width 15 #:align 'right)
+            (~a (format-result max-ms) #:min-width 15 #:align 'right)
+            (~a (format-result p99-ms) #:min-width 15 #:align 'right))))
 
 (module+ main
   (run-benchmark))
