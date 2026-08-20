@@ -94,3 +94,20 @@
     (if (rope-leaf? ρ)
         (cons (rope-leaf-chunk ρ) acc)
         (loop (rope-node-left ρ) (loop (rope-node-right ρ) acc)))))
+
+;; Find the largest depth class such that a rope with n elements is
+;; rope-balanced? at that depth. O(1)
+(define (fib-slot-index n)
+  (let loop ([i 0])
+    (if (or (>= (add1 i) (vector-length FIB-BOUND-TABLE))
+            (< n (vector-ref FIB-BOUND-TABLE (add1 i))))
+        i
+        (loop (add1 i)))))
+
+;;; Build an in-order list of maximal balanced subtrees covering ρ.
+;;; O(# maximal balanced subtrees)
+(define (rope-runs ρ)
+  (let loop ([ρ ρ] [acc null])
+    (if (rope-balanced? ρ)
+        (cons ρ acc)
+        (loop (rope-node-left ρ) (loop (rope-node-right ρ) acc)))))
