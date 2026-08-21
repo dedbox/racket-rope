@@ -5,6 +5,8 @@
 ;; The core rope data structure, the tree balancing algorithm, and all rope
 ;; operations that do not require a rope type descriptor.
 
+(require racket/fixnum)
+
 (provide (all-defined-out))
 
 ;;; ----------------------------------------------------------------------------
@@ -61,10 +63,10 @@
 
 ;; All of these operations are O(1).
 
-(define (rope-count ρ) (if (rope-leaf? ρ) (rope-leaf-count ρ) (rope-node-count ρ)))
-(define (rope-size  ρ) (if (rope-leaf? ρ) (rope-leaf-size  ρ) (rope-node-size  ρ)))
-(define (rope-depth ρ) (if (rope-leaf? ρ) 0 (rope-node-depth ρ)))
-(define (rope-empty? ρ) (zero? (rope-size ρ)))
+(define (rope-count a) (if (rope-leaf? a) (rope-leaf-count a) (rope-node-count a)))
+(define (rope-size  a) (if (rope-leaf? a) (rope-leaf-size  a) (rope-node-size  a)))
+(define (rope-depth a) (if (rope-leaf? a) 0 (rope-node-depth a)))
+(define (rope-empty? a) (zero? (rope-size a)))
 
 ;;; ----------------------------------------------------------------------------
 ;;; Tree Balancing Algorithm
@@ -72,42 +74,65 @@
 
 ;; The Fibonacci bound, offset by 2, per Boehm/Atkinson/Plass:
 ;;
-;;   A balanced rope of depth d must hold at least fib(d+2) elements.
+;;   A balanced rope of depth d must hold at least Fib(d+2) elements.
 ;;
-(define FIB-BOUND-TABLE
-  #(1 2 3 5 8 13 21 34 55 89 144 233 377 610 987 1597 2584 4181 6765 10946 17711
-      28657 46368 75025 121393 196418 317811 514229 832040 1346269 2178309
-      3524578 5702887 9227465 14930352 24157817 39088169 63245986 102334155))
+;; A rope is a binary tree. By definition, the depth of a parent node is
+;; always:
+;;
+;;   d_parent = 1 + max(d_left, d_right).
+;;
+;; For a rope of depth d with N elements, at least one of its sub-ropes must
+;; have depth d - 1. For the other sub-rope, we want to find the smallest
+;; possible depth that still gives O(log N) worst-case time complexity for
+;; basic operations without creating more work than it saves.
+;;
+;; Suppose d_left = d_parent - 1. If we require d_right ≥ d_parent - 1 always,
+;; then the rope will stay perfectly balanced at all times. In practice, the
+;; amount of work involved negates any savings. If d_right = d_parent - K for
+;; some k > 1, then the rope becomes more list-like as K increases.
+;;
+;; The sweet spot is K = 2. This gives the rope some room to absorb small
+;; changes without triggering a rebalance, and it is always near enough to
+;; perfect balance to give roughly O(log N) time complexity.
+;;
+;; What does this have to do with Fiboncci numbers? Let M(d) be the minimum
+;; number of elements required for a balanced rope of depth d, and suppose
+;; d_left = d - 1. Then we have
+;;
+;;   M(d_parent) = M(d_left) + M(d_right) = M(d_parent - 1) + M(d_parent - 2).
+;;
+;; This recurrence generates the Fibonacci numbers, giving us a cheap balance
+;; test - if a rope's depth is at least the corresponding Fibonacci number, we
+;; say is balanced. Since the Fibonacci sequence begins (0, 1, 1, 2, ...), and
+;; a non-empty rope of depth 0 has exactly one element, and a rope of depth 1
+;; has at least two elements, we offset the sequence by two.
+
+;; Determine the largest Fibonacci number that fits into a fixnum. On a 64-bit
+;; system, this should be 86.
+(define max-fib-index
+  (let loop ([i 0] [Fᵢ₊₁ 2] [Fᵢ 1])
+    (define space-left (- (most-positive-fixnum) Fᵢ₊₁))
+    (if (< space-left Fᵢ) (add1 i) (loop (add1 i) (+ Fᵢ₊₁ Fᵢ) Fᵢ₊₁))))
+
+(define fib-vector
+  (let ([vec (make-vector (add1 max-fib-index))])
+    (vector-set! vec 0 1)
+    (vector-set! vec 1 2)
+    (for ([i (in-range 2 (add1 max-fib-index))])
+      (vector-set! vec i (+ (vector-ref vec (- i 1))
+                            (vector-ref vec (- i 2)))))
+    vec))
 
 ;; O(1)
-(define (fib-bound depth)
-  (vector-ref FIB-BOUND-TABLE
-              (min depth (sub1 (vector-length FIB-BOUND-TABLE)))))
+(define (fib-bound d) (vector-ref fib-vector (min d max-fib-index)))
 
 ;; O(1)
-(define (rope-balanced? ρ)
-  (or (rope-empty? ρ) (>= (rope-count ρ) (fib-bound (rope-depth ρ)))))
+(define (rope-balanced? a)
+  (or (rope-empty? a) (>= (rope-count a) (fib-bound (rope-depth a)))))
 
 ;; Collect chunks left-to-right. O(# leaves)
-(define (rope-flatten ρ)
-  (let loop ([ρ ρ] [acc null])
-    (if (rope-leaf? ρ)
-        (cons (rope-leaf-chunk ρ) acc)
-        (loop (rope-node-left ρ) (loop (rope-node-right ρ) acc)))))
-
-;; Find the largest depth class such that a rope with n elements is
-;; rope-balanced? at that depth. O(1)
-(define (fib-slot-index n)
-  (let loop ([i 0])
-    (if (or (>= (add1 i) (vector-length FIB-BOUND-TABLE))
-            (< n (vector-ref FIB-BOUND-TABLE (add1 i))))
-        i
-        (loop (add1 i)))))
-
-;;; Build an in-order list of maximal balanced subtrees covering ρ.
-;;; O(# maximal balanced subtrees)
-(define (rope-runs ρ)
-  (let loop ([ρ ρ] [acc null])
-    (if (rope-balanced? ρ)
-        (cons ρ acc)
-        (loop (rope-node-left ρ) (loop (rope-node-right ρ) acc)))))
+(define (rope-chunks a)
+  (let loop ([a a] [acc null])
+    (if (rope-leaf? a)
+        (cons (rope-leaf-chunk a) acc)
+        (loop (rope-node-left a) (loop (rope-node-right a) acc)))))
