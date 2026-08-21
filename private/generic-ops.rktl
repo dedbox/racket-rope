@@ -230,24 +230,18 @@
 (define-rope-operation (rope-rebalance a0)
   (let ()
     (define (insert slots a)
-      (let loop ([i 0] [carry a] [current-slots slots])
+      (let loop ([i (rope-depth a)] [carry a] [current-slots slots])
         (define slot-i (hash-ref current-slots i #f))
         ;; If the current slot is occupied, it represents elements strictly to
         ;; the left of `carry`. Merge them to maintain chunk order before
         ;; evaluating Fibonacci bounds.
         (define next-carry (if slot-i (rope-concat ρ slot-i carry) carry))
         (define next-slots (if slot-i (hash-remove current-slots i) current-slots))
-
         ;; We only place the merged chunk if the slot was initially empty AND
         ;; the chunk's length is small enough for this slot's Fibonacci bound.
         (if (and (not slot-i) (< (rope-count next-carry) (fib-bound (+ i 3))))
             (hash-set next-slots i next-carry)
             (loop (add1 i) next-carry next-slots))))
-
-    (define (traverse a slots)
-      (if (rope-balanced? a)
-          (insert slots a)
-          (traverse (rope-node-right a) (traverse (rope-node-left a) slots))))
 
     (define (collapse slots)
       ;; Collapse from smallest index to largest to maintain depth bounds.
@@ -258,4 +252,12 @@
           [(not result) slot-i]
           [else (rope-concat ρ slot-i result)])))
 
-    (collapse (traverse a0 (hasheqv)))))
+    (define (build stop?)
+      (define (traverse a slots)
+        (if (stop? a)
+            (insert slots a)
+            (traverse (rope-node-right a) (traverse (rope-node-left a) slots))))
+      (collapse (traverse a0 (hasheqv))))
+
+    (define fast (build rope-balanced?))
+    (if (rope-balanced? fast) fast (build rope-leaf?))))

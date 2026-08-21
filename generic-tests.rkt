@@ -141,6 +141,17 @@
         (define r (rope-append weighted (map (λ (c) (make-rope-leaf weighted c)) chunks)))
         (equal? (rope->weighted r) (apply vector-append chunks)))
 
+      (test-property "rope-rebalance handles non-leaf runs, not just leaves"
+          #:trials 100
+          ([depth (add1 (random 5))]
+           [leaf-chunk (random-weighted-chunk (add1 (random 6)))])
+        (define deep
+          (for/fold ([r (make-rope-leaf weighted (random-weighted-chunk 1))])
+                    ([_ (in-range depth)])
+            (rope-append2 weighted r (make-rope-leaf weighted (random-weighted-chunk 1)))))
+        (define combined (rope-concat weighted deep (make-rope-leaf weighted leaf-chunk)))
+        (rope-balanced? (rope-rebalance weighted combined)))
+
       (test-case "sequential appends stay Fibonacci-balanced across many steps"
         (for/fold ([r (make-empty-rope weighted)]) ([i (in-range 800)])
           (define chunk  (random-weighted-chunk (add1 (random 6))))
