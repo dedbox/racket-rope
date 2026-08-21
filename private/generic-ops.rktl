@@ -245,7 +245,7 @@
             (loop (add1 i) next-carry next-slots))))
 
     (define (traverse a slots)
-      (if (rope-leaf? a)
+      (if (rope-balanced? a)
           (insert slots a)
           (traverse (rope-node-right a) (traverse (rope-node-left a) slots))))
 
