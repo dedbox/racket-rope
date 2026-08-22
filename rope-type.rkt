@@ -77,6 +77,7 @@
        [make-empty-*-rope      . ,(mk-id- "make-empty-~arope")]
        [*-rope-concat          . ,(mk-id- "~arope-concat")]
        [*-rope-append          . ,(mk-id- "~arope-append")]
+       [*-rope-append2         . ,(mk-id- "~arope-append2")]
        [*-rope-split           . ,(mk-id- "~arope-split")]
        [*-rope-ref             . ,(mk-id- "~arope-ref")]
        [*-rope-offset-index    . ,(mk-id- "~arope-offset-index")]
@@ -174,6 +175,7 @@
   #:with make-empty-*-rope      (id* 'make-empty-*-rope)
   #:with *-rope-concat          (id* '*-rope-concat)
   #:with *-rope-append          (id* '*-rope-append)
+  #:with *-rope-append2         (id* '*-rope-append2)
   #:with *-rope-split           (id* '*-rope-split)
   #:with *-rope-ref             (id* '*-rope-ref)
   #:with *-rope-offset-index    (id* '*-rope-offset-index)
@@ -328,6 +330,7 @@
 
     (define (*-rope-concat         l r)      (rope-concat         type-id l r))
     (define (*-rope-append       . as)       (rope-append         type-id as))
+    (define (*-rope-append2        l r)      (rope-append2        type-id l r))
     (define (*-rope-split          a i)      (rope-split          type-id a i))
     (define (*-rope-ref            a i)      (rope-ref            type-id a i))
     (define (*-rope-offset-index   a p)      (rope-offset-index   type-id a p))

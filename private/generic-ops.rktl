@@ -89,6 +89,9 @@
     [(^= 0 (rope-count r)) l]
     [else (make-rope-node ρ l r)]))
 
+(define-rope-operation (rope-append2 l r)
+  (rope-ensure-balance ρ (rope-concat ρ l r)))
+
 ;; O(log n) amortized
 (define-rope-operation (rope-append as)
   (rope-ensure-balance
@@ -226,57 +229,48 @@
 ;; Efficient forest-based rope rebuild. O(log n) amortized
 (define-rope-operation (rope-rebalance a0)
   (let ()
-    (define slots (make-hasheqv))
-
+    ;; A rope with len elements is too large for the current slot if len falls
+    ;; beyond the interval [Fₙ, Fₙ₊₁). Hence, we move on to the next slot if
+    ;; len ≥ Fₙ₊₁.
+    ;;
+    ;; Since i = n - 2 (see the comment in rope.rkt) ⇒ n = i + 2, we have
+    ;;
+    ;;   len ≥ F₍ᵢ₊₂₎₊₁ = Fᵢ₊₃.
+    ;;
     (define (target-slot len)
       (let loop ([i 0])
-        ;; A rope with len elements is too large for the current slot if len
-        ;; falls beyond the interval [Fₙ, Fₙ₊₁). Hence, we move on to the next
-        ;; slot if len ≥ Fₙ₊₁.
-        ;;
-        ;; Since i = n - 2 (see the comment in rope.rkt) ⇒ n = i + 2, we have
-        ;;
-        ;;   len ≥ F₍ᵢ₊₂₎₊₁ = Fᵢ₊₃.
-        ;;
         (if (>= len (fib-bound (+ i 3))) (loop (add1 i)) i)))
 
-    (define (insert a)
+    (define (insert slots0 a)
       (define n (target-slot (rope-count a)))
-      ;; Concatenate on the left from slot 0 to the target slot.
-      (define prefix
-        (for/fold ([acc #f])
+      ;; Consolidate any occupied slots [0, n) into one prefix, oldest-first.
+      (define-values (pfx slots)
+        (for/fold ([pfx #f] [slots slots0])
                   ([i (in-range n)])
           (define cur (hash-ref slots i #f))
-          (when cur (hash-remove! slots i))
-          (cond
-            [(not cur) acc]
-            [(not acc) cur]
-            [else (rope-concat ρ cur acc)])))
-      ;; If there is a prefix, put it to the right of the initial rope.
-      (define r (if prefix (rope-concat ρ prefix a) a))
-      ;; Concatenate on the left from the target slot until we find an empty
-      ;; slot that fits. This is like carry propagation in binary arithmetic:
-      ;; keep flipping "ones" until we hit a "zero."
-      (let cascade ([i n] [curr r])
+          (values (cond [(not cur) pfx]
+                        [(not pfx) cur]
+                        [else (rope-concat ρ cur pfx)])
+                  (if cur (hash-remove slots i) slots))))
+      (define r (if pfx (rope-concat ρ pfx a) a))
+      ;; Cascade upward from slot n.
+      (let cascade ([i n] [cur r] [slots slots])
         (define next (hash-ref slots i #f))
-        (cond
-          [next
-           (hash-remove! slots i)
-           (cascade (add1 i) (rope-concat ρ next curr))]
-          [else
-           (hash-set! slots i curr)])))
+        (if next
+            (cascade (add1 i) (rope-concat ρ next cur) (hash-remove slots i))
+            (hash-set slots i cur))))
 
-    (define (traverse a)
+    (define (traverse a slots)
       (cond
         ;; must use strict balance here
         [(or (rope-leaf? a) (rope-strictly-balanced? a))
-         (insert a)]
+         (insert slots a)]
         [else
-         (traverse (rope-node-left a))
-         (traverse (rope-node-right a))]))
+         (traverse (rope-node-right a)
+                   (traverse (rope-node-left a) slots))]))
 
     ;; Concatenate on the left, from smallest to largest slot.
-    (define (collapse)
+    (define (collapse slots)
       (for/fold ([result #f])
                 ([i (in-range max-fib-index)])
         (define slot-i (hash-ref slots i #f))
@@ -287,4 +281,4 @@
 
     (if (rope-mostly-balanced? a0)
         a0
-        (begin (traverse a0) (collapse)))))
+        (collapse (traverse a0 (hasheqv))))))
