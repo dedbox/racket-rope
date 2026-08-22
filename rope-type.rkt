@@ -76,7 +76,6 @@
        [make-*-rope-node       . ,(mk-id- "make-~arope-node")]
        [make-empty-*-rope      . ,(mk-id- "make-empty-~arope")]
        [*-rope-concat          . ,(mk-id- "~arope-concat")]
-       [*-rope-concat/lazy     . ,(mk-id- "~arope-concat/lazy")]
        [*-rope-append          . ,(mk-id- "~arope-append")]
        [*-rope-split           . ,(mk-id- "~arope-split")]
        [*-rope-ref             . ,(mk-id- "~arope-ref")]
@@ -86,6 +85,7 @@
        [*-rope-splice          . ,(mk-id- "~arope-splice")]
        [*->rope                . ,(mk-id  "~a->rope")]
        [rope->*                . ,(mk-id  "rope->~a")]
+       [*-rope-ensure-balance  . ,(mk-id- "~arope-ensure-balance")]
        [*-rope-rebalance       . ,(mk-id- "~arope-rebalance")]
        [*-rope-defrag          . ,(mk-id- "~arope-defrag")])))
 
@@ -173,7 +173,6 @@
   #:with make-*-rope-node       (id* 'make-*-rope-node)
   #:with make-empty-*-rope      (id* 'make-empty-*-rope)
   #:with *-rope-concat          (id* '*-rope-concat)
-  #:with *-rope-concat/lazy     (id* '*-rope-concat/lazy)
   #:with *-rope-append          (id* '*-rope-append)
   #:with *-rope-split           (id* '*-rope-split)
   #:with *-rope-ref             (id* '*-rope-ref)
@@ -182,6 +181,7 @@
   #:with *-rope-slice           (id* '*-rope-slice)
   #:with *->rope                (id* '*->rope)
   #:with rope->*                (id* 'rope->*)
+  #:with *-rope-ensure-balance  (id* '*-rope-ensure-balance)
   #:with *-rope-rebalance       (id* '*-rope-rebalance)
   #:with *-rope-defrag          (id* '*-rope-defrag)
   (begin
@@ -326,17 +326,17 @@
     (define (make-*-rope-node l r)   (make-rope-node  type-id l r))
     (define (make-empty-*-rope)      (make-empty-rope type-id))
 
-    (define (*-rope-concat       l r)      (rope-concat       type-id l r))
-    (define (*-rope-concat/lazy  l r)      (rope-concat/lazy  type-id l r))
-    (define (*-rope-append . as)           (rope-append       type-id as))
-    (define (*-rope-split        a i)      (rope-split        type-id a i))
-    (define (*-rope-ref          a i)      (rope-ref          type-id a i))
-    (define (*-rope-offset-index a p)      (rope-offset-index type-id a p))
-    (define (*-rope-cut          a i k)    (rope-cut          type-id a i k))
-    (define (*-rope-slice        a i k)    (rope-slice        type-id a i k))
-    (define (*-rope-splice       a i k es) (rope-splice       type-id a i k es))
-    (define (*->rope             c)        (chunk->rope       type-id c))
-    (define (rope->*             a)        (rope->chunk       type-id a))
-    (define (*-rope-rebalance    a)        (rope-rebalance    type-id a))
-    (define (*-rope-defrag       a)        (rope-defrag       type-id a))
+    (define (*-rope-concat         l r)      (rope-concat         type-id l r))
+    (define (*-rope-append       . as)       (rope-append         type-id as))
+    (define (*-rope-split          a i)      (rope-split          type-id a i))
+    (define (*-rope-ref            a i)      (rope-ref            type-id a i))
+    (define (*-rope-offset-index   a p)      (rope-offset-index   type-id a p))
+    (define (*-rope-cut            a i k)    (rope-cut            type-id a i k))
+    (define (*-rope-slice          a i k)    (rope-slice          type-id a i k))
+    (define (*-rope-splice         a i k es) (rope-splice         type-id a i k es))
+    (define (*->rope               c)        (chunk->rope         type-id c))
+    (define (rope->*               a)        (rope->chunk         type-id a))
+    (define (*-rope-ensure-balance a)        (rope-ensure-balance type-id a))
+    (define (*-rope-rebalance      a)        (rope-rebalance      type-id a))
+    (define (*-rope-defrag         a)        (rope-defrag         type-id a))
     ))

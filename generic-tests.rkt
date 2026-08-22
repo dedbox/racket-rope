@@ -112,13 +112,13 @@
 
   (define append-suite
     (test-suite "append"
-      (test-property "rope-concat/lazy agrees with vector-append and stays mostly balanced"
+      (test-property "rope-append agrees with vector-append and stays mostly balanced"
           #:trials 300
           ([a (random-weighted-chunk (random 40))]
            [b (random-weighted-chunk (random 40))])
-        (define r (rope-concat/lazy weighted
-                                    (make-rope-leaf weighted a)
-                                    (make-rope-leaf weighted b)))
+        (define r (rope-append weighted
+                               (list (make-rope-leaf weighted a)
+                                     (make-rope-leaf weighted b))))
         (and (= (rope-count r) (+ (vector-length a) (vector-length b)))
              (= (rope-size  r) (+ (weighted-rope-chunk-size a)
                                   (weighted-rope-chunk-size b)))
@@ -128,8 +128,8 @@
       (test-case "empty rope is a left unit and a right unit of rope-concat/lazy"
         (define e (make-empty-rope weighted))
         (define r (make-rope-leaf weighted (vector 1 2 3)))
-        (check-equal? (rope->weighted (rope-concat/lazy weighted e r)) (rope->weighted r))
-        (check-equal? (rope->weighted (rope-concat/lazy weighted r e)) (rope->weighted r)))
+        (check-equal? (rope->weighted (rope-append weighted (list e r))) (rope->weighted r))
+        (check-equal? (rope->weighted (rope-append weighted (list r e))) (rope->weighted r)))
 
       (test-case "rope-append with no ropes returns the empty rope"
         (check-true (rope-empty? (rope-append weighted null))))
@@ -148,7 +148,8 @@
         (define deep
           (for/fold ([r (make-rope-leaf weighted (random-weighted-chunk 1))])
                     ([_ (in-range depth)])
-            (rope-concat/lazy weighted r (make-rope-leaf weighted (random-weighted-chunk 1)))))
+            (rope-append weighted
+                         (list r (make-rope-leaf weighted (random-weighted-chunk 1))))))
         (define combined (rope-concat weighted deep (make-rope-leaf weighted leaf-chunk)))
         (rope-mostly-balanced? (rope-rebalance weighted combined)))
 
@@ -156,7 +157,7 @@
         (for/fold ([r (make-empty-rope weighted)]) ([i (in-range 800)])
           (define chunk  (random-weighted-chunk (add1 (random 6))))
           (define leaf   (make-rope-leaf weighted chunk))
-          (define r+leaf (rope-concat/lazy weighted r leaf))
+          (define r+leaf (rope-append weighted (list r leaf)))
           (with-check-info (['iteration i] ['chunk chunk] ['r+leaf r+leaf])
             (check-true (rope-mostly-balanced? r+leaf)))
           r+leaf)
