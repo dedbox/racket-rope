@@ -41,8 +41,8 @@
   (values (- end start) (- (current-gc-milliseconds) gc0)))
 
 (module+ main
-  (define _t (tree-session 2000))
-  (define _f (forest-session 2000)) ;; warmup
+  (tree-session 2000)
+  (forest-session 2000) ;; warmup
   (for ([label (in-list '("tree (current)" "forest"))]
         [fn    (in-list (list tree-session forest-session))])
     (define-values (times gcs)
