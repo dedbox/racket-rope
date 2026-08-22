@@ -72,7 +72,7 @@
 
         (check-equal? (rope-chunk-size weighted (vector 1 2 3)) 6)
         (check-equal? (rope-chunk-slice weighted (vector 1 2 3 4) 1 2) (vector 2 3))
-        (check-equal? (rope-chunk-append2 weighted (vector 1 2) (vector 3 4))
+        (check-equal? (rope-chunk-append weighted (list (vector 1 2) (vector 3 4)))
                       (vector 1 2 3 4))
         (check-equal? (rope-chunk-ref weighted (vector 10 20 30) 1) 20))
 
