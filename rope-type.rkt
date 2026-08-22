@@ -88,7 +88,11 @@
        [rope->*                . ,(mk-id  "rope->~a")]
        [*-rope-ensure-balance  . ,(mk-id- "~arope-ensure-balance")]
        [*-rope-rebalance       . ,(mk-id- "~arope-rebalance")]
-       [*-rope-defrag          . ,(mk-id- "~arope-defrag")])))
+       [*-rope-defrag          . ,(mk-id- "~arope-defrag")]
+
+       [*-rope-forest-add     . ,(mk-id- "~arope-forest-add")]
+       [*-rope-forest->rope   . ,(mk-id- "~arope-forest->rope")]
+       )))
 
   (define (raise-def-error msg src1 [src2 #f])
     (raise-syntax-error 'define-rope-type msg src1 src2))
@@ -186,6 +190,9 @@
   #:with *-rope-ensure-balance  (id* '*-rope-ensure-balance)
   #:with *-rope-rebalance       (id* '*-rope-rebalance)
   #:with *-rope-defrag          (id* '*-rope-defrag)
+
+  #:with *-rope-forest-add      (id* '*-rope-forest-add)
+  #:with *-rope-forest->rope    (id* '*-rope-forest->rope)
   (begin
     (define-syntax rope:type-id
       (rope-type-descriptor #'*-rope-chunk?
@@ -342,4 +349,7 @@
     (define (*-rope-ensure-balance a)        (rope-ensure-balance type-id a))
     (define (*-rope-rebalance      a)        (rope-rebalance      type-id a))
     (define (*-rope-defrag         a)        (rope-defrag         type-id a))
+
+    (define (*-rope-forest-add     f a)      (rope-forest-add     type-id f a))
+    (define (*-rope-forest->rope   f)        (rope-forest->rope   type-id f))
     ))

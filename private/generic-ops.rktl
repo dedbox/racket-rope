@@ -226,59 +226,106 @@
 (define-rope-operation (rope-ensure-balance a)
   (if (rope-mostly-balanced? a) a (rope-rebalance ρ a)))
 
-;; Efficient forest-based rope rebuild. O(log n) amortized
+;; ;; Efficient forest-based rope rebuild. O(log n) amortized
+;; (define-rope-operation (rope-rebalance a0)
+;;   (let ()
+;;     ;; A rope with len elements is too large for the current slot if len falls
+;;     ;; beyond the interval [Fₙ, Fₙ₊₁). Hence, we move on to the next slot if
+;;     ;; len ≥ Fₙ₊₁.
+;;     ;;
+;;     ;; Since i = n - 2 (see the comment in rope.rkt) ⇒ n = i + 2, we have
+;;     ;;
+;;     ;;   len ≥ F₍ᵢ₊₂₎₊₁ = Fᵢ₊₃.
+;;     ;;
+;;     (define (target-slot len)
+;;       (let loop ([i 0])
+;;         (if (>= len (fib-bound (+ i 3))) (loop (add1 i)) i)))
+
+;;     (define (insert slots0 a)
+;;       (define n (target-slot (rope-count a)))
+;;       ;; Consolidate any occupied slots [0, n) into one prefix, oldest-first.
+;;       (define-values (pfx slots)
+;;         (for/fold ([pfx #f] [slots slots0])
+;;                   ([i (in-range n)])
+;;           (define cur (hash-ref slots i #f))
+;;           (values (cond [(not cur) pfx]
+;;                         [(not pfx) cur]
+;;                         [else (rope-concat ρ cur pfx)])
+;;                   (if cur (hash-remove slots i) slots))))
+;;       (define r (if pfx (rope-concat ρ pfx a) a))
+;;       ;; Cascade upward from slot n.
+;;       (let cascade ([i n] [cur r] [slots slots])
+;;         (define next (hash-ref slots i #f))
+;;         (if next
+;;             (cascade (add1 i) (rope-concat ρ next cur) (hash-remove slots i))
+;;             (hash-set slots i cur))))
+
+;;     (define (traverse a slots)
+;;       (cond
+;;         ;; must use strict balance here
+;;         [(or (rope-leaf? a) (rope-strictly-balanced? a))
+;;          (insert slots a)]
+;;         [else
+;;          (traverse (rope-node-right a)
+;;                    (traverse (rope-node-left a) slots))]))
+
+;;     ;; Concatenate on the left, from smallest to largest slot.
+;;     (define (collapse slots)
+;;       (for/fold ([result #f])
+;;                 ([i (in-range max-fib-index)])
+;;         (define slot-i (hash-ref slots i #f))
+;;         (cond
+;;           [(not slot-i) result]
+;;           [(not result) slot-i]
+;;           [else (rope-concat ρ slot-i result)])))
+
+;;     (if (rope-mostly-balanced? a0)
+;;         a0
+;;         (collapse (traverse a0 (hasheqv))))))
+
+
+;; Insert one leaf/strictly-balanced run into a forest. O(1) amortized —
+;; this is the entire algorithm; nothing about it depends on where the
+;; run came from.
+(define-rope-operation (rope-forest-insert slots0 a)
+  (let ()
+    (define n (fib-target-slot (rope-count a)))
+    (define-values (prefix slots1)
+      (for/fold ([prefix #f] [slots slots0])
+                ([i (in-range n)])
+        (define cur (hash-ref slots i #f))
+        (values (cond [(not cur) prefix] [(not prefix) cur] [else (rope-concat ρ cur prefix)])
+                (if cur (hash-remove slots i) slots))))
+    (define r (if prefix (rope-concat ρ prefix a) a))
+    (let cascade ([i n] [curr r] [slots slots1])
+      (define next (hash-ref slots i #f))
+      (if next
+          (cascade (add1 i) (rope-concat ρ next curr) (hash-remove slots i))
+          (hash-set slots i curr)))))
+
+;; Collapse a forest into a real rope. #f if the forest is empty.
+(define-rope-operation (rope-forest-collapse slots)
+  (for/fold ([result #f]) ([i (in-range max-fib-index)])
+    (define slot-i (hash-ref slots i #f))
+    (cond [(not slot-i) result] [(not result) slot-i] [else (rope-concat ρ slot-i result)])))
+
+;; rope-rebalance is now just: decompose an existing tree into runs, feed
+;; them through the same insert/collapse a forest builder uses.
 (define-rope-operation (rope-rebalance a0)
   (let ()
-    ;; A rope with len elements is too large for the current slot if len falls
-    ;; beyond the interval [Fₙ, Fₙ₊₁). Hence, we move on to the next slot if
-    ;; len ≥ Fₙ₊₁.
-    ;;
-    ;; Since i = n - 2 (see the comment in rope.rkt) ⇒ n = i + 2, we have
-    ;;
-    ;;   len ≥ F₍ᵢ₊₂₎₊₁ = Fᵢ₊₃.
-    ;;
-    (define (target-slot len)
-      (let loop ([i 0])
-        (if (>= len (fib-bound (+ i 3))) (loop (add1 i)) i)))
-
-    (define (insert slots0 a)
-      (define n (target-slot (rope-count a)))
-      ;; Consolidate any occupied slots [0, n) into one prefix, oldest-first.
-      (define-values (pfx slots)
-        (for/fold ([pfx #f] [slots slots0])
-                  ([i (in-range n)])
-          (define cur (hash-ref slots i #f))
-          (values (cond [(not cur) pfx]
-                        [(not pfx) cur]
-                        [else (rope-concat ρ cur pfx)])
-                  (if cur (hash-remove slots i) slots))))
-      (define r (if pfx (rope-concat ρ pfx a) a))
-      ;; Cascade upward from slot n.
-      (let cascade ([i n] [cur r] [slots slots])
-        (define next (hash-ref slots i #f))
-        (if next
-            (cascade (add1 i) (rope-concat ρ next cur) (hash-remove slots i))
-            (hash-set slots i cur))))
-
     (define (traverse a slots)
       (cond
-        ;; must use strict balance here
-        [(or (rope-leaf? a) (rope-strictly-balanced? a))
-         (insert slots a)]
-        [else
-         (traverse (rope-node-right a)
-                   (traverse (rope-node-left a) slots))]))
-
-    ;; Concatenate on the left, from smallest to largest slot.
-    (define (collapse slots)
-      (for/fold ([result #f])
-                ([i (in-range max-fib-index)])
-        (define slot-i (hash-ref slots i #f))
-        (cond
-          [(not slot-i) result]
-          [(not result) slot-i]
-          [else (rope-concat ρ slot-i result)])))
-
+        [(or (rope-leaf? a) (rope-strictly-balanced? a)) (rope-forest-insert ρ slots a)]
+        [else (traverse (rope-node-right a) (traverse (rope-node-left a) slots))]))
     (if (rope-mostly-balanced? a0)
         a0
-        (collapse (traverse a0 (hasheqv))))))
+        (rope-forest-collapse ρ (traverse a0 (hasheqv))))))
+
+
+
+
+(define-rope-operation (rope-forest-add forest a)
+  (rope-forest (rope-forest-insert ρ (rope-forest-slots forest) a)))
+
+(define-rope-operation (rope-forest->rope forest)
+  (or (rope-forest-collapse ρ (rope-forest-slots forest)) (make-empty-rope ρ)))
