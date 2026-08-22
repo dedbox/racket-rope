@@ -9,6 +9,7 @@
          racket/include
          racket/splicing
          rope2/private/math-ops
+         rope2/rope
          syntax/parse/define)
 
 (provide (all-defined-out))
