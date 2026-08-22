@@ -85,45 +85,41 @@
 ;; Naive concatenation. O(1)
 (define-rope-operation (rope-concat l r) (make-rope-node ρ l r))
 
-;; Concatenation with rebalancing. O(log n) amortized.
-(define-rope-operation (rope-append2 l r)
+;; Concatenation with rebalancing. O(1) mostly, O(log n) amortized
+(define-rope-operation (rope-concat/lazy l r)
   (cond
-    [(= 0 (rope-count l)) r]
-    [(= 0 (rope-count r)) l]
+    [(^= 0 (rope-count l)) r]
+    [(^= 0 (rope-count r)) l]
     [else
      (define combined (rope-concat ρ l r))
-     (if (rope-balanced? combined) combined (rope-rebalance ρ combined))]))
+     (if (rope-mostly-balanced? combined) combined (rope-rebalance ρ combined))]))
 
 ;; O(log n) amortized
 (define-rope-operation (rope-append as)
-  (let ([b (for/fold ([l (make-empty-rope ρ)]) ([r (in-list as)])
-             (rope-concat ρ l r))])
-    (if (rope-balanced? b) b (rope-rebalance ρ b))))
+  (for/fold ([l (make-empty-rope ρ)])
+            ([r (in-list as)])
+    (rope-concat/lazy ρ l r)))
 
 ;; Splits at an element index, returning the two halves [0, i) and [i, n).
 ;; O(log n) amortized
 (define-rope-operation (rope-split a0 i0)
-  (let-values
-      ([(l r)
-        (let loop ([a a0] [i i0])
-          (cond
-            [(rope-leaf? a)
-             (define chunk (rope-leaf-chunk a))
-             (values (make-rope-leaf ρ (chunk-slice chunk 0 i))
-                     (make-rope-leaf ρ (chunk-slice chunk i (^- (rope-leaf-count a) i))))]
-            [else
-             (define l (rope-node-left a))
-             (define r (rope-node-right a))
-             (define n (rope-count l))
-             (cond
-               [(^<= i n)
-                (define-values (ll lr) (loop l i))
-                (values ll (rope-concat ρ lr r))]
-               [else
-                (define-values (rl rr) (loop r (^- i n)))
-                (values (rope-concat ρ l rl) rr)])]))])
-    (values (if (rope-balanced? l) l (rope-rebalance ρ l))
-            (if (rope-balanced? r) r (rope-rebalance ρ r)))))
+  (let loop ([a a0] [i i0])
+    (cond
+      [(rope-leaf? a)
+       (define chunk (rope-leaf-chunk a))
+       (values (make-rope-leaf ρ (chunk-slice chunk 0 i))
+               (make-rope-leaf ρ (chunk-slice chunk i (^- (rope-leaf-count a) i))))]
+      [else
+       (define l (rope-node-left a))
+       (define r (rope-node-right a))
+       (define n (rope-count l))
+       (cond
+         [(^<= i n)
+          (define-values (ll lr) (loop l i))
+          (values ll (rope-concat ρ lr r))]
+         [else
+          (define-values (rl rr) (loop r (^- i n)))
+          (values (rope-concat ρ l rl) rr)])])))
 
 ;;; O(log n)
 (define-rope-operation (rope-ref a0 i0)
@@ -156,60 +152,54 @@
 ;; endpoints of the interval, limiting the number of rebalances to three.
 ;; O(log n) amortized
 (define-rope-operation (rope-cut a0 i0 k0)
-  (let-values
-      ([(l r)
-        (let loop ([a a0] [i i0] [j (^+ i0 k0)])
-          (cond
-            [(rope-leaf? a)
-             (define chunk (rope-leaf-chunk a))
-             (values (make-rope-leaf ρ (chunk-slice chunk 0 i))
-                     (make-rope-leaf ρ (chunk-slice chunk j (rope-leaf-count a))))]
-            [else
-             (define l (rope-node-left a))
-             (define r (rope-node-right a))
-             (define n (rope-count l))
-             (cond
-               ;; (end of) interval must be in the left sub-tree
-               [(^<= j n)
-                (define-values (ll lr) (loop l i j))
-                (values ll (rope-concat ρ lr r))]
-               ;; (start of) interval must be in the right sub-tree
-               [(^>= i n)
-                (define-values (rl rr) (loop r (^- i n) (^- j n)))
-                (values (rope-concat ρ l rl) rr)]
-               ;; interval touches both sub-trees
-               [else
-                (define-values (ll _lr) (rope-split ρ l i))
-                (define-values (_rl rr) (rope-split ρ r (^- j n)))
-                (values ll rr)])]))])
-    (values (if (rope-balanced? l) l (rope-rebalance ρ l))
-            (if (rope-balanced? r) r (rope-rebalance ρ r)))))
+  (let loop ([a a0] [i i0] [j (^+ i0 k0)])
+    (cond
+      [(rope-leaf? a)
+       (define chunk (rope-leaf-chunk a))
+       (values (make-rope-leaf ρ (chunk-slice chunk 0 i))
+               (make-rope-leaf ρ (chunk-slice chunk j (rope-leaf-count a))))]
+      [else
+       (define l (rope-node-left a))
+       (define r (rope-node-right a))
+       (define n (rope-count l))
+       (cond
+         ;; (end of) interval must be in the left sub-tree
+         [(^<= j n)
+          (define-values (ll lr) (loop l i j))
+          (values ll (rope-concat ρ lr r))]
+         ;; (start of) interval must be in the right sub-tree
+         [(^>= i n)
+          (define-values (rl rr) (loop r (^- i n) (^- j n)))
+          (values (rope-concat ρ l rl) rr)]
+         ;; interval touches both sub-trees
+         [else
+          (define-values (ll _lr) (rope-split ρ l i))
+          (define-values (_rl rr) (rope-split ρ r (^- j n)))
+          (values ll rr)])])))
 
 ;; The complement of rope-cut. Keeps only the interval [i, i + k). O(log n)
 ;; amortized
 (define-rope-operation (rope-slice a0 i0 k0)
-  (let ([b (let loop ([a a0] [i i0] [j (^+ i0 k0)])
-             (cond
-               [(rope-leaf? a)
-                (make-rope-leaf ρ (chunk-slice (rope-leaf-chunk a) i (^- j i)))]
-               [else
-                (define l (rope-node-left a))
-                (define r (rope-node-right a))
-                (define n (rope-count l))
-                (cond
-                  [(^<= j n) (loop l i j)]
-                  [(^>= i n) (loop r (^- i n) (^- j n))]
-                  [else
-                   (define-values (_ll lr) (rope-split ρ l i))
-                   (define-values (rl _rr) (rope-split ρ r (^- j n)))
-                   (rope-concat ρ lr rl)])]))])
-    (if (rope-balanced? b) b (rope-rebalance ρ b))))
+  (let loop ([a a0] [i i0] [j (^+ i0 k0)])
+    (cond
+      [(rope-leaf? a)
+       (make-rope-leaf ρ (chunk-slice (rope-leaf-chunk a) i (^- j i)))]
+      [else
+       (define l (rope-node-left a))
+       (define r (rope-node-right a))
+       (define n (rope-count l))
+       (cond
+         [(^<= j n) (loop l i j)]
+         [(^>= i n) (loop r (^- i n) (^- j n))]
+         [else
+          (define-values (_ll lr) (rope-split ρ l i))
+          (define-values (rl _rr) (rope-split ρ r (^- j n)))
+          (rope-concat ρ lr rl)])])))
 
 ;; Replaces the interval [i, i + k) with chunk. O(log n) amortized
 (define-rope-operation (rope-splice a i k chunk)
-  (let ([b (let-values ([(l r) (rope-cut ρ a i k)])
-             (rope-concat ρ (rope-concat ρ l (chunk->rope ρ chunk)) r))])
-    (if (rope-balanced? b) b (rope-rebalance ρ b))))
+  (let-values ([(l r) (rope-cut ρ a i k)])
+    (rope-concat ρ (rope-concat ρ l (chunk->rope ρ chunk)) r)))
 
 ;; Produces an optimally balanced rope.
 (define-rope-operation (chunk->rope chunk0)
@@ -227,37 +217,68 @@
 (define-rope-operation (rope-defrag a)
   (chunk->rope ρ (rope->chunk ρ a)))
 
+;; Efficient forest-based rope rebuild. O(log n) amortized
 (define-rope-operation (rope-rebalance a0)
   (let ()
-    (define (insert slots a)
-      (let loop ([i (rope-depth a)] [carry a] [current-slots slots])
-        (define slot-i (hash-ref current-slots i #f))
-        ;; If the current slot is occupied, it represents elements strictly to
-        ;; the left of `carry`. Merge them to maintain chunk order before
-        ;; evaluating Fibonacci bounds.
-        (define next-carry (if slot-i (rope-concat ρ slot-i carry) carry))
-        (define next-slots (if slot-i (hash-remove current-slots i) current-slots))
-        ;; We only place the merged chunk if the slot was initially empty AND
-        ;; the chunk's length is small enough for this slot's Fibonacci bound.
-        (if (and (not slot-i) (< (rope-count next-carry) (fib-bound (+ i 3))))
-            (hash-set next-slots i next-carry)
-            (loop (add1 i) next-carry next-slots))))
+    (define slots (make-hasheqv))
 
-    (define (collapse slots)
-      ;; Collapse from smallest index to largest to maintain depth bounds.
-      (for/fold ([result #f]) ([i (in-range max-fib-index)])
+    (define (target-slot len)
+      (let loop ([i 0])
+        ;; A rope with len elements is too large for the current slot if len
+        ;; falls beyond the interval [Fₙ, Fₙ₊₁). Hence, we move on to the next
+        ;; slot if len ≥ Fₙ₊₁.
+        ;;
+        ;; Since i = n - 2 (see the comment in rope.rkt) ⇒ n = i + 2, we have
+        ;;
+        ;;   len ≥ F₍ᵢ₊₂₎₊₁ = Fᵢ₊₃.
+        ;;
+        (if (>= len (fib-bound (+ i 3))) (loop (add1 i)) i)))
+
+    (define (insert a)
+      (define n (target-slot (rope-count a)))
+      ;; Concatenate on the left from slot 0 to the target slot.
+      (define prefix
+        (for/fold ([acc #f])
+                  ([i (in-range n)])
+          (define cur (hash-ref slots i #f))
+          (when cur (hash-remove! slots i))
+          (cond
+            [(not cur) acc]
+            [(not acc) cur]
+            [else (rope-concat ρ cur acc)])))
+      ;; If there is a prefix, put it to the right of the initial rope.
+      (define r (if prefix (rope-concat ρ prefix a) a))
+      ;; Concatenate on the left from the target slot until we find an empty
+      ;; slot that fits. This is like carry propagation in binary arithmetic:
+      ;; keep flipping "ones" until we hit a "zero."
+      (let cascade ([i n] [curr r])
+        (define next (hash-ref slots i #f))
+        (cond
+          [next
+           (hash-remove! slots i)
+           (cascade (add1 i) (rope-concat ρ next curr))]
+          [else
+           (hash-set! slots i curr)])))
+
+    (define (traverse a)
+      (cond
+        ;; must use strict balance here
+        [(or (rope-leaf? a) (rope-strictly-balanced? a))
+         (insert a)]
+        [else
+         (traverse (rope-node-left a))
+         (traverse (rope-node-right a))]))
+
+    ;; Concatenate on the left, from smallest to largest slot.
+    (define (collapse)
+      (for/fold ([result #f])
+                ([i (in-range max-fib-index)])
         (define slot-i (hash-ref slots i #f))
         (cond
           [(not slot-i) result]
           [(not result) slot-i]
           [else (rope-concat ρ slot-i result)])))
 
-    (define (build stop?)
-      (define (traverse a slots)
-        (if (stop? a)
-            (insert slots a)
-            (traverse (rope-node-right a) (traverse (rope-node-left a) slots))))
-      (collapse (traverse a0 (hasheqv))))
-
-    (define fast (build rope-balanced?))
-    (if (rope-balanced? fast) fast (build rope-leaf?))))
+    (if (rope-mostly-balanced? a0)
+        a0
+        (begin (traverse a0) (collapse)))))

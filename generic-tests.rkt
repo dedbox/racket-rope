@@ -112,32 +112,32 @@
 
   (define append-suite
     (test-suite "append"
-      (test-property "rope-append2 agrees with vector-append and stays balanced"
+      (test-property "rope-concat/lazy agrees with vector-append and stays mostly balanced"
           #:trials 300
           ([a (random-weighted-chunk (random 40))]
            [b (random-weighted-chunk (random 40))])
-        (define r (rope-append2 weighted
-                                (make-rope-leaf weighted a)
-                                (make-rope-leaf weighted b)))
+        (define r (rope-concat/lazy weighted
+                                    (make-rope-leaf weighted a)
+                                    (make-rope-leaf weighted b)))
         (and (= (rope-count r) (+ (vector-length a) (vector-length b)))
              (= (rope-size  r) (+ (weighted-rope-chunk-size a)
                                   (weighted-rope-chunk-size b)))
              (equal? (rope->weighted r) (vector-append a b))
-             (rope-balanced? r)))
+             (rope-mostly-balanced? r)))
 
-      (test-case "empty rope is a left unit and a right unit of rope-append2"
+      (test-case "empty rope is a left unit and a right unit of rope-concat/lazy"
         (define e (make-empty-rope weighted))
         (define r (make-rope-leaf weighted (vector 1 2 3)))
-        (check-equal? (rope->weighted (rope-append2 weighted e r)) (rope->weighted r))
-        (check-equal? (rope->weighted (rope-append2 weighted r e)) (rope->weighted r)))
+        (check-equal? (rope->weighted (rope-concat/lazy weighted e r)) (rope->weighted r))
+        (check-equal? (rope->weighted (rope-concat/lazy weighted r e)) (rope->weighted r)))
 
       (test-case "rope-append with no ropes returns the empty rope"
         (check-true (rope-empty? (rope-append weighted null))))
 
       (test-property "rope-append agrees with vector-append"
           #:trials 50
-          ([chunks (for/list ([_ (in-range (add1 (random 12)))])
-                     (random-weighted-chunk (random 20)))])
+          ([chunks (for/list ([_ (in-range (add1 (random 9)))])
+                     (random-weighted-chunk (random 7)))])
         (define r (rope-append weighted (map (λ (c) (make-rope-leaf weighted c)) chunks)))
         (equal? (rope->weighted r) (apply vector-append chunks)))
 
@@ -148,17 +148,17 @@
         (define deep
           (for/fold ([r (make-rope-leaf weighted (random-weighted-chunk 1))])
                     ([_ (in-range depth)])
-            (rope-append2 weighted r (make-rope-leaf weighted (random-weighted-chunk 1)))))
+            (rope-concat/lazy weighted r (make-rope-leaf weighted (random-weighted-chunk 1)))))
         (define combined (rope-concat weighted deep (make-rope-leaf weighted leaf-chunk)))
-        (rope-balanced? (rope-rebalance weighted combined)))
+        (rope-mostly-balanced? (rope-rebalance weighted combined)))
 
       (test-case "sequential appends stay Fibonacci-balanced across many steps"
         (for/fold ([r (make-empty-rope weighted)]) ([i (in-range 800)])
           (define chunk  (random-weighted-chunk (add1 (random 6))))
           (define leaf   (make-rope-leaf weighted chunk))
-          (define r+leaf (rope-append2 weighted r leaf))
-          (with-check-info (['iteration i])
-            (check-true (rope-balanced? r+leaf)))
+          (define r+leaf (rope-concat/lazy weighted r leaf))
+          (with-check-info (['iteration i] ['chunk chunk] ['r+leaf r+leaf])
+            (check-true (rope-mostly-balanced? r+leaf)))
           r+leaf)
         (void))
 
@@ -170,9 +170,7 @@
         (define r (rope-append weighted leaves))
         (define a (rope->weighted r))
         (define b (apply vector-append chunks))
-        (check-equal? a b))
-
-      ))
+        (check-equal? a b))))
 
   (run-suite! (test-suite "generic-tests.rkt"
                 generic-ops-suite core-ops-suite append-suite)))

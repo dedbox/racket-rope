@@ -76,7 +76,7 @@
        [make-*-rope-node       . ,(mk-id- "make-~arope-node")]
        [make-empty-*-rope      . ,(mk-id- "make-empty-~arope")]
        [*-rope-concat          . ,(mk-id- "~arope-concat")]
-       [*-rope-append2         . ,(mk-id- "~arope-append2")]
+       [*-rope-concat/lazy     . ,(mk-id- "~arope-concat/lazy")]
        [*-rope-append          . ,(mk-id- "~arope-append")]
        [*-rope-split           . ,(mk-id- "~arope-split")]
        [*-rope-ref             . ,(mk-id- "~arope-ref")]
@@ -173,7 +173,7 @@
   #:with make-*-rope-node       (id* 'make-*-rope-node)
   #:with make-empty-*-rope      (id* 'make-empty-*-rope)
   #:with *-rope-concat          (id* '*-rope-concat)
-  #:with *-rope-append2         (id* '*-rope-append2)
+  #:with *-rope-concat/lazy     (id* '*-rope-concat/lazy)
   #:with *-rope-append          (id* '*-rope-append)
   #:with *-rope-split           (id* '*-rope-split)
   #:with *-rope-ref             (id* '*-rope-ref)
@@ -327,7 +327,7 @@
     (define (make-empty-*-rope)      (make-empty-rope type-id))
 
     (define (*-rope-concat       l r)      (rope-concat       type-id l r))
-    (define (*-rope-append2      l r)      (rope-append2      type-id l r))
+    (define (*-rope-concat/lazy  l r)      (rope-concat/lazy  type-id l r))
     (define (*-rope-append . as)           (rope-append       type-id as))
     (define (*-rope-split        a i)      (rope-split        type-id a i))
     (define (*-rope-ref          a i)      (rope-ref          type-id a i))

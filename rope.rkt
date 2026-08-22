@@ -126,9 +126,14 @@
 ;; O(1)
 (define (fib-bound d) (vector-ref fib-vector (min d max-fib-index)))
 
+;; A rope of depth n is /strictly balanced/ if its length is at least Fₙ₊₂.
 ;; O(1)
-(define (rope-balanced? a)
-  (or (rope-empty? a) (>= (rope-count a) (fib-bound (rope-depth a)))))
+(define (rope-strictly-balanced? r)
+  (or (= 0 (rope-count r)) (>= (rope-count r) (fib-bound (+ (rope-depth r) 2)))))
+
+;; A rope of depth n is /mostly balanced/ if its length is at most Fₙ. O(1)
+(define (rope-mostly-balanced? r)
+  (or (= 0 (rope-count r)) (>= (rope-count r) (fib-bound (rope-depth r)))))
 
 ;; Collect chunks left-to-right. O(# leaves)
 (define (rope-chunks a)
