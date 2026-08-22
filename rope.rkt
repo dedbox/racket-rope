@@ -126,11 +126,6 @@
 ;; O(1)
 (define (fib-bound d) (vector-ref fib-vector (min d max-fib-index)))
 
-;; Pure arithmetic — no descriptor needed.
-(define (fib-target-slot len)
-  (let loop ([i 0])
-    (if (>= len (fib-bound (+ i 3))) (loop (add1 i)) i)))
-
 ;; A rope of depth n is /strictly balanced/ if its length is at least Fₙ₊₂.
 ;; O(1)
 (define (rope-strictly-balanced? r)
@@ -147,14 +142,3 @@
         (cons (rope-leaf-chunk a) acc)
         (loop (rope-node-left a) (loop (rope-node-right a) acc)))))
 
-
-
-(struct rope-forest (slots) #:transparent)
-
-(define (make-rope-forest) (rope-forest (hasheqv)))
-
-(define (rope-forest-count forest)
-  (for/sum ([r (in-hash-values (rope-forest-slots forest))]) (rope-count r)))
-
-(define (rope-forest-empty? forest)
-  (hash-empty? (rope-forest-slots forest)))

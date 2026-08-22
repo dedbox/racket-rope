@@ -284,6 +284,25 @@
 ;;         (collapse (traverse a0 (hasheqv))))))
 
 
+
+
+
+;; Pure arithmetic — no descriptor needed.
+(define (fib-target-slot len)
+  (let loop ([i 0])
+    (if (>= len (fib-bound (+ i 3))) (loop (add1 i)) i)))
+
+(struct rope-forest (slots) #:transparent)
+
+(define (make-rope-forest) (rope-forest (hasheqv)))
+
+(define (rope-forest-count forest)
+  (for/sum ([r (in-hash-values (rope-forest-slots forest))]) (rope-count r)))
+
+(define (rope-forest-empty? forest)
+  (hash-empty? (rope-forest-slots forest)))
+
+
 ;; Insert one leaf/strictly-balanced run into a forest. O(1) amortized —
 ;; this is the entire algorithm; nothing about it depends on where the
 ;; run came from.
@@ -294,7 +313,9 @@
       (for/fold ([prefix #f] [slots slots0])
                 ([i (in-range n)])
         (define cur (hash-ref slots i #f))
-        (values (cond [(not cur) prefix] [(not prefix) cur] [else (rope-concat ρ cur prefix)])
+        (values (cond [(not cur) prefix]
+                      [(not prefix) cur]
+                      [else (rope-concat ρ cur prefix)])
                 (if cur (hash-remove slots i) slots))))
     (define r (if prefix (rope-concat ρ prefix a) a))
     (let cascade ([i n] [curr r] [slots slots1])
@@ -307,19 +328,27 @@
 (define-rope-operation (rope-forest-collapse slots)
   (for/fold ([result #f]) ([i (in-range max-fib-index)])
     (define slot-i (hash-ref slots i #f))
-    (cond [(not slot-i) result] [(not result) slot-i] [else (rope-concat ρ slot-i result)])))
+    (cond [(not slot-i) result]
+          [(not result) slot-i]
+          [else (rope-concat ρ slot-i result)])))
+
+(define-rope-operation (traverse a0 slots0)
+  (let ([visit-count (box 0)])
+    (let ([result (let loop ([a a0] [slots slots0])
+                    (set-box! visit-count (add1 (unbox visit-count)))
+                    (cond
+                      [(or (rope-leaf? a) (rope-strictly-balanced? a))
+                       (rope-forest-insert ρ slots a)]
+                      [else (loop (rope-node-right a) (loop (rope-node-left a) slots))]))])
+      (eprintf "traverse visited ~a nodes\n" (unbox visit-count))
+      result)))
 
 ;; rope-rebalance is now just: decompose an existing tree into runs, feed
 ;; them through the same insert/collapse a forest builder uses.
 (define-rope-operation (rope-rebalance a0)
-  (let ()
-    (define (traverse a slots)
-      (cond
-        [(or (rope-leaf? a) (rope-strictly-balanced? a)) (rope-forest-insert ρ slots a)]
-        [else (traverse (rope-node-right a) (traverse (rope-node-left a) slots))]))
-    (if (rope-mostly-balanced? a0)
-        a0
-        (rope-forest-collapse ρ (traverse a0 (hasheqv))))))
+  (if (rope-mostly-balanced? a0)
+      a0
+      (rope-forest-collapse ρ (traverse ρ a0 (hasheqv)))))
 
 
 
