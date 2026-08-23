@@ -60,6 +60,7 @@
 
   (define (random-weight)           (add1 (random 4)))
   (define (random-weighted-chunk n) (build-vector n (λ (_) (random-weight))))
+  (define (weighted->vec a)         (rope->weighted a))
 
   (define generic-ops-suite
     (test-suite "generic"
@@ -160,10 +161,50 @@
           (with-check-info (['iteration i] ['chunk chunk] ['r+leaf r+leaf])
             (check-true (rope-mostly-balanced? r+leaf)))
           r+leaf)
-        (void))
+        (void))))
 
-      ;; Regressions
+  (define split-suite
+    (test-suite "split"
+      (test-property "all partitions are a total cover"
+          #:trials 300
+          ([chunk (random-weighted-chunk (add1 (random 200)))])
+        (define n (vector-length chunk))
+        (define a (weighted->rope chunk))
+        (for/and ([i (in-range (add1 n))])
+          (define-values (l r) (weighted-rope-split a i))
+          (and (= (rope-count l) i)
+               (= (rope-count r) (- n i))
+               (equal? (vector-append (weighted->vec l) (weighted->vec r)) chunk))))
 
+      (test-case "splitting at one end returns an empty rope"
+        (define chunk (random-weighted-chunk 30))
+        (define a (weighted->rope chunk))
+        (define-values (l0 r0) (weighted-rope-split a 0))
+        (define-values (ln rn) (weighted-rope-split a (vector-length chunk)))
+        (check-true   (rope-empty? l0))
+        (check-equal? (weighted->vec r0) chunk)
+        (check-equal? (weighted->vec ln) chunk)
+        (check-true   (rope-empty? rn)))))
+
+  (define (vector-splice v i k chunk)
+    (vector-append (vector-copy v 0 i) chunk
+                   (vector-copy v (+ i k) (vector-length v))))
+
+  (define splice/slice-suite
+    (test-suite "splice/slice"
+      (test-property "rope-splice matches a vector oracle"
+          #:trials 300
+          ([chunk (random-weighted-chunk (add1 (random 100)))])
+        (define n (vector-length chunk))
+        (define i (random (add1 n)))
+        (define k (random (add1 (- n i))))
+        (define new-chunk (random-weighted-chunk (random 20)))
+        (define a (weighted->rope new-chunk))
+        (equal? (weighted->vec (weighted-rope-splice (weighted->rope chunk) i k a))
+                (vector-splice chunk i k new-chunk)))))
+
+  (define regression-suite
+    (test-suite "regressions"
       (test-case "rope-rebalance does not skip intervening occupied slots"
         (define chunks (list #(3) #() #(2 1)))
         (define leaves (map (λ (c) (make-rope-leaf weighted c)) chunks))
@@ -173,4 +214,6 @@
         (check-equal? a b))))
 
   (run-suite! (test-suite "generic-tests.rkt"
-                generic-ops-suite core-ops-suite append-suite)))
+                generic-ops-suite core-ops-suite append-suite split-suite
+                splice/slice-suite
+                regression-suite)))
