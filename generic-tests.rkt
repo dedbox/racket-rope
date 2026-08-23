@@ -211,7 +211,17 @@
         (define k (random (add1 (- n i))))
         (define a (weighted->rope chunk))
         (equal? (weighted->vec (weighted-rope-slice a i k))
-                (vector-copy chunk i (+ i k))))))
+                (vector-copy chunk i (+ i k))))
+
+      (test-case "rope-slice/rope-splice don't fail at either end"
+        (define chunk (random-weighted-chunk 20))
+        (define a (weighted->rope chunk))
+        (define b (make-empty-weighted-rope))
+        (check-not-exn (λ () (weighted-rope-slice a 0 0)))
+        (check-not-exn (λ () (weighted-rope-slice a (vector-length chunk) 0)))
+        (check-not-exn (λ () (weighted-rope-splice a 0 0 b)))
+        (check-not-exn (λ () (weighted-rope-splice a (vector-length chunk) 0 b))
+                       ))))
 
   (define regression-suite
     (test-suite "regressions"
