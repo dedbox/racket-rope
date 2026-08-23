@@ -201,7 +201,17 @@
         (define new-chunk (random-weighted-chunk (random 20)))
         (define a (weighted->rope new-chunk))
         (equal? (weighted->vec (weighted-rope-splice (weighted->rope chunk) i k a))
-                (vector-splice chunk i k new-chunk)))))
+                (vector-splice chunk i k new-chunk)))
+
+      (test-property "rope-slice matches a vector oracle"
+          #:trials 300
+          ([chunk (random-weighted-chunk (add1 (random 100)))])
+        (define n (vector-length chunk))
+        (define i (random (add1 n)))
+        (define k (random (add1 (- n i))))
+        (define a (weighted->rope chunk))
+        (equal? (weighted->vec (weighted-rope-slice a i k))
+                (vector-copy chunk i (+ i k))))))
 
   (define regression-suite
     (test-suite "regressions"
