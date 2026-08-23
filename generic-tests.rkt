@@ -48,7 +48,7 @@
 
   (define-rope-type weighted
     #:chunk?        vector?
-    #:elem-size     values
+    #:elem-size     vector-ref
     #:chunk-limit   (λ () WEIGHTED-CHUNK-LIMIT)
     #:chunk-empty   vector
     #:chunk-count   vector-length
@@ -223,6 +223,30 @@
         (check-not-exn (λ () (weighted-rope-splice a (vector-length chunk) 0 b))
                        ))))
 
+  (define (owning-index chunk p)
+    (let loop ([i 0] [acc 0])
+      (define w (vector-ref chunk i))
+      (if (< p (+ acc w)) i (loop (add1 i) (+ acc w)))))
+
+  (define offset-index-suite
+    (test-suite "rope-offset-index"
+      (test-property "matches a linear-scan oracle"
+          #:trials 200
+          ([chunk (random-weighted-chunk (add1 (random 30)))]
+           [a (weighted->rope chunk)]
+           [p (random (rope-size a))]
+           [i (weighted-rope-offset-index a p)]
+           [j (owning-index chunk p)])
+        (= i j))
+
+      (test-case "at both ends, and one past the end"
+        (define chunk (vector 3 1 4 1 5)) ; width 14
+        (define a (make-weighted-rope-leaf chunk))
+        (check-equal? (weighted-rope-offset-index a 0) 0)
+        (check-equal? (weighted-rope-offset-index a 13) 4)
+        (check-not-exn (λ () (weighted-rope-offset-index a 14)))
+        (check-equal? (weighted-rope-offset-index a 14) 4))))
+
   (define regression-suite
     (test-suite "regressions"
       (test-case "rope-rebalance does not skip intervening occupied slots"
@@ -235,5 +259,5 @@
 
   (run-suite! (test-suite "generic-tests.rkt"
                 generic-ops-suite core-ops-suite append-suite split-suite
-                splice/slice-suite
+                splice/slice-suite offset-index-suite
                 regression-suite)))
