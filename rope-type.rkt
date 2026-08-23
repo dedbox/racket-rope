@@ -180,6 +180,7 @@
   #:with *-rope-ref             (id* '*-rope-ref)
   #:with *-rope-offset-index    (id* '*-rope-offset-index)
   #:with *-rope-splice          (id* '*-rope-splice)
+  #:with *-rope-cut             (id* '*-rope-cut)
   #:with *-rope-slice           (id* '*-rope-slice)
   #:with *->rope                (id* '*->rope)
   #:with rope->*                (id* 'rope->*)
