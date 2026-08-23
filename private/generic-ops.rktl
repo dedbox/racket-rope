@@ -155,31 +155,34 @@
 ;; endpoints of the interval, limiting the number of rebalances to three.
 ;; O(log n) amortized
 (define-rope-operation (rope-cut a0 i0 k0)
-  (rope-ensure-balance
-   ρ (let loop ([a a0] [i i0] [j (^+ i0 k0)])
-       (cond
-         [(rope-leaf? a)
-          (define chunk (rope-leaf-chunk a))
-          (values (make-rope-leaf ρ (chunk-slice chunk 0 i))
-                  (make-rope-leaf ρ (chunk-slice chunk j (rope-leaf-count a))))]
-         [else
-          (define l (rope-node-left a))
-          (define r (rope-node-right a))
-          (define n (rope-count l))
+  (let-values
+      ([(l r)
+        (let loop ([a a0] [i i0] [j (^+ i0 k0)])
           (cond
-            ;; (end of) interval must be in the left sub-tree
-            [(^<= j n)
-             (define-values (ll lr) (loop l i j))
-             (values ll (rope-concat ρ lr r))]
-            ;; (start of) interval must be in the right sub-tree
-            [(^>= i n)
-             (define-values (rl rr) (loop r (^- i n) (^- j n)))
-             (values (rope-concat ρ l rl) rr)]
-            ;; interval touches both sub-trees
+            [(rope-leaf? a)
+             (define chunk (rope-leaf-chunk a))
+             (values (make-rope-leaf ρ (chunk-slice chunk 0 i))
+                     (make-rope-leaf ρ (chunk-slice chunk j (^- (rope-leaf-count a) j))))]
             [else
-             (define-values (ll _lr) (rope-split ρ l i))
-             (define-values (_rl rr) (rope-split ρ r (^- j n)))
-             (values ll rr)])]))))
+             (define l (rope-node-left a))
+             (define r (rope-node-right a))
+             (define n (rope-count l))
+             (cond
+               ;; (end of) interval must be in the left sub-tree
+               [(^<= j n)
+                (define-values (ll lr) (loop l i j))
+                (values ll (rope-concat ρ lr r))]
+               ;; (start of) interval must be in the right sub-tree
+               [(^>= i n)
+                (define-values (rl rr) (loop r (^- i n) (^- j n)))
+                (values (rope-concat ρ l rl) rr)]
+               ;; interval touches both sub-trees
+               [else
+                (define-values (ll _lr) (rope-split ρ l i))
+                (define-values (_rl rr) (rope-split ρ r (^- j n)))
+                (values ll rr)])]))])
+    (values (rope-ensure-balance ρ l)
+            (rope-ensure-balance ρ r))))
 
 ;; The complement of rope-cut. Keeps only the interval [i, i + k). O(log n)
 ;; amortized
@@ -201,11 +204,10 @@
              (define-values (rl _rr) (rope-split ρ r (^- j n)))
              (rope-concat ρ lr rl)])]))))
 
-;; Replaces the interval [i, i + k) with chunk. O(log n) amortized
-(define-rope-operation (rope-splice a i k chunk)
-  (rope-ensure-balance
-   ρ (let-values ([(l r) (rope-cut ρ a i k)])
-       (rope-concat ρ (rope-concat ρ l (chunk->rope ρ chunk)) r))))
+;; Replaces the interval [i, i + k) with a. O(log n) amortized
+(define-rope-operation (rope-splice a0 i k a)
+  (rope-ensure-balance ρ (let-values ([(l r) (rope-cut ρ a0 i k)])
+                           (rope-concat ρ (rope-concat ρ l a) r))))
 
 ;; Produces an optimally balanced rope.
 (define-rope-operation (chunk->rope chunk0)
