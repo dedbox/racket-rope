@@ -247,6 +247,28 @@
         (check-not-exn (λ () (weighted-rope-offset-index a 14)))
         (check-equal? (weighted-rope-offset-index a 14) 4))))
 
+  (define balance-suite
+    (test-suite "conversions and balance"
+      (test-property "chunk-rope maintains balance"
+          #:trials 100
+          ([chunk (random-weighted-chunk (random 500))])
+        (define a (weighted->rope chunk))
+        (and (equal? (weighted->vec a) chunk) (rope-strictly-balanced? a)))
+
+      (test-case "chunk larger than limit produces at least one node"
+        (define chunk (random-weighted-chunk (* 3 WEIGHTED-CHUNK-LIMIT)))
+        (check-true (> (rope-depth (weighted->rope chunk)) 0)))
+
+      (test-case "a deeply concatenated rope is unbalanced"
+        (define a (for/fold ([a (make-weighted-rope-leaf (vector 1))])
+                            ([_ (in-range 99)])
+                    (weighted-rope-concat a (make-weighted-rope-leaf (vector 1)))))
+        (check-equal? (rope-depth a) 99)
+        (check-not-exn (λ () (rope-strictly-balanced? a))) ; fib-bound clamp
+        (check-not-exn (λ () (rope-mostly-balanced? a)))   ; doesn't crash
+        (check-false (rope-strictly-balanced? a))
+        (check-false (rope-mostly-balanced? a)))))
+
   (define regression-suite
     (test-suite "regressions"
       (test-case "rope-rebalance does not skip intervening occupied slots"
@@ -259,5 +281,5 @@
 
   (run-suite! (test-suite "generic-tests.rkt"
                 generic-ops-suite core-ops-suite append-suite split-suite
-                splice/slice-suite offset-index-suite
+                splice/slice-suite offset-index-suite balance-suite
                 regression-suite)))
