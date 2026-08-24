@@ -38,6 +38,14 @@
 (define HASH-MOD  (sub1 (expt 2 31))) ; Mersenne prime 2³¹ - 1
 (define HASH-BASE (sub1 (expt 2 29))) ; a coprime base < HASH-MOD
 
+;; *-rope-poly-hash (below) conses a fresh (h . p) pair on every cache miss.
+;; Since h and p are both bounded by HASH-MOD, we can pack them into one
+;; fixnum.
+(define HASH-BITS 31)                   ; MUST agree with HASH-MOD above
+(define (pack-hash h p) (bitwise-ior (arithmetic-shift h HASH-BITS) p))
+(define (unpack-hash-h hp) (arithmetic-shift hp (- HASH-BITS)))
+(define (unpack-hash-p hp) (bitwise-and hp (sub1 (arithmetic-shift 1 HASH-BITS))))
+
 (begin-for-syntax
   ;; To add a new type-specific rope operation:
   ;;
@@ -231,10 +239,10 @@
 
     (define (*-leaf-poly-hash chunk)
       (for/fold ([h 0] [p 1] #:result (values h p))
-                ([i (in-range (*-rope-chunk-count chunk))])
+                ([i (in-range (chunk-count chunk))])
         ;; Bitmasking the native hash ensures e is < 2³¹, preventing bignums
         ;; when computing the polynomial term `(* e p)`
-        (define e (bitwise-and (equal-hash-code (*-rope-chunk-ref chunk i)) HASH-MOD))
+        (define e (bitwise-and (equal-hash-code (chunk-ref chunk i)) HASH-MOD))
         (values (modulo (+ h (* e p)) HASH-MOD)
                 (modulo (* p HASH-BASE) HASH-MOD))))
 
@@ -243,7 +251,7 @@
       ;; of a closure every time the cache is checked.
       (or (hash-ref *-rope-hash-cache rope #f)
           (let-values
-              ([(h p) (if (*-rope-leaf? rope)
+              ([(h p) (if (rope-leaf? rope)
                           (*-leaf-poly-hash (rope-leaf-chunk rope))
                           (let ([hl+pl (*-rope-poly-hash (rope-node-left  rope))]
                                 [hr+pr (*-rope-poly-hash (rope-node-right rope))])
@@ -253,9 +261,9 @@
                                   [pr (cdr hr+pr)])
                               (values (modulo (+ hl (* pl hr)) HASH-MOD)
                                       (modulo (* pl pr) HASH-MOD)))))])
-            (define result (cons h p))
-            (hash-set! *-rope-hash-cache rope result)
-            result)))
+            (define hp (cons h p))
+            (hash-set! *-rope-hash-cache rope hp)
+            hp)))
 
     ;; -------------------------------------------------------------------------
 
@@ -270,10 +278,10 @@
             [(null? st)
              (values #f 0 null)]
             ;; For a leaf, return its chunk and the remaining stack.
-            [(*-rope-leaf? (car st))
+            [(rope-leaf? (car st))
              (values (rope-leaf-chunk (car st)) 0 (cdr st))]
             ;; For a node, push right branch and descend into left branch
-            [(*-rope-node? (car st))
+            [(rope-node? (car st))
              (loop (list* (rope-node-left  (car st))
                           (rope-node-right (car st))
                           (cdr st)))])))
@@ -287,11 +295,11 @@
                  ;; Advance to the next chunk if the current one is finished.
                  ;; Automatically skips empty leaves in O(1) time.
                  (let-values ([(a-chunk a-pos a-stack)
-                               (if (or (not a-chunk) (>= a-pos (*-rope-chunk-count a-chunk)))
+                               (if (or (not a-chunk) (>= a-pos (chunk-count a-chunk)))
                                    (next-chunk a-stack)
                                    (values a-chunk a-pos a-stack))]
                               [(b-chunk b-pos b-stack)
-                               (if (or (not b-chunk) (>= b-pos (*-rope-chunk-count b-chunk)))
+                               (if (or (not b-chunk) (>= b-pos (chunk-count b-chunk)))
                                    (next-chunk b-stack)
                                    (values b-chunk b-pos b-stack))])
                    (cond
@@ -300,8 +308,8 @@
                      ;; msimatch: one tree finishes early
                      [(or (not a-chunk) (not b-chunk)) #f]
                      [else
-                      (define na (- (*-rope-chunk-count a-chunk) a-pos))
-                      (define nb (- (*-rope-chunk-count b-chunk) b-pos))
+                      (define na (- (chunk-count a-chunk) a-pos))
+                      (define nb (- (chunk-count b-chunk) b-pos))
                       (define k  (min na nb))
                       (and (*-rope-chunk-overlap=? a-chunk b-chunk a-pos b-pos k)
                            (walk a-chunk (+ a-pos k) a-stack
@@ -312,15 +320,15 @@
       #:transparent
       #:methods gen:equal+hash
       [(define (equal-proc a b _) (*-rope-content=? a b))
-       (define (hash-proc  a _)   (car (*-rope-poly-hash a)))
-       (define (hash2-proc a _)   (cdr (*-rope-poly-hash a)))])
+       (define (hash-proc  a _)   (unpack-hash-h (*-rope-poly-hash a)))
+       (define (hash2-proc a _)   (unpack-hash-p (*-rope-poly-hash a)))])
 
     (struct *-rope-node rope-node ()
       #:transparent
       #:methods gen:equal+hash
       [(define (equal-proc a b _) (*-rope-content=? a b))
-       (define (hash-proc  a _)   (car (*-rope-poly-hash a)))
-       (define (hash2-proc a _)   (cdr (*-rope-poly-hash a)))])
+       (define (hash-proc  a _)   (unpack-hash-h (*-rope-poly-hash a)))
+       (define (hash2-proc a _)   (unpack-hash-p (*-rope-poly-hash a)))])
 
     (define (*-rope? a) (or (*-rope-leaf? a) (*-rope-node? a)))
 

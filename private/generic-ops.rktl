@@ -1,5 +1,8 @@
 ;; rope/private/generic-ops.rktl
 
+;; BEWARE: Since the operations produced by define-rope-operation are
+;; themselves macros, you CANNOT use bare recursion in the body or the macro
+;; will expand forever. Use a (let loop ...) form or helper functions instead.
 (define-syntax-parse-rule (define-rope-operation (gen-id . args) body ...)
   #:with ρ                (format-id this-syntax "ρ")
   #:with chunk?           (format-id this-syntax "chunk?")
