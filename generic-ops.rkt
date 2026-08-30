@@ -6,8 +6,6 @@
                      racket/syntax
                      rope2/rope-type-descriptor
                      syntax/parse)
-         racket/fixnum
-         rope2/private/hash
          rope2/rope
          syntax/parse/define)
 
@@ -60,10 +58,6 @@
 
   ;; basic operations
   #:with rope-concat      (mk-op "rope-concat")
-
-  ;; hashing
-  #:with rope-chunk-hash (mk-op "rope-chunk-hash")
-  #:with rope-hash       (mk-op "rope-hash")
 
   ;; Passing arbitrary user-supplied arguments directly to the inner macro
   ;; definition is not safe because syntax/parse binds _ as the no-bind
@@ -152,37 +146,3 @@
 ;; basic operations
 (define-rope-operation (rope-concat ρ l r)
   (make-rope-node ρ l r))
-
-;; hashing
-
-;; Unrolled SWAR-style Leaf Hashing (4-Way)
-(define-rope-operation (rope-chunk-hash _ c X X⁴)
-  (let* ([n (chunk-length c)]
-         [limit (fx- n (fxand n 3))])
-    (let loop ([i 0] [h 0])
-      (if (fx= i limit)
-          ;; Tail processing for remaining < 4 chars
-          (let tail-loop ([j i] [th h])
-            (if (fx= j n)
-                th
-                (tail-loop (fx+ j 1)
-                           (fxmodulo-M (fx+ (fxmodulo-M (fx* th X)) (elem-hash (chunk-ref c j)))))))
-          ;; Unrolled 4-way loop mapping nicely onto Horner's method
-          (let* ([c0 (elem-hash (chunk-ref c i))]
-                 [c1 (elem-hash (chunk-ref c (fx+ i 1)))]
-                 [c2 (elem-hash (chunk-ref c (fx+ i 2)))]
-                 [c3 (elem-hash (chunk-ref c (fx+ i 3)))]
-                 ;; h_new = h * X^4 + c0*X^3 + c1*X^2 + c2*X + c3
-                 ;; Calculated safely within fixnum bounds
-                 [poly (fxmodulo-M (fx+ c3 (fx* X (fx+ c2 (fx* X (fx+ c1 (fx* X c0)))))))])
-            (loop (fx+ i 4) (fxmodulo-M (fx+ (fxmodulo-M (fx* h X⁴)) poly))))))))
-
-(define-rope-operation (rope-hash ρ a0)
-  (let loop ([a a0])
-    (if (rope-leaf? a)
-        (values (rope-chunk-hash ρ (rope-leaf-chunk a) X₁ X₁⁴)
-                (rope-chunk-hash ρ (rope-leaf-chunk a) X₂ X₂⁴))
-        (let-values ([(hl1 hl2) (loop (rope-node-left a))]
-                     [(hr1 hr2) (loop (rope-node-right a))]
-                     [(right-len) (rope-length (rope-node-right a))])
-          (hash-combine hl1 hr1 hl2 hr2 right-len)))))

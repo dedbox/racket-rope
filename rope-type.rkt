@@ -6,7 +6,9 @@
                      racket/syntax
                      rope2/rope-type-descriptor
                      syntax/parse)
+         racket/fixnum
          rope2/generic-ops
+         rope2/private/hash
          rope2/rope
          syntax/parse/define)
 
@@ -160,6 +162,8 @@
   #:with *-rope-concat           (mk* "~a-rope-concat")
 
   ;; hashing
+  #:with *-rope-hash-cache       (mk* "~a-rope-hash-cache")
+  #:with *-rope-chunk-hash       (mk* "~a-rope-chunk-hash")
   #:with *-rope-hash             (mk* "~a-rope-hash")
 
   (begin
@@ -232,6 +236,37 @@
     (define (*-rope-concat l r) (rope-concat type-id l r))
 
     ;; hashing
-    (define (*-rope-hash a) (rope-hash type-id a))
+    (define (*-rope-chunk-hash c X X⁴)
+      (define n (chunk-length c))
+      (define limit (fx- n (fxand n 3)))
+      (let loop ([i 0] [h 0])
+        (cond
+          [(fx= i limit)
+           (let tail-loop ([j i] [th h])
+             (cond
+               [(fx= j n) th]
+               [else
+                (define next-th
+                  (fxmodulo-M (fx+ (fxmodulo-M (fx* th X)) (elem-hash (chunk-ref c j)))))
+                (tail-loop (fx+ j 1) next-th)]))]
+          [else
+           (define c0 (elem-hash (chunk-ref c i)))
+           (define c1 (elem-hash (chunk-ref c (fx+ i 1))))
+           (define c2 (elem-hash (chunk-ref c (fx+ i 2))))
+           (define c3 (elem-hash (chunk-ref c (fx+ i 3))))
+           ;; h_new = h * X^4 + c0*X^3 + c1*X^2 + c2*X + c3
+           (define poly (fxmodulo-M (fx+ c3 (fx* X (fx+ c2 (fx* X (fx+ c1 (fx* X c0))))))))
+           (loop (fx+ i 4) (fxmodulo-M (fx+ (fxmodulo-M (fx* h X⁴)) poly)))])))
+
+    (define (*-rope-hash a)
+      (cond
+        [(rope-leaf? a)
+         (values (*-rope-chunk-hash (rope-leaf-chunk a) X₁ X₁⁴)
+                 (*-rope-chunk-hash (rope-leaf-chunk a) X₂ X₂⁴))]
+        [else
+         (define-values (hl1 hl2) (*-rope-hash (rope-node-left a)))
+         (define-values (hr1 hr2) (*-rope-hash (rope-node-right a)))
+         (define-values (right-len) (rope-length (rope-node-right a)))
+         (hash-combine hl1 hr1 hl2 hr2 right-len)]))
 
     ))
