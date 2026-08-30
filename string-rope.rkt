@@ -7,15 +7,14 @@
 (provide (all-defined-out))
 
 (define-rope-type string
-  #:chunk?        string?
-  #:elem-size     1
-  #:chunk-limit   (λ () 512)
-  #:chunk-empty   (λ () "")
-  #:chunk-count   string-length
-  #:chunk-size    string-length
-  #:chunk-slice   (λ (str i k) (substring str i (+ i k)))
-  #:chunk-append  (λ (strs) (apply string-append strs))
-  #:chunk-ref     string-ref
-  #:chunk-compare (λ (a b) (cond [(string<? a b) '<] [(string=? a b) '=] [else '>])))
+  #:chunk?       string?
+  #:chunk-limit  512
+  #:chunk-empty  ""
+  #:chunk-length string-length
+  #:chunk-ref    string-ref
+  #:chunk-slice  (λ (c i k) (substring c i (+ i k)))
+  #:chunk-append (λ (cs) (apply string-append cs))
+  #:elem-width   1
+  #:elem-hash    char->integer)
 
-(define empty-string-rope (make-empty-string-rope))
+(require rope2/generic-ops)

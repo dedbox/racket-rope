@@ -14,48 +14,48 @@
 ;;; ----------------------------------------------------------------------------
 
 (struct rope () #:transparent
-  #:methods gen:equal+hash
-  [(define (equal-proc a b recursive-equal?)
-     (and (rope? b)
-          (= (rope-count a) (rope-count b))
-          (= (rope-size  a) (rope-size  b))
-          (cond
-            [(and (rope-leaf? a) (rope-leaf? b))
-             (equal? (rope-leaf-chunk a) (rope-leaf-chunk b))]
-            [(and (rope-node? a) (rope-node? b))
-             (and (recursive-equal? (rope-node-left  a) (rope-node-left  b))
-                  (recursive-equal? (rope-node-right a) (rope-node-right b)))]
-            [else #f])))
-   (define (hash-proc a recursive-hash)
-     (cond
-       [(rope-leaf? a) (equal-hash-code (rope-leaf-chunk a))]
-       [(rope-node? a) (+ (* 31 (recursive-hash (rope-node-left a)))
-                          (recursive-hash (rope-node-right a)))]
-       [else
-        (error 'hash-proc "expected a rope, got ~v" a)]))
-   (define (hash2-proc a recursive-hash)
-     (cond
-       [(rope-leaf? a) (equal-secondary-hash-code (rope-leaf-chunk a))]
-       [(rope-node? a) (+ (* 31 (recursive-hash (rope-node-left a)))
-                          (recursive-hash (rope-node-right a)))]
-       [else
-        (error 'hash2-proc "expected a rope, got ~v" a)]))])
+  ;; #:methods gen:equal+hash
+  ;; [(define (equal-proc a b recursive-equal?)
+  ;;    (and (rope? b)
+  ;;         (= (rope-length a) (rope-length b))
+  ;;         (= (rope-width  a) (rope-width  b))
+  ;;         (cond
+  ;;           [(and (rope-leaf? a) (rope-leaf? b))
+  ;;            (equal? (rope-leaf-chunk a) (rope-leaf-chunk b))]
+  ;;           [(and (rope-node? a) (rope-node? b))
+  ;;            (and (recursive-equal? (rope-node-left  a) (rope-node-left  b))
+  ;;                 (recursive-equal? (rope-node-right a) (rope-node-right b)))]
+  ;;           [else #f])))
+  ;;  (define (hash-proc a recursive-hash)
+  ;;    (cond
+  ;;      [(rope-leaf? a) (equal-hash-code (rope-leaf-chunk a))]
+  ;;      [(rope-node? a) (+ (* 31 (recursive-hash (rope-node-left a)))
+  ;;                         (recursive-hash (rope-node-right a)))]
+  ;;      [else
+  ;;       (error 'hash-proc "expected a rope, got ~v" a)]))
+  ;;  (define (hash2-proc a recursive-hash)
+  ;;    (cond
+  ;;      [(rope-leaf? a) (equal-secondary-hash-code (rope-leaf-chunk a))]
+  ;;      [(rope-node? a) (+ (* 31 (recursive-hash (rope-node-left a)))
+  ;;                         (recursive-hash (rope-node-right a)))]
+  ;;      [else
+  ;;       (error 'hash2-proc "expected a rope, got ~v" a)]))]
+  )
 
-;; count = the number of elements in `chunk`
-;; size  = the number of valid indices spanning the elements of `chunk`
-;; chunk = a sequence of raw element data
+;; length = the number of elements in `chunk`
+;; width  = the number of valid indices spanning the elements of `chunk`
+;; chunk  = a sequence of raw element data
 ;;
-;; For byte strings and strings without multibyte Unicode characters, count =
-;; bytes. However, this is not always the case. For example, if a chunk
-;; consists of a vector of lexical tokens containing the underlying text,
-;; `count` is the number of tokens and `size` is the number of characters
-;; covered by the tokens.
-(struct rope-leaf rope (count size chunk) #:transparent)
+;; For strings, length = # of characters. However, this is not always the
+;; case. For example, if a chunk consists of a vector of lexical tokens
+;; containing the underlying text, `length` is the number of tokens and
+;; `width` is the number of characters covered by the tokens.
+(struct rope-leaf rope (length width chunk) #:transparent)
 
-;; count = the number of elements spanning `left` and `right`
-;; size  = the number of valid indices spanning the elements of `left` and `right`
-;; depth = the maximum distance from this node to the leaves of `left` and `right`
-(struct rope-node rope (count size depth left right) #:transparent)
+;; length = the number of elements spanning `left` and `right`
+;; width  = the number of valid indices spanning the elements of `left` and `right`
+;; depth  = the maximum distance from this node to the leaves of `left` and `right`
+(struct rope-node rope (length width depth left right) #:transparent)
 
 ;;; ----------------------------------------------------------------------------
 ;;; Core Operations
@@ -63,10 +63,16 @@
 
 ;; All of these operations are O(1).
 
-(define (rope-count a) (if (rope-leaf? a) (rope-leaf-count a) (rope-node-count a)))
-(define (rope-size  a) (if (rope-leaf? a) (rope-leaf-size  a) (rope-node-size  a)))
-(define (rope-depth a) (if (rope-leaf? a) 0 (rope-node-depth a)))
-(define (rope-empty? a) (zero? (rope-size a)))
+(define (rope-length a) (if (rope-leaf? a) (rope-leaf-length a) (rope-node-length a)))
+(define (rope-width  a) (if (rope-leaf? a) (rope-leaf-width  a) (rope-node-width  a)))
+(define (rope-depth  a) (if (rope-leaf? a) 0 (rope-node-depth a)))
+(define (rope-empty? a) (zero? (rope-width a)))
+
+(define (rope-flatten a)
+  (let loop ([a a] [acc null])
+    (if (rope-leaf? a)
+        (cons (rope-leaf-chunk a) acc)
+        (loop (rope-node-left a) (loop (rope-node-right a) acc)))))
 
 ;;; ----------------------------------------------------------------------------
 ;;; Tree Balancing Algorithm
@@ -129,11 +135,11 @@
 ;; A rope of depth n is /strictly balanced/ if its length is at least Fₙ₊₂.
 ;; O(1)
 (define (rope-strictly-balanced? r)
-  (or (= 0 (rope-count r)) (>= (rope-count r) (fib-bound (+ (rope-depth r) 2)))))
+  (or (= 0 (rope-length r)) (>= (rope-length r) (fib-bound (+ (rope-depth r) 2)))))
 
 ;; A rope of depth n is /mostly balanced/ if its length is at most Fₙ. O(1)
 (define (rope-mostly-balanced? r)
-  (or (= 0 (rope-count r)) (>= (rope-count r) (fib-bound (rope-depth r)))))
+  (or (= 0 (rope-length r)) (>= (rope-length r) (fib-bound (rope-depth r)))))
 
 ;; Collect chunks left-to-right. O(# leaves)
 (define (rope-chunks a)

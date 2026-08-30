@@ -6,9 +6,19 @@
 
 (struct rope-type-descriptor
   ;; user-defined operations
-  (chunk? elem-size chunk-limit chunk-empty chunk-count
-          chunk-size chunk-slice chunk-append chunk-ref
-          chunk-compare chunk-overlap=?
-          ;; automatically generated operations
-          leaf-constructor node-constructor)
+  (chunk?
+   chunk-limit
+   chunk-empty
+   chunk-length
+   chunk-width
+   chunk-ref
+   chunk-slice
+   chunk-append
+   chunk-compare
+   chunk-overlap=?
+   elem-width
+   elem-hash
+   ;; automatically generated operations
+   leaf-constructor
+   node-constructor)
   #:transparent)
