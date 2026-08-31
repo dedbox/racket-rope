@@ -256,13 +256,32 @@
 
     ;; content-based hashing & equality
     (define (*-rope-chunk-hash c)
-      (for/fold ([h 0] [p 1] #:result (values h p))
-                ([i (in-range (chunk-length c))])
-        ;; Bitmasking the native hash ensures e is < 2³¹, preventing bignums
-        ;; when computing the polynomial term `(* e p)`
-        (define e (bitwise-and (elem-hash (chunk-ref c i)) M))
-        (values (fxmodulo-M (fx+ h (fx* e p)))
-                (fxmodulo-M (fx* p X)))))
+      ;; h = h₀ + X·h₁ + X²·h₂ + X³·h₃    hₖ = Σⱼ e₄ⱼ₊ₖ·(X⁴)ʲ
+      (define n   (chunk-length c))
+      (define n/4 (fxquotient n 4))
+      (let loop ([j 0] [h0 0] [h1 0] [h2 0] [h3 0] [q 1])
+        (cond
+          [(fx< j n/4)
+           (define base (fx* j 4))
+           (define e0 (bitwise-and (elem-hash (chunk-ref c base))          M))
+           (define e1 (bitwise-and (elem-hash (chunk-ref c (fx+ base 1)))  M))
+           (define e2 (bitwise-and (elem-hash (chunk-ref c (fx+ base 2)))  M))
+           (define e3 (bitwise-and (elem-hash (chunk-ref c (fx+ base 3)))  M))
+           (loop (fx+ j 1)
+                 (fxmodulo-M (fx+ h0 (fx* e0 q)))
+                 (fxmodulo-M (fx+ h1 (fx* e1 q)))
+                 (fxmodulo-M (fx+ h2 (fx* e2 q)))
+                 (fxmodulo-M (fx+ h3 (fx* e3 q)))
+                 (fxmodulo-M (fx* q X⁴)))]
+          [else
+           (define h (fxmodulo-M (fx+ h0 (fx* X (fxmodulo-M (fx+ h1 (fx* X (fxmodulo-M (fx+ h2 (fx* X h3))))))))))
+           (let tail ([i (fx* n/4 4)] [h h] [p q])
+             (if (fx= i n)
+                 (values h p)
+                 (let ([e (bitwise-and (elem-hash (chunk-ref c i)) M)])
+                   (tail (fx+ i 1)
+                         (fxmodulo-M (fx+ h (fx* e p)))
+                         (fxmodulo-M (fx* p X))))))])))
 
     (define (*-rope-node-hash l r)
       (define hl (rope-hash1 l))
