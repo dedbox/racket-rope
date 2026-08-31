@@ -236,37 +236,70 @@
     (define (*-rope-concat l r) (rope-concat type-id l r))
 
     ;; hashing
-    (define (*-rope-chunk-hash c X X⁴)
-      (define n (chunk-length c))
-      (define limit (fx- n (fxand n 3)))
-      (let loop ([i 0] [h 0])
-        (cond
-          [(fx= i limit)
-           (let tail-loop ([j i] [th h])
-             (cond
-               [(fx= j n) th]
-               [else
-                (define next-th
-                  (fxmodulo-M (fx+ (fxmodulo-M (fx* th X)) (elem-hash (chunk-ref c j)))))
-                (tail-loop (fx+ j 1) next-th)]))]
-          [else
-           (define c0 (elem-hash (chunk-ref c i)))
-           (define c1 (elem-hash (chunk-ref c (fx+ i 1))))
-           (define c2 (elem-hash (chunk-ref c (fx+ i 2))))
-           (define c3 (elem-hash (chunk-ref c (fx+ i 3))))
-           ;; h_new = h * X^4 + c0*X^3 + c1*X^2 + c2*X + c3
-           (define poly (fxmodulo-M (fx+ c3 (fx* X (fx+ c2 (fx* X (fx+ c1 (fx* X c0))))))))
-           (loop (fx+ i 4) (fxmodulo-M (fx+ (fxmodulo-M (fx* h X⁴)) poly)))])))
+    (define *-rope-hash-cache (make-weak-hasheq))
 
-    (define (*-rope-hash a)
-      (cond
-        [(rope-leaf? a)
-         (values (*-rope-chunk-hash (rope-leaf-chunk a) X₁ X₁⁴)
-                 (*-rope-chunk-hash (rope-leaf-chunk a) X₂ X₂⁴))]
-        [else
-         (define-values (hl1 hl2) (*-rope-hash (rope-node-left a)))
-         (define-values (hr1 hr2) (*-rope-hash (rope-node-right a)))
-         (define-values (right-len) (rope-length (rope-node-right a)))
-         (hash-combine hl1 hr1 hl2 hr2 right-len)]))
+    (define (*-rope-chunk-hash chunk)
+      (for/fold ([h 0] [p 1] #:result (values h p))
+                ([i (in-range (chunk-length chunk))])
+        ;; Bitmasking the native hash ensures e is < 2³¹, preventing bignums
+        ;; when computing the polynomial term `(* e p)`
+        (define e (bitwise-and (elem-hash (chunk-ref chunk i)) M))
+        (values (fxmodulo-M (fx+ h (fx* e p)))
+                (fxmodulo-M (fx* p X₁)))))
+
+    (define (*-rope-hash rope)
+      ;; Set hash-ref's failure-result to a value (#f) to prevent allocation
+      ;; of a closure every time the cache is checked.
+      (or (hash-ref *-rope-hash-cache rope #f)
+          (let-values
+              ([(h p) (if (rope-leaf? rope)
+                          (*-rope-chunk-hash (rope-leaf-chunk rope))
+                          (let ([hl+pl (*-rope-hash (rope-node-left  rope))]
+                                [hr+pr (*-rope-hash (rope-node-right rope))])
+                            (let ([hl (car hl+pl)]
+                                  [pl (cdr hl+pl)]
+                                  [hr (car hr+pr)]
+                                  [pr (cdr hr+pr)])
+                              (values (fxmodulo-M (fx+ hl (fx* pl hr)))
+                                      (fxmodulo-M (fx* pl pr))))))])
+            (define hp (cons h p))
+            (hash-set! *-rope-hash-cache rope hp)
+            hp)))
+
+
+
+
+    ;; (define (*-rope-chunk-hash c X X⁴)
+    ;;   (define n (chunk-length c))
+    ;;   (define limit (fx- n (fxand n 3)))
+    ;;   (let loop ([i 0] [h 0])
+    ;;     (cond
+    ;;       [(fx= i limit)
+    ;;        (let tail-loop ([j i] [th h])
+    ;;          (cond
+    ;;            [(fx= j n) th]
+    ;;            [else
+    ;;             (define next-th
+    ;;               (fxmodulo-M (fx+ (fxmodulo-M (fx* th X)) (elem-hash (chunk-ref c j)))))
+    ;;             (tail-loop (fx+ j 1) next-th)]))]
+    ;;       [else
+    ;;        (define c0 (elem-hash (chunk-ref c i)))
+    ;;        (define c1 (elem-hash (chunk-ref c (fx+ i 1))))
+    ;;        (define c2 (elem-hash (chunk-ref c (fx+ i 2))))
+    ;;        (define c3 (elem-hash (chunk-ref c (fx+ i 3))))
+    ;;        ;; h_new = h * X^4 + c0*X^3 + c1*X^2 + c2*X + c3
+    ;;        (define poly (fxmodulo-M (fx+ c3 (fx* X (fx+ c2 (fx* X (fx+ c1 (fx* X c0))))))))
+    ;;        (loop (fx+ i 4) (fxmodulo-M (fx+ (fxmodulo-M (fx* h X⁴)) poly)))])))
+
+    ;; (define (*-rope-hash a)
+    ;;   (cond
+    ;;     [(rope-leaf? a)
+    ;;      (values (*-rope-chunk-hash (rope-leaf-chunk a) X₁ X₁⁴)
+    ;;              (*-rope-chunk-hash (rope-leaf-chunk a) X₂ X₂⁴))]
+    ;;     [else
+    ;;      (define-values (hl1 hl2) (*-rope-hash (rope-node-left a)))
+    ;;      (define-values (hr1 hr2) (*-rope-hash (rope-node-right a)))
+    ;;      (define-values (right-len) (rope-length (rope-node-right a)))
+    ;;      (hash-combine hl1 hr1 hl2 hr2 right-len)]))
 
     ))
