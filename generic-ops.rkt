@@ -150,14 +150,14 @@
                       l r)))
 
 ;; conversions
-(define-rope-operation (chunk->rope ρ c0)
-  (let loop ([c c0])
-    (let ([n (chunk-length c)])
-      (if (<= n (chunk-limit))
-          (make-rope-leaf ρ c)
-          (let* ([mid (quotient n 2)]
-                 [l (loop (chunk-slice c 0 mid))]
-                 [r (loop (chunk-slice c mid (- n mid)))])
+(define-rope-operation (chunk->rope ρ c)
+  (let ([total (chunk-length c)])
+    (let loop ([i 0] [k total])
+      (if (<= k (chunk-limit))
+          (make-rope-leaf ρ (chunk-slice c i k))
+          (let ([mid (quotient k 2)])
+            (define l (loop i mid))
+            (define r (loop (+ i mid) (- k mid)))
             (rope-concat ρ l r))))))
 
 (define-rope-operation (rope->chunk _ a)
