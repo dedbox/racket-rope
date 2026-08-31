@@ -13,34 +13,7 @@
 ;;; The Data Structure
 ;;; ----------------------------------------------------------------------------
 
-(struct rope () #:transparent
-  ;; #:methods gen:equal+hash
-  ;; [(define (equal-proc a b recursive-equal?)
-  ;;    (and (rope? b)
-  ;;         (= (rope-length a) (rope-length b))
-  ;;         (= (rope-width  a) (rope-width  b))
-  ;;         (cond
-  ;;           [(and (rope-leaf? a) (rope-leaf? b))
-  ;;            (equal? (rope-leaf-chunk a) (rope-leaf-chunk b))]
-  ;;           [(and (rope-node? a) (rope-node? b))
-  ;;            (and (recursive-equal? (rope-node-left  a) (rope-node-left  b))
-  ;;                 (recursive-equal? (rope-node-right a) (rope-node-right b)))]
-  ;;           [else #f])))
-  ;;  (define (hash-proc a recursive-hash)
-  ;;    (cond
-  ;;      [(rope-leaf? a) (equal-hash-code (rope-leaf-chunk a))]
-  ;;      [(rope-node? a) (+ (* 31 (recursive-hash (rope-node-left a)))
-  ;;                         (recursive-hash (rope-node-right a)))]
-  ;;      [else
-  ;;       (error 'hash-proc "expected a rope, got ~v" a)]))
-  ;;  (define (hash2-proc a recursive-hash)
-  ;;    (cond
-  ;;      [(rope-leaf? a) (equal-secondary-hash-code (rope-leaf-chunk a))]
-  ;;      [(rope-node? a) (+ (* 31 (recursive-hash (rope-node-left a)))
-  ;;                         (recursive-hash (rope-node-right a)))]
-  ;;      [else
-  ;;       (error 'hash2-proc "expected a rope, got ~v" a)]))]
-  )
+(struct rope () #:transparent)
 
 ;; length = the number of elements in `chunk`
 ;; width  = the number of valid indices spanning the elements of `chunk`
@@ -50,12 +23,12 @@
 ;; case. For example, if a chunk consists of a vector of lexical tokens
 ;; containing the underlying text, `length` is the number of tokens and
 ;; `width` is the number of characters covered by the tokens.
-(struct rope-leaf rope (length width chunk) #:transparent)
+(struct rope-leaf rope (length width hash1 hash2 chunk) #:transparent)
 
 ;; length = the number of elements spanning `left` and `right`
 ;; width  = the number of valid indices spanning the elements of `left` and `right`
 ;; depth  = the maximum distance from this node to the leaves of `left` and `right`
-(struct rope-node rope (length width depth left right) #:transparent)
+(struct rope-node rope (length width hash1 hash2 depth left right) #:transparent)
 
 ;;; ----------------------------------------------------------------------------
 ;;; Core Operations
@@ -65,6 +38,8 @@
 
 (define (rope-length a) (if (rope-leaf? a) (rope-leaf-length a) (rope-node-length a)))
 (define (rope-width  a) (if (rope-leaf? a) (rope-leaf-width  a) (rope-node-width  a)))
+(define (rope-hash1  a) (if (rope-leaf? a) (rope-leaf-hash1  a) (rope-node-hash1  a)))
+(define (rope-hash2  a) (if (rope-leaf? a) (rope-leaf-hash2  a) (rope-node-hash2  a)))
 (define (rope-depth  a) (if (rope-leaf? a) 0 (rope-node-depth a)))
 (define (rope-empty? a) (zero? (rope-width a)))
 

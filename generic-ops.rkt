@@ -47,6 +47,13 @@
   ;; per-rope primitives
   #:with leaf-constructor (mk-op "leaf-constructor")
   #:with node-constructor (mk-op "node-constructor")
+  #:with rope-chunk-hash  (mk-op "rope-chunk-hash")
+  #:with rope-node-hash   (mk-op "rope-node-hash")
+  #:with rope-hashing     (mk-op "rope-hashing")
+
+  ;; content-based hashing * equality
+  #:with make-rope-hash   (mk-op "make-rope-hash")
+  #:with content=?        (mk-op "content=?")
 
   ;; smart constructors
   #:with make-rope-leaf   (mk-op "make-rope-leaf")
@@ -96,6 +103,12 @@
     ;; per-rope primitives
     #:with leaf-constructor (rope-type-descriptor-leaf-constructor desc)
     #:with node-constructor (rope-type-descriptor-node-constructor desc)
+    #:with rope-chunk-hash  (rope-type-descriptor-rope-chunk-hash  desc)
+    #:with rope-node-hash   (rope-type-descriptor-rope-node-hash   desc)
+
+    ;; content-based hashing & equality
+    #:with rope-hashing     (rope-type-descriptor-make-rope-hash   desc)
+    #:with rope-content=?   (rope-type-descriptor-content=?        desc)
 
     ;; Rebind the temporary identifiers to the corresponding originals.
     #:with ρ         #'inner-ρ
@@ -119,15 +132,22 @@
 (define-rope-operation (rope-elem-width      _ c i)   (elem-width      c i))
 (define-rope-operation (rope-elem-hash       _ e)     (elem-hash       e))
 
+;; content-based hashing * equality
+(define-rope-operation (make-rope-hash       _ a)     (rope-hashing    a))
+(define-rope-operation (rope-content=?       _ a b)   (content=?       a b))
+
 ;; smart constructors
 (define-rope-operation (make-rope-leaf _ c)
-  (leaf-constructor (chunk-length c) (chunk-width c) c))
+  (let-values ([(hash1 hash2) (rope-chunk-hash c)])
+    (leaf-constructor (chunk-length c) (chunk-width c) hash1 hash2 c)))
 
 (define-rope-operation (make-rope-node _ l r)
-  (node-constructor (+ (rope-length l) (rope-length r))
-                    (+ (rope-width l) (rope-width r))
-                    (add1 (max (rope-depth l) (rope-depth r)))
-                    l r))
+  (let-values ([(hash1 hash2) (rope-node-hash l r)])
+    (node-constructor (+ (rope-length l) (rope-length r))
+                      (+ (rope-width l) (rope-width r))
+                      hash1 hash2
+                      (add1 (max (rope-depth l) (rope-depth r)))
+                      l r)))
 
 ;; conversions
 (define-rope-operation (chunk->rope ρ c0)

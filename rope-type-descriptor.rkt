@@ -20,5 +20,9 @@
    elem-hash
    ;; automatically generated operations
    leaf-constructor
-   node-constructor)
+   node-constructor
+   rope-chunk-hash
+   rope-node-hash
+   make-rope-hash
+   content=?)
   #:transparent)

@@ -141,6 +141,10 @@
   #:with *-rope-elem-width       (mk* "~a-rope-elem-width")
   #:with *-rope-elem-hash        (mk* "~a-rope-elem-hash")
 
+  ;; per-rope primitives
+  #:with *-rope-chunk-hash       (mk* "~a-rope-chunk-hash")
+  #:with *-rope-node-hash        (mk* "~a-rope-node-hash")
+
   ;; rope structs
   #:with *-rope-leaf             (mk* "~a-rope-leaf")
   #:with *-rope-node             (mk* "~a-rope-node")
@@ -149,6 +153,10 @@
   #:with *-rope-leaf?            (mk* "~a-rope-leaf?")
   #:with *-rope-node?            (mk* "~a-rope-node?")
   #:with *-rope?                 (mk* "~a-rope?")
+
+  ;; content-based hashing & equality
+  #:with make-*-rope-hash        (mk* "make-~a-rope-hash")
+  #:with *-rope-content=?        (mk* "~a-rope-content=?")
 
   ;; smart constructors
   #:with make-*-rope-leaf        (mk* "make-~a-rope-leaf")
@@ -160,12 +168,6 @@
 
   ;; basic operations
   #:with *-rope-concat           (mk* "~a-rope-concat")
-
-  ;; content-based hashing & equality
-  #:with *-rope-hash-cache       (mk* "~a-rope-hash-cache")
-  #:with *-rope-chunk-hash       (mk* "~a-rope-chunk-hash")
-  #:with *-rope-hash             (mk* "~a-rope-hash")
-  #:with *-rope-content=?        (mk* "~a-rope-content=?")
 
   (begin
 
@@ -184,7 +186,12 @@
                             #'*-rope-elem-width
                             #'*-rope-elem-hash
                             #'*-rope-leaf
-                            #'*-rope-node))
+                            #'*-rope-node
+                            #'*-rope-chunk-hash
+                            #'*-rope-node-hash
+                            #'make-*-rope-hash
+                            #'*-rope-content=?
+                            ))
 
     ;; per-chunk primitives
     (define (*-rope-chunk-limit)        (chunk-limit.callable))
@@ -224,10 +231,15 @@
       #:transparent
       #:methods gen:equal+hash
       [(define (equal-proc a b _) (*-rope-content=? a b))
-       (define (hash-proc a _) (car (*-rope-hash a)))
-       (define (hash2-proc a _) (cdr (*-rope-hash a)))])
+       (define (hash-proc  a _)   (rope-leaf-hash1 a))
+       (define (hash2-proc a _)   (rope-leaf-hash2 a))])
 
-    (struct *-rope-node rope-node () #:transparent)
+    (struct *-rope-node rope-node ()
+      #:transparent
+      #:methods gen:equal+hash
+      [(define (equal-proc a b _) (*-rope-content=? a b))
+       (define (hash-proc  a _)   (rope-node-hash1 a))
+       (define (hash2-proc a _)   (rope-node-hash2 a))])
 
     (define (*-rope? x) (or (*-rope-leaf? x) (*-rope-node? x)))
 
@@ -242,36 +254,30 @@
     ;; basic operations
     (define (*-rope-concat l r) (rope-concat type-id l r))
 
-    ;; hashing
+    ;; content-based hashing & equality
     (define *-rope-hash-cache (make-weak-hasheq))
 
-    (define (*-rope-chunk-hash chunk)
+    (define (*-rope-chunk-hash c)
       (for/fold ([h 0] [p 1] #:result (values h p))
-                ([i (in-range (chunk-length chunk))])
+                ([i (in-range (chunk-length c))])
         ;; Bitmasking the native hash ensures e is < 2³¹, preventing bignums
         ;; when computing the polynomial term `(* e p)`
-        (define e (bitwise-and (elem-hash (chunk-ref chunk i)) M))
+        (define e (bitwise-and (elem-hash (chunk-ref c i)) M))
         (values (fxmodulo-M (fx+ h (fx* e p)))
                 (fxmodulo-M (fx* p X₁)))))
 
-    (define (*-rope-hash rope)
-      ;; Set hash-ref's failure-result to a value (#f) to prevent allocation
-      ;; of a closure every time the cache is checked.
-      (or (hash-ref *-rope-hash-cache rope #f)
-          (let-values
-              ([(h p) (if (rope-leaf? rope)
-                          (*-rope-chunk-hash (rope-leaf-chunk rope))
-                          (let ([hl+pl (*-rope-hash (rope-node-left  rope))]
-                                [hr+pr (*-rope-hash (rope-node-right rope))])
-                            (let ([hl (car hl+pl)]
-                                  [pl (cdr hl+pl)]
-                                  [hr (car hr+pr)]
-                                  [pr (cdr hr+pr)])
-                              (values (fxmodulo-M (fx+ hl (fx* pl hr)))
-                                      (fxmodulo-M (fx* pl pr))))))])
-            (define hp (cons h p))
-            (hash-set! *-rope-hash-cache rope hp)
-            hp)))
+    (define (*-rope-node-hash l r)
+      (define hl (rope-hash1 l))
+      (define pl (rope-hash2 l))
+      (define hr (rope-hash1 r))
+      (define pr (rope-hash2 r))
+      (values (fxmodulo-M (fx+ hl (fx* pl hr)))
+              (fxmodulo-M (fx* pl pr))))
+
+    (define (make-*-rope-hash a)
+      (if (rope-leaf? a)
+          (*-rope-chunk-hash (rope-leaf-chunk a))
+          (*-rope-node-hash (rope-node-left a) (rope-node-right a))))
 
     (define (*-rope-content=? a b)
       (define (next-chunk stack)
@@ -288,7 +294,8 @@
 
       (or (eq? a b)
           (and (= (rope-length a) (rope-length b))
-               (equal? (*-rope-hash a) (*-rope-hash b))
+               (equal? (rope-hash1 a) (rope-hash1 b))
+               (equal? (rope-hash2 a) (rope-hash2 b))
                (let walk ([ca-chunk #f]
                           [ca-pos 0]
                           [ca-stack (list a)]

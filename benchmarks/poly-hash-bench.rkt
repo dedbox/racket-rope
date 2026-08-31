@@ -10,6 +10,7 @@
 
 (require racket/format
          rope2/private/hash
+         rope2/rope
          rope2/string-rope)
 
 (define SIZES '(10 100 1000 10000 100000 1000000 10000000))
@@ -37,11 +38,11 @@
     (define cold-times
       (for/list ([_ (in-range TRIALS)])
         (define r (make-rope-of-size n)) ;; fresh, uncached, every trial
-        (time-ms (λ () (string-rope-hash r)))))
+        (time-ms (λ () (make-string-rope-hash r)))))
     (define r (make-rope-of-size n))
-    (string-rope-hash r) ;; prime the cache once
+    (make-string-rope-hash r) ;; prime the cache once
     (define warm-times
-      (for/list ([_ (in-range TRIALS)]) (time-ms (λ () (string-rope-hash r)))))
+      (for/list ([_ (in-range TRIALS)]) (time-ms (λ () (bitwise-and (rope-hash1 r) (rope-hash2 r))))))
     (printf "| ~a | ~a | ~a |\n"
             (~a n #:min-width 8)
             (~a (format-result (apply min cold-times)) #:min-width 14 #:align 'right)
