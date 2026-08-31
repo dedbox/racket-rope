@@ -43,7 +43,8 @@
 (define (rope-depth  a) (if (rope-leaf? a) 0 (rope-node-depth a)))
 (define (rope-empty? a) (zero? (rope-width a)))
 
-(define (rope-flatten a)
+;; Collect chunks left-to-right. O(# leaves)
+(define (rope-chunks a)
   (let loop ([a a] [acc null])
     (if (rope-leaf? a)
         (cons (rope-leaf-chunk a) acc)
@@ -115,10 +116,3 @@
 ;; A rope of depth n is /mostly balanced/ if its length is at most Fₙ. O(1)
 (define (rope-mostly-balanced? r)
   (or (= 0 (rope-length r)) (>= (rope-length r) (fib-bound (rope-depth r)))))
-
-;; Collect chunks left-to-right. O(# leaves)
-(define (rope-chunks a)
-  (let loop ([a a] [acc null])
-    (if (rope-leaf? a)
-        (cons (rope-leaf-chunk a) acc)
-        (loop (rope-node-left a) (loop (rope-node-right a) acc)))))
