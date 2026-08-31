@@ -255,8 +255,6 @@
     (define (*-rope-concat l r) (rope-concat type-id l r))
 
     ;; content-based hashing & equality
-    (define *-rope-hash-cache (make-weak-hasheq))
-
     (define (*-rope-chunk-hash c)
       (for/fold ([h 0] [p 1] #:result (values h p))
                 ([i (in-range (chunk-length c))])
