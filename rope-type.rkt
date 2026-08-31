@@ -168,6 +168,14 @@
 
   ;; basic operations
   #:with *-rope-concat           (mk* "~a-rope-concat")
+  #:with *-rope-append2          (mk* "~a-rope-append2")
+  #:with *-rope-append           (mk* "~a-rope-append")
+  #:with *-rope-split            (mk* "~a-rope-split")
+  #:with *-rope-ref              (mk* "~a-rope-ref")
+  #:with *-rope-offset-index     (mk* "~a-rope-offset-index")
+  #:with *-rope-cut              (mk* "~a-rope-cut")
+  #:with *-rope-slice            (mk* "~a-rope-slice")
+  #:with *-rope-splice           (mk* "~a-rope-splice")
 
   (begin
 
@@ -205,8 +213,7 @@
     (define *-rope-chunk-width
       (if (number? elem-width)
           (λ (c) (* (chunk-length c) elem-width))
-          (λ (c) (for/sum ([i (in-range (chunk-length c))])
-                   (elem-width c (chunk-ref c i))))))
+          (λ (c) (for/sum ([i (in-range (chunk-length c))]) (elem-width c i)))))
 
     (define *-rope-chunk-compare
       (~? (λ (a b) (chunk-compare a b))
@@ -244,15 +251,13 @@
     (define (*-rope? x) (or (*-rope-leaf? x) (*-rope-node? x)))
 
     ;; smart constructors
-    (define (make-*-rope-leaf c)   (make-rope-leaf type-id c))
-    (define (make-*-rope-node l r) (make-rope-node type-id l r))
+    (define (make-*-rope-leaf c)   (make-rope-leaf  type-id c))
+    (define (make-*-rope-node l r) (make-rope-node  type-id l r))
+    (define (make-empty-*-rope)    (make-empty-rope type-id))
 
     ;; conversions
     (define (*-chunk->rope c) (chunk->rope type-id c))
     (define (*-rope->chunk a) (rope->chunk type-id a))
-
-    ;; basic operations
-    (define (*-rope-concat l r) (rope-concat type-id l r))
 
     ;; content-based hashing & equality
     (define (*-rope-chunk-hash c)
@@ -263,10 +268,10 @@
         (cond
           [(fx< j n/4)
            (define base (fx* j 4))
-           (define e0 (bitwise-and (elem-hash (chunk-ref c base))          M))
-           (define e1 (bitwise-and (elem-hash (chunk-ref c (fx+ base 1)))  M))
-           (define e2 (bitwise-and (elem-hash (chunk-ref c (fx+ base 2)))  M))
-           (define e3 (bitwise-and (elem-hash (chunk-ref c (fx+ base 3)))  M))
+           (define e0 (bitwise-and (*-rope-elem-hash (chunk-ref c base))          M))
+           (define e1 (bitwise-and (*-rope-elem-hash (chunk-ref c (fx+ base 1)))  M))
+           (define e2 (bitwise-and (*-rope-elem-hash (chunk-ref c (fx+ base 2)))  M))
+           (define e3 (bitwise-and (*-rope-elem-hash (chunk-ref c (fx+ base 3)))  M))
            (loop (fx+ j 1)
                  (fxmodulo-M (fx+ h0 (fx* e0 q)))
                  (fxmodulo-M (fx+ h1 (fx* e1 q)))
@@ -278,7 +283,7 @@
            (let tail ([i (fx* n/4 4)] [h h] [p q])
              (if (fx= i n)
                  (values h p)
-                 (let ([e (bitwise-and (elem-hash (chunk-ref c i)) M)])
+                 (let ([e (bitwise-and (*-rope-elem-hash (chunk-ref c i)) M)])
                    (tail (fx+ i 1)
                          (fxmodulo-M (fx+ h (fx* e p)))
                          (fxmodulo-M (fx* p X))))))])))
@@ -328,5 +333,16 @@
                     (and (*-rope-chunk-overlap=? ca* cb* pa* pb* k)
                          (walk ca* (fx+ pa* k) sa*
                                cb* (fx+ pb* k) sb*))])))))
+
+    ;; basic operations
+    (define (*-rope-concat       a b)     (rope-concat       type-id a b))
+    (define (*-rope-append2      a b)     (rope-append2      type-id a b))
+    (define (*-rope-append       as)      (rope-append       type-id as))
+    (define (*-rope-split        a i)     (rope-split        type-id a i))
+    (define (*-rope-ref          a i)     (rope-ref          type-id a i))
+    (define (*-rope-offset-index a p)     (rope-offset-index type-id a p))
+    (define (*-rope-cut          a i k)   (rope-cut          type-id a i k))
+    (define (*-rope-slice        a i k)   (rope-slice        type-id a i k))
+    (define (*-rope-splice       a i k b) (rope-splice       type-id a i k b))
 
     ))
