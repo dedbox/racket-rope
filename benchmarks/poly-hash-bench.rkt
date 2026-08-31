@@ -30,20 +30,32 @@
   (- (current-inexact-monotonic-milliseconds) start))
 
 (module+ main
-  (printf "| ~a | ~a | ~a |\n"
-          (~a "Size" #:min-width 8) (~a "cold hash" #:min-width 14 #:align 'right)
+  (printf "| ~a | ~a | ~a | ~a |\n"
+          (~a "Size" #:min-width 8)
+          (~a "cold hash" #:min-width 18 #:align 'right)
+          (~a "incremental" #:min-width 18 #:align 'right)
           (~a "warm hash (cached)" #:min-width 18 #:align 'right))
   (printf "|-\n")
+
   (for ([n (in-list SIZES)])
     (define cold-times
       (for/list ([_ (in-range TRIALS)])
-        (define r (make-rope-of-size n)) ;; fresh, uncached, every trial
-        (time-ms (λ () (make-string-rope-hash r)))))
+        (time-ms (λ () (make-rope-of-size n)))))
+
+    (define base (make-rope-of-size n))
+    (define small (make-rope-of-size 16))
+
+    (define edit-times
+      (for/list ([_ (in-range TRIALS)])
+        (time-ms (λ () (string-rope-concat base small)))))
+
     (define r (make-rope-of-size n))
-    (make-string-rope-hash r) ;; prime the cache once
+
     (define warm-times
-      (for/list ([_ (in-range TRIALS)]) (time-ms (λ () (bitwise-and (rope-hash1 r) (rope-hash2 r))))))
-    (printf "| ~a | ~a | ~a |\n"
+      (for/list ([_ (in-range TRIALS)]) (time-ms (λ () (equal-hash-code r)))))
+
+    (printf "| ~a | ~a | ~a | ~a |\n"
             (~a n #:min-width 8)
-            (~a (format-result (apply min cold-times)) #:min-width 14 #:align 'right)
+            (~a (format-result (apply min cold-times)) #:min-width 18 #:align 'right)
+            (~a (format-result (apply min edit-times)) #:min-width 18 #:align 'right)
             (~a (format-result (apply min warm-times)) #:min-width 18 #:align 'right))))
