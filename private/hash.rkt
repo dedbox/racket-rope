@@ -17,35 +17,19 @@
 ;;   - 1 bit for sign
 ;;   - what are the other two bits for?
 
-(require (for-meta 2 racket/base
-                   syntax/parse)
-         (for-syntax racket/base
-                     racket/syntax
-                     syntax/parse
-                     syntax/parse/define
-                     syntax/transformer)
-         math
+(require (for-syntax racket/base
+                     syntax/parse)
          racket/fixnum
-         rope2/rope
          syntax/parse/define)
 
 (provide (all-defined-out))
 
-;;; Phase-0+1 constants
-(define-syntax-parse-rule (define-constant var:id val:expr)
-  (define-syntax var (make-variable-like-transformer #'val)))
-
-(define-for-syntax (constant var-id)
-  (syntax-e ((syntax-local-value var-id) #'here)))
-
 ;; Constants for a 64-bit host
-(define-constant U #x3fffffff)          ; 2³⁰ - 1 (the largest 30-bit number)
-(define-constant M #x3fffffdd)          ; 2³⁰ - 35 (the largest 30-bit prime)
-(define-constant M-1 #x3fffffdc)        ; M - 1 = 2³⁰ - 36
-(define-constant X₁ 31)
-(define-constant X₂ 257)
-(define-constant X₁⁴ #xe1781)
-(define-constant X₂⁴ #x406048d)
+(define U  #x3fffffff)                  ; 2³⁰ - 1 (the largest 30-bit number)
+(define M  #x3fffffdd)                  ; 2³⁰ - 35 (the largest 30-bit prime)
+(define C  35)                          ; 2³⁰ (mod M)
+(define X  31)
+(define X⁴ #xe1781)
 
 ;; For pseudo-Mersenne prime M = 2³⁰ - 35, we can exploit the fact that
 ;;
@@ -84,60 +68,17 @@
 ;; reduction is idempotent for any X < M, we can safely fix the number of
 ;; iterations at two to avoid stalling on a missed branch prediction.
 
-(define-syntax-parse-rule (define-pm-fxmodulo name:id modulus:expr)
-  #:do [(define mod-val (constant #'modulus))
-        (define c-val   (modulo (expt 2 30) mod-val))]
-  #:with m #'modulus
-  #:with c (datum->syntax #'here c-val)
-  (define-syntax-parse-rule (name n:expr)
-    (let* ([N n]
-           ;; First iteration, reduces ≤ 60 bits down to ≤ 36 bits.
-           [H₁ (fxrshift N 30)]
-           [L₁ (fxand N U)]
-           [x₁ (fx+ (fx* H₁ c) L₁)]
-           ;; Second iteration, reduces ≤ 36 bits down to ≤ 2³⁰ + 1153
-           [H₂ (fxrshift x₁ 30)]
-           [L₂ (fxand x₁ U)]
-           [x₂ (fx+ (fx* H₂ c) L₂)])
-      ;; Now x₂ < 2M, so a conditional subtraction guarantees x₂ < M. This
-      ;; should be optimized to a branchless conditional move (cmov).
-      (if (fx>= x₂ m) (fx- x₂ m) x₂))))
-
-(define-pm-fxmodulo fxmodulo-M M)
-(define-pm-fxmodulo fxmodulo-M-1 M-1)
-
-;; M also satisfies Fermat's Little Theorem, which states that for any integer
-;; X coprime to M, we have
-;;
-;;    Xᴹ⁻¹ ≡ 1 (mod M).
-;;
-;; This property allows us to efficiently calculate modular exponentiation of
-;; the base primes by constraining the number of bits in the exponent.
-
-(begin-for-syntax
-  (define (base-powers base modulus max-bits)
-    (let loop ([n 0] [b base] [acc null])
-      (if (= n max-bits)
-          (reverse acc)
-          (loop (add1 n) (modulo (* b b) modulus) (cons (datum->syntax #'here b) acc))))))
-
-(define-syntax-parse-rule (define-unrolled-fxexpt name:id base:expr)
-  #:do [(define base-val (syntax-e (local-expand #'base 'expression #f)))]
-  #:with (pₙ ...) (base-powers base-val (constant #'M) 30)
-  #:with (shiftₙ ...) (for/list ([n (in-range 30)]) (datum->syntax #'here n))
-  (define (name pow)
-    (define safe-pow (fxmodulo-M-1 pow))
-    (let* ([res 1]
-           [res (if (fx= (fxand (fxrshift safe-pow shiftₙ) 1) 1)
-                    (fxmodulo-M (fx* res pₙ))
-                    res)]
-           ...)
-      res)))
-
-(define-unrolled-fxexpt fxexpt-X₁-M X₁)
-(define-unrolled-fxexpt fxexpt-X₂-M X₂)
-
-(define (hash-combine hl1 hr1 hl2 hr2 right-len)
-  (values (fxmodulo-M (fx+ (fxmodulo-M (fx* hl1 (fxexpt-X₁-M right-len))) hr1))
-          (fxmodulo-M (fx+ (fxmodulo-M (fx* hl2 (fxexpt-X₂-M right-len))) hr2))))
+(define-syntax-parse-rule (fxmodulo-M n:expr)
+  (let* ([N n]
+         ;; First iteration, reduces ≤ 60 bits down to ≤ 36 bits.
+         [H₁ (fxrshift N 30)]
+         [L₁ (fxand N U)]
+         [x₁ (fx+ (fx* H₁ C) L₁)]
+         ;; Second iteration, reduces ≤ 36 bits down to ≤ 2³⁰ + 1153
+         [H₂ (fxrshift x₁ 30)]
+         [L₂ (fxand x₁ U)]
+         [x₂ (fx+ (fx* H₂ C) L₂)])
+    ;; Now x₂ < 2M, so a conditional subtraction guarantees x₂ < M. This
+    ;; should be optimized to a branchless conditional move (cmov).
+    (if (fx>= x₂ M) (fx- x₂ M) x₂)))
 

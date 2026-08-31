@@ -262,7 +262,7 @@
         ;; when computing the polynomial term `(* e p)`
         (define e (bitwise-and (elem-hash (chunk-ref c i)) M))
         (values (fxmodulo-M (fx+ h (fx* e p)))
-                (fxmodulo-M (fx* p X₁)))))
+                (fxmodulo-M (fx* p X)))))
 
     (define (*-rope-node-hash l r)
       (define hl (rope-hash1 l))
