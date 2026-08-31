@@ -280,40 +280,36 @@
           (*-rope-node-hash (rope-node-left a) (rope-node-right a))))
 
     (define (*-rope-content=? a b)
-      (define (next-chunk stack)
-        (let loop ([st stack])
+      (define (advance chunk pos stack)
+        (let loop ([chunk chunk] [pos pos] [stack stack])
           (cond
-            [(null? st)
+            [(and chunk (fx< pos (chunk-length chunk)))
+             (values chunk pos stack)]
+            [(null? stack)
              (values #f 0 null)]
-            ;; If we hit a leaf, return its chunk and the remaining stack
-            [(rope-leaf? (car st))
-             (values (rope-leaf-chunk (car st)) 0 (cdr st))]
-            ;; If we hit a node, push the right child and immediately descend left
+            [(rope-leaf? (car stack))
+             (loop (rope-leaf-chunk (car stack)) 0 (cdr stack))]
             [else
-             (loop (list* (rope-node-left (car st)) (rope-node-right (car st)) (cdr st)))])))
+             (loop chunk pos (list* (rope-node-left (car stack))
+                                    (rope-node-right (car stack))
+                                    (cdr stack)))])))
 
       (or (eq? a b)
           (and (= (rope-length a) (rope-length b))
                (equal? (rope-hash1 a) (rope-hash1 b))
                (equal? (rope-hash2 a) (rope-hash2 b))
-               (let walk ([ca-chunk #f]
-                          [ca-pos 0]
-                          [ca-stack (list a)]
-                          [cb-chunk #f]
-                          [cb-pos 0]
-                          [cb-stack (list b)])
+               (let walk ([ca-chunk #f] [ca-pos 0] [ca-stack (list a)]
+                          [cb-chunk #f] [cb-pos 0] [cb-stack (list b)])
+                 (define-values (ca* pa* sa*) (advance ca-chunk ca-pos ca-stack))
+                 (define-values (cb* pb* sb*) (advance cb-chunk cb-pos cb-stack))
                  (cond
-                   ;; Both trees exhausted simultaneously -> Match
-                   [(and (not ca-chunk) (not cb-chunk)) #t]
-                   ;; One tree exhausted early -> Mismatch
-                   [(or (not ca-chunk) (not cb-chunk)) #f]
-                   ;; Compare the overlapping chunk segment
+                   [(and (not ca*) (not cb*)) #t]
+                   [(or (not ca*) (not cb*)) #f]
                    [else
-                    (define na (- (chunk-length ca-chunk) ca-pos))
-                    (define nb (- (chunk-length cb-chunk) cb-pos))
-                    (define k  (min na nb))
-                    (and (*-rope-chunk-overlap=? ca-chunk cb-chunk ca-pos cb-pos k)
-                         (walk ca-chunk (+ ca-pos k) ca-stack
-                               cb-chunk (+ cb-pos k) cb-stack))])))))
+                    (define k (fxmin (fx- (chunk-length ca*) pa*)
+                                     (fx- (chunk-length cb*) pb*)))
+                    (and (*-rope-chunk-overlap=? ca* cb* pa* pb* k)
+                         (walk ca* (fx+ pa* k) sa*
+                               cb* (fx+ pb* k) sb*))])))))
 
     ))
