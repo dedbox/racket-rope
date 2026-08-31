@@ -85,17 +85,20 @@
 ;; iterations at two to avoid stalling on a missed branch prediction.
 
 (define-syntax-parse-rule (define-pm-fxmodulo name:id modulus:expr)
-  #:with m (local-expand #'modulus 'expression #f)
+  #:do [(define mod-val (constant #'modulus))
+        (define c-val   (modulo (expt 2 30) mod-val))]
+  #:with m #'modulus
+  #:with c (datum->syntax #'here c-val)
   (define-syntax-parse-rule (name n:expr)
     (let* ([N n]
            ;; First iteration, reduces ≤ 60 bits down to ≤ 36 bits.
            [H₁ (fxrshift N 30)]
            [L₁ (fxand N U)]
-           [x₁ (fx+ (fx* H₁ 35) L₁)]
+           [x₁ (fx+ (fx* H₁ c) L₁)]
            ;; Second iteration, reduces ≤ 36 bits down to ≤ 2³⁰ + 1153
            [H₂ (fxrshift x₁ 30)]
            [L₂ (fxand x₁ U)]
-           [x₂ (fx+ (fx* H₂ 35) L₂)])
+           [x₂ (fx+ (fx* H₂ c) L₂)])
       ;; Now x₂ < 2M, so a conditional subtraction guarantees x₂ < M. This
       ;; should be optimized to a branchless conditional move (cmov).
       (if (fx>= x₂ m) (fx- x₂ m) x₂))))
