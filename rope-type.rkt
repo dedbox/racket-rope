@@ -161,10 +161,11 @@
   ;; basic operations
   #:with *-rope-concat           (mk* "~a-rope-concat")
 
-  ;; hashing
+  ;; content-based hashing & equality
   #:with *-rope-hash-cache       (mk* "~a-rope-hash-cache")
   #:with *-rope-chunk-hash       (mk* "~a-rope-chunk-hash")
   #:with *-rope-hash             (mk* "~a-rope-hash")
+  #:with *-rope-content=?        (mk* "~a-rope-content=?")
 
   (begin
 
@@ -219,7 +220,13 @@
     (define (*-rope-elem-hash  c)   (~? (elem-hash c) (equal-hash-code c)))
 
     ;; rope structs & predicates
-    (struct *-rope-leaf rope-leaf () #:transparent)
+    (struct *-rope-leaf rope-leaf ()
+      #:transparent
+      #:methods gen:equal+hash
+      [(define (equal-proc a b _) (*-rope-content=? a b))
+       (define (hash-proc a _) (car (*-rope-hash a)))
+       (define (hash2-proc a _) (cdr (*-rope-hash a)))])
+
     (struct *-rope-node rope-node () #:transparent)
 
     (define (*-rope? x) (or (*-rope-leaf? x) (*-rope-node? x)))
@@ -266,40 +273,40 @@
             (hash-set! *-rope-hash-cache rope hp)
             hp)))
 
+    (define (*-rope-content=? a b)
+      (define (next-chunk stack)
+        (let loop ([st stack])
+          (cond
+            [(null? st)
+             (values #f 0 null)]
+            ;; If we hit a leaf, return its chunk and the remaining stack
+            [(rope-leaf? (car st))
+             (values (rope-leaf-chunk (car st)) 0 (cdr st))]
+            ;; If we hit a node, push the right child and immediately descend left
+            [else
+             (loop (list* (rope-node-left (car st)) (rope-node-right (car st)) (cdr st)))])))
 
-
-
-    ;; (define (*-rope-chunk-hash c X X⁴)
-    ;;   (define n (chunk-length c))
-    ;;   (define limit (fx- n (fxand n 3)))
-    ;;   (let loop ([i 0] [h 0])
-    ;;     (cond
-    ;;       [(fx= i limit)
-    ;;        (let tail-loop ([j i] [th h])
-    ;;          (cond
-    ;;            [(fx= j n) th]
-    ;;            [else
-    ;;             (define next-th
-    ;;               (fxmodulo-M (fx+ (fxmodulo-M (fx* th X)) (elem-hash (chunk-ref c j)))))
-    ;;             (tail-loop (fx+ j 1) next-th)]))]
-    ;;       [else
-    ;;        (define c0 (elem-hash (chunk-ref c i)))
-    ;;        (define c1 (elem-hash (chunk-ref c (fx+ i 1))))
-    ;;        (define c2 (elem-hash (chunk-ref c (fx+ i 2))))
-    ;;        (define c3 (elem-hash (chunk-ref c (fx+ i 3))))
-    ;;        ;; h_new = h * X^4 + c0*X^3 + c1*X^2 + c2*X + c3
-    ;;        (define poly (fxmodulo-M (fx+ c3 (fx* X (fx+ c2 (fx* X (fx+ c1 (fx* X c0))))))))
-    ;;        (loop (fx+ i 4) (fxmodulo-M (fx+ (fxmodulo-M (fx* h X⁴)) poly)))])))
-
-    ;; (define (*-rope-hash a)
-    ;;   (cond
-    ;;     [(rope-leaf? a)
-    ;;      (values (*-rope-chunk-hash (rope-leaf-chunk a) X₁ X₁⁴)
-    ;;              (*-rope-chunk-hash (rope-leaf-chunk a) X₂ X₂⁴))]
-    ;;     [else
-    ;;      (define-values (hl1 hl2) (*-rope-hash (rope-node-left a)))
-    ;;      (define-values (hr1 hr2) (*-rope-hash (rope-node-right a)))
-    ;;      (define-values (right-len) (rope-length (rope-node-right a)))
-    ;;      (hash-combine hl1 hr1 hl2 hr2 right-len)]))
+      (or (eq? a b)
+          (and (= (rope-length a) (rope-length b))
+               (equal? (*-rope-hash a) (*-rope-hash b))
+               (let walk ([ca-chunk #f]
+                          [ca-pos 0]
+                          [ca-stack (list a)]
+                          [cb-chunk #f]
+                          [cb-pos 0]
+                          [cb-stack (list b)])
+                 (cond
+                   ;; Both trees exhausted simultaneously -> Match
+                   [(and (not ca-chunk) (not cb-chunk)) #t]
+                   ;; One tree exhausted early -> Mismatch
+                   [(or (not ca-chunk) (not cb-chunk)) #f]
+                   ;; Compare the overlapping chunk segment
+                   [else
+                    (define na (- (chunk-length ca-chunk) ca-pos))
+                    (define nb (- (chunk-length cb-chunk) cb-pos))
+                    (define k  (min na nb))
+                    (and (*-rope-chunk-overlap=? ca-chunk cb-chunk ca-pos cb-pos k)
+                         (walk ca-chunk (+ ca-pos k) ca-stack
+                               cb-chunk (+ cb-pos k) cb-stack))])))))
 
     ))
