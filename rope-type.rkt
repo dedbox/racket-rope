@@ -161,6 +161,7 @@
   ;; smart constructors
   #:with make-*-rope-leaf        (mk* "make-~a-rope-leaf")
   #:with make-*-rope-node        (mk* "make-~a-rope-node")
+  #:with make-empty-*-rope       (mk* "make-empty-~a-rope")
 
   ;; conversions
   #:with *-chunk->rope           (mk* "~a-chunk->rope")
