@@ -225,7 +225,7 @@
             [(rope-leaf? a)
              (define chunk (rope-leaf-chunk a))
              (values (make-rope-leaf ρ (chunk-slice chunk 0 i))
-                     (make-rope-leaf ρ (chunk-slice chunk i (- (rope-leaf-length a) i))))]
+                     (make-rope-leaf ρ (chunk-slice chunk i (- (rope-length a) i))))]
             [else
              (define l (rope-node-left a))
              (define r (rope-node-right a))
@@ -281,7 +281,7 @@
             [(rope-leaf? a)
              (define chunk (rope-leaf-chunk a))
              (values (make-rope-leaf ρ (chunk-slice chunk 0 i))
-                     (make-rope-leaf ρ (chunk-slice chunk j (- (rope-leaf-length a) j))))]
+                     (make-rope-leaf ρ (chunk-slice chunk j (- (rope-length a) j))))]
             [else
              (define l (rope-node-left a))
              (define r (rope-node-right a))

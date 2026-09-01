@@ -239,15 +239,15 @@
       #:transparent
       #:methods gen:equal+hash
       [(define (equal-proc a b _) (*-rope-content=? a b))
-       (define (hash-proc  a _)   (rope-leaf-hash1 a))
-       (define (hash2-proc a _)   (rope-leaf-hash2 a))])
+       (define (hash-proc  a _)   (rope-hash1 a))
+       (define (hash2-proc a _)   (rope-hash2 a))])
 
     (struct *-rope-node rope-node ()
       #:transparent
       #:methods gen:equal+hash
       [(define (equal-proc a b _) (*-rope-content=? a b))
-       (define (hash-proc  a _)   (rope-node-hash1 a))
-       (define (hash2-proc a _)   (rope-node-hash2 a))])
+       (define (hash-proc  a _)   (rope-hash1 a))
+       (define (hash2-proc a _)   (rope-hash2 a))])
 
     (define (*-rope? x) (or (*-rope-leaf? x) (*-rope-node? x)))
 

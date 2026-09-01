@@ -3,19 +3,6 @@
 ;; rope/private/hash.rkt
 ;;
 ;; A High-Performance Associative Polynomial Rolling Hash
-;;
-;; Hash
-;;
-;; Polynomial Hash
-;;
-;; Rolling Hash
-;;
-;; Associativity
-;;
-;; Numeric Precision
-;; - On CS, fixnums only give us 60 bits to work with
-;;   - 1 bit for sign
-;;   - what are the other two bits for?
 
 (require (for-syntax racket/base
                      syntax/parse)

@@ -13,7 +13,7 @@
 ;;; The Data Structure
 ;;; ----------------------------------------------------------------------------
 
-(struct rope () #:transparent)
+(struct rope (length width hash1 hash2) #:transparent)
 
 ;; length = the number of elements in `chunk`
 ;; width  = the number of valid indices spanning the elements of `chunk`
@@ -23,12 +23,12 @@
 ;; case. For example, if a chunk consists of a vector of lexical tokens
 ;; containing the underlying text, `length` is the number of tokens and
 ;; `width` is the number of characters covered by the tokens.
-(struct rope-leaf rope (length width hash1 hash2 chunk) #:transparent)
+(struct rope-leaf rope (chunk) #:transparent)
 
 ;; length = the number of elements spanning `left` and `right`
 ;; width  = the number of valid indices spanning the elements of `left` and `right`
 ;; depth  = the maximum distance from this node to the leaves of `left` and `right`
-(struct rope-node rope (length width hash1 hash2 depth left right) #:transparent)
+(struct rope-node rope (depth left right) #:transparent)
 
 ;;; ----------------------------------------------------------------------------
 ;;; Core Operations
@@ -36,10 +36,6 @@
 
 ;; All of these operations are O(1).
 
-(define (rope-length a) (if (rope-leaf? a) (rope-leaf-length a) (rope-node-length a)))
-(define (rope-width  a) (if (rope-leaf? a) (rope-leaf-width  a) (rope-node-width  a)))
-(define (rope-hash1  a) (if (rope-leaf? a) (rope-leaf-hash1  a) (rope-node-hash1  a)))
-(define (rope-hash2  a) (if (rope-leaf? a) (rope-leaf-hash2  a) (rope-node-hash2  a)))
 (define (rope-depth  a) (if (rope-leaf? a) 0 (rope-node-depth a)))
 (define (rope-empty? a) (zero? (rope-width a)))
 
