@@ -5,9 +5,7 @@
 (require (for-syntax racket/base
                      racket/syntax
                      rope2/private/rope-type-classes
-                     rope2/rope-type-descriptor
-                     syntax/parse)
-         racket/fixnum
+                     rope2/rope-type-descriptor)
          rope2/generic-ops
          rope2/private/hash
          rope2/rope
@@ -166,38 +164,38 @@
     (define (*-rope-chunk-hash c)
       ;; h = h₀ + X·h₁ + X²·h₂ + X³·h₃    hₖ = Σⱼ e₄ⱼ₊ₖ·(X⁴)ʲ
       (define n   (chunk-length c))
-      (define n/4 (fxquotient n 4))
+      (define n/4 (quotient n 4))
       (let loop ([j 0] [h0 0] [h1 0] [h2 0] [h3 0] [q 1])
         (cond
-          [(fx< j n/4)
-           (define base (fx* j 4))
+          [(< j n/4)
+           (define base (* j 4))
            (define e0 (bitwise-and (*-rope-elem-hash (chunk-ref c base))          M))
-           (define e1 (bitwise-and (*-rope-elem-hash (chunk-ref c (fx+ base 1)))  M))
-           (define e2 (bitwise-and (*-rope-elem-hash (chunk-ref c (fx+ base 2)))  M))
-           (define e3 (bitwise-and (*-rope-elem-hash (chunk-ref c (fx+ base 3)))  M))
-           (loop (fx+ j 1)
-                 (fxmodulo-M (fx+ h0 (fx* e0 q)))
-                 (fxmodulo-M (fx+ h1 (fx* e1 q)))
-                 (fxmodulo-M (fx+ h2 (fx* e2 q)))
-                 (fxmodulo-M (fx+ h3 (fx* e3 q)))
-                 (fxmodulo-M (fx* q X⁴)))]
+           (define e1 (bitwise-and (*-rope-elem-hash (chunk-ref c (+ base 1)))  M))
+           (define e2 (bitwise-and (*-rope-elem-hash (chunk-ref c (+ base 2)))  M))
+           (define e3 (bitwise-and (*-rope-elem-hash (chunk-ref c (+ base 3)))  M))
+           (loop (+ j 1)
+                 (fxmodulo-M (+ h0 (* e0 q)))
+                 (fxmodulo-M (+ h1 (* e1 q)))
+                 (fxmodulo-M (+ h2 (* e2 q)))
+                 (fxmodulo-M (+ h3 (* e3 q)))
+                 (fxmodulo-M (* q X⁴)))]
           [else
-           (define h (fxmodulo-M (fx+ h0 (fx* X (fxmodulo-M (fx+ h1 (fx* X (fxmodulo-M (fx+ h2 (fx* X h3))))))))))
-           (let tail ([i (fx* n/4 4)] [h h] [p q])
-             (if (fx= i n)
+           (define h (fxmodulo-M (+ h0 (* X (fxmodulo-M (+ h1 (* X (fxmodulo-M (+ h2 (* X h3))))))))))
+           (let tail ([i (* n/4 4)] [h h] [p q])
+             (if (= i n)
                  (values h p)
                  (let ([e (bitwise-and (*-rope-elem-hash (chunk-ref c i)) M)])
-                   (tail (fx+ i 1)
-                         (fxmodulo-M (fx+ h (fx* e p)))
-                         (fxmodulo-M (fx* p X))))))])))
+                   (tail (+ i 1)
+                         (fxmodulo-M (+ h (* e p)))
+                         (fxmodulo-M (* p X))))))])))
 
     (define (*-rope-node-hash l r)
       (define hl (rope-hash1 l))
       (define pl (rope-hash2 l))
       (define hr (rope-hash1 r))
       (define pr (rope-hash2 r))
-      (values (fxmodulo-M (fx+ hl (fx* pl hr)))
-              (fxmodulo-M (fx* pl pr))))
+      (values (fxmodulo-M (+ hl (* pl hr)))
+              (fxmodulo-M (* pl pr))))
 
     (define (make-*-rope-hash a)
       (if (rope-leaf? a)
@@ -208,7 +206,7 @@
       (define (advance chunk pos stack)
         (let loop ([chunk chunk] [pos pos] [stack stack])
           (cond
-            [(and chunk (fx< pos (chunk-length chunk)))
+            [(and chunk (< pos (chunk-length chunk)))
              (values chunk pos stack)]
             [(null? stack)
              (values #f 0 null)]
@@ -231,11 +229,11 @@
                    [(and (not ca*) (not cb*)) #t]
                    [(or (not ca*) (not cb*)) #f]
                    [else
-                    (define k (fxmin (fx- (chunk-length ca*) pa*)
-                                     (fx- (chunk-length cb*) pb*)))
+                    (define k (min (- (chunk-length ca*) pa*)
+                                   (- (chunk-length cb*) pb*)))
                     (and (*-rope-chunk-overlap=? ca* cb* pa* pb* k)
-                         (walk ca* (fx+ pa* k) sa*
-                               cb* (fx+ pb* k) sb*))])))))
+                         (walk ca* (+ pa* k) sa*
+                               cb* (+ pb* k) sb*))])))))
 
     ;; basic operations
     (define (*-rope-concat       a b)     (rope-concat       type-id a b))
