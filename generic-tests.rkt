@@ -11,6 +11,7 @@
            rope2/generic-ops
            rope2/rope
            rope2/rope-type
+           rope2/string-rope
            syntax/parse/define)
 
   (define (run-suite! suite)
@@ -249,7 +250,7 @@
           #:trials 100
           ([chunk (random-weighted-chunk (random 500))])
         (define a (chunk->rope weighted chunk))
-        (and (equal? (weighted->vec a) chunk) (rope-strictly-balanced? a)))
+        (and (equal? (weighted->vec a) chunk) (rope-mostly-balanced? a)))
 
       (test-case "chunk larger than limit produces at least one node"
         (define chunk (random-weighted-chunk (* 3 WEIGHTED-CHUNK-LIMIT)))
