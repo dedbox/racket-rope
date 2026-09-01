@@ -146,6 +146,7 @@
   #:with *-rope-node-hash        (mk* "~a-rope-node-hash")
 
   ;; rope structs
+  #:with *-rope-equal+hash-impl  (mk* "~a-rope-equal+hash-impl")
   #:with *-rope-leaf             (mk* "~a-rope-leaf")
   #:with *-rope-node             (mk* "~a-rope-node")
 
@@ -235,19 +236,18 @@
     (define (*-rope-elem-hash  c)   (~? (elem-hash c) (equal-hash-code c)))
 
     ;; rope structs & predicates
+    (define *-rope-equal+hash-impl
+      (list (λ (a b _) (*-rope-content=? a b))
+            (λ (a _) (rope-hash1 a))
+            (λ (a _) (rope-hash2 a))))
+
     (struct *-rope-leaf rope-leaf ()
       #:transparent
-      #:methods gen:equal+hash
-      [(define (equal-proc a b _) (*-rope-content=? a b))
-       (define (hash-proc  a _)   (rope-hash1 a))
-       (define (hash2-proc a _)   (rope-hash2 a))])
+      #:property prop:equal+hash *-rope-equal+hash-impl)
 
     (struct *-rope-node rope-node ()
       #:transparent
-      #:methods gen:equal+hash
-      [(define (equal-proc a b _) (*-rope-content=? a b))
-       (define (hash-proc  a _)   (rope-hash1 a))
-       (define (hash2-proc a _)   (rope-hash2 a))])
+      #:property prop:equal+hash *-rope-equal+hash-impl)
 
     (define (*-rope? x) (or (*-rope-leaf? x) (*-rope-node? x)))
 

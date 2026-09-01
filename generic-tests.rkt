@@ -283,7 +283,9 @@
                                 ([char (in-list chars)])
                         (string-rope-concat a (string-chunk->rope (string char)))))
         (check-true (string-rope-content=? leaf nodes))
-        (check-equal? leaf nodes))
+        (check-true (string-rope-content=? nodes leaf))
+        (check-equal? leaf nodes)
+        (check-equal? nodes leaf))
 
       ))
 
