@@ -41,7 +41,6 @@
   #:with chunk-compare       (mk-op "chunk-compare")
   #:with chunk-overlap=?     (mk-op "chunk-overlap=?")
   #:with chunk-hash          (mk-op "chunk-hash")
-  #:with rope-chunk-hash     (mk-op "rope-chunk-hash")
 
   ;; per-element primitives
   #:with elem-width          (mk-op "elem-width")
@@ -52,34 +51,7 @@
   #:with node-constructor    (mk-op "node-constructor")
   #:with node-hash           (mk-op "node-hash")
   #:with rope-hashing        (mk-op "rope-hashing")
-  #:with rope-node-hash      (mk-op "rope-node-hash")
-  #:with make-rope-hash      (mk-op "make-rope-hash")
   #:with content=?           (mk-op "content=?")
-
-  ;; smart constructors
-  #:with make-rope-leaf      (mk-op "make-rope-leaf")
-  #:with make-rope-node      (mk-op "make-rope-node")
-  #:with make-empty-rope     (mk-op "make-empty-rope")
-
-  ;; conversions
-  #:with chunk->rope         (mk-op "chunk->rope")
-  #:with rope->chunk         (mk-op "rope->chunk")
-
-  ;; basic operations
-  #:with rope-concat         (mk-op "rope-concat")
-  #:with rope-append2        (mk-op "rope-append2")
-  #:with rope-append         (mk-op "rope-append")
-  #:with rope-split          (mk-op "rope-split")
-  #:with rope-ref            (mk-op "rope-ref")
-  #:with rope-offset-index   (mk-op "rope-offset-index")
-  #:with rope-cut            (mk-op "rope-cut")
-  #:with rope-slice          (mk-op "rope-slice")
-  #:with rope-splice         (mk-op "rope-splice")
-
-  ;; balancing operations
-  #:with rope-defrag         (mk-op "rope-defrag")
-  #:with rope-ensure-balance (mk-op "rope-ensure-balance")
-  #:with rope-rebalance      (mk-op "rope-rebalance")
 
   ;; Passing arbitrary user-supplied arguments directly to the inner macro
   ;; definition is not safe because syntax/parse binds _ as the no-bind
