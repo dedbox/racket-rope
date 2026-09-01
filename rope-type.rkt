@@ -5,7 +5,8 @@
 (require (for-syntax racket/base
                      racket/syntax
                      rope2/private/rope-type-classes
-                     rope2/rope-type-descriptor)
+                     rope2/rope-type-descriptor
+                     syntax/parse)
          rope2/generic-ops
          rope2/private/hash
          rope2/rope
@@ -86,7 +87,10 @@
 
   (begin
 
+    ;; -------------------------------------------------------------------------
     ;; rope type descriptor
+    ;; -------------------------------------------------------------------------
+
     (define-syntax rope:*
       (rope-type-descriptor #'*-rope-chunk?
                             #'*-rope-chunk-limit
@@ -108,7 +112,10 @@
                             #'*-rope-content=?
                             ))
 
+    ;; -------------------------------------------------------------------------
     ;; per-chunk primitives
+    ;; -------------------------------------------------------------------------
+
     (define (*-rope-chunk-limit)        (chunk-limit.callable))
     (define (*-rope-chunk-empty)        (chunk-empty.callable))
     (define (*-rope-chunk?       x)     (chunk?       x))
@@ -136,11 +143,17 @@
                                        (chunk-ref bc (+ bp i)))
                                (loop (add1 i))))))))
 
+    ;; -------------------------------------------------------------------------
     ;; per-element primitives
+    ;; -------------------------------------------------------------------------
+
     (define (*-rope-elem-width c i) (elem-width c i))
     (define (*-rope-elem-hash  c)   (~? (elem-hash c) (equal-hash-code c)))
 
+    ;; -------------------------------------------------------------------------
     ;; rope structs & predicates
+    ;; -------------------------------------------------------------------------
+
     (define *-rope-equal+hash-impl
       (list (λ (a b _) (*-rope-content=? a b))
             (λ (a _) (rope-hash1 a))
@@ -151,16 +164,25 @@
 
     (define (*-rope? x) (or (*-rope-leaf? x) (*-rope-node? x)))
 
+    ;; -------------------------------------------------------------------------
     ;; smart constructors
+    ;; -------------------------------------------------------------------------
+
     (define (make-*-rope-leaf c)   (make-rope-leaf  type-id c))
     (define (make-*-rope-node l r) (make-rope-node  type-id l r))
     (define (make-empty-*-rope)    (make-empty-rope type-id))
 
+    ;; -------------------------------------------------------------------------
     ;; conversions
+    ;; -------------------------------------------------------------------------
+
     (define (*-chunk->rope c) (chunk->rope type-id c))
     (define (*-rope->chunk a) (rope->chunk type-id a))
 
+    ;; -------------------------------------------------------------------------
     ;; content-based hashing & equality
+    ;; -------------------------------------------------------------------------
+
     (define (*-rope-chunk-hash c)
       ;; h = h₀ + X·h₁ + X²·h₂ + X³·h₃    hₖ = Σⱼ e₄ⱼ₊ₖ·(X⁴)ʲ
       (define n   (chunk-length c))
@@ -222,7 +244,7 @@
                (equal? (rope-hash1 a) (rope-hash1 b))
                (equal? (rope-hash2 a) (rope-hash2 b))
                (let walk ([ca-chunk #f] [ca-pos 0] [ca-stack (list a)]
-                          [cb-chunk #f] [cb-pos 0] [cb-stack (list b)])
+                                        [cb-chunk #f] [cb-pos 0] [cb-stack (list b)])
                  (define-values (ca* pa* sa*) (advance ca-chunk ca-pos ca-stack))
                  (define-values (cb* pb* sb*) (advance cb-chunk cb-pos cb-stack))
                  (cond
@@ -235,7 +257,10 @@
                          (walk ca* (+ pa* k) sa*
                                cb* (+ pb* k) sb*))])))))
 
+    ;; -------------------------------------------------------------------------
     ;; basic operations
+    ;; -------------------------------------------------------------------------
+
     (define (*-rope-concat       a b)     (rope-concat       type-id a b))
     (define (*-rope-append2      a b)     (rope-append2      type-id a b))
     (define (*-rope-append       as)      (rope-append       type-id as))
