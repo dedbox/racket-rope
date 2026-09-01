@@ -241,13 +241,8 @@
             (λ (a _) (rope-hash1 a))
             (λ (a _) (rope-hash2 a))))
 
-    (struct *-rope-leaf rope-leaf ()
-      #:transparent
-      #:property prop:equal+hash *-rope-equal+hash-impl)
-
-    (struct *-rope-node rope-node ()
-      #:transparent
-      #:property prop:equal+hash *-rope-equal+hash-impl)
+    (struct *-rope-leaf rope-leaf () #:transparent)
+    (struct *-rope-node rope-node () #:transparent)
 
     (define (*-rope? x) (or (*-rope-leaf? x) (*-rope-node? x)))
 

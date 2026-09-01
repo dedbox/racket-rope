@@ -79,12 +79,12 @@
       (test-case "leaf-constructor / node-constructor return usable constructors"
         (let-values ([(h p) (rope-chunk-hash weighted (vector 1))])
           (check-equal? (make-rope-leaf weighted (vector 1))
-                        (weighted-rope-leaf 1 1 h p (vector 1))))
+                        (weighted-rope-leaf 1 1 h p weighted-rope-content=? (vector 1))))
         (let*-values ([(l)   (make-rope-leaf weighted (vector 1 2))]
                       [(r)   (make-rope-leaf weighted (vector 3 4))]
                       [(h p) (rope-node-hash weighted l r)])
           (check-equal? (make-rope-node weighted l r)
-                        (weighted-rope-node 4 10 h p 1 l r))))))
+                        (weighted-rope-node 4 10 h p weighted-rope-content=? 1 l r))))))
 
   (define core-ops-suite
     (test-suite "empty rope, leaves, concat"

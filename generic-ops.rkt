@@ -121,7 +121,7 @@
     #:with node-constructor (rope-type-descriptor-node-constructor desc)
     #:with node-hash        (rope-type-descriptor-rope-node-hash   desc)
     #:with rope-hashing     (rope-type-descriptor-make-rope-hash   desc)
-    #:with rope-content=?   (rope-type-descriptor-content=?        desc)
+    #:with content=?        (rope-type-descriptor-content=?        desc)
 
     ;; Rebind the temporary identifiers to the corresponding originals.
     #:with ρ         #'inner-ρ
@@ -166,13 +166,14 @@
 
 (define-rope-operation (make-rope-leaf ρ c)
   (let-values ([(h p) (rope-chunk-hash ρ c)])
-    (leaf-constructor (chunk-length c) (chunk-width c) h p c)))
+    (leaf-constructor (chunk-length c) (chunk-width c) h p content=? c)))
 
 (define-rope-operation (make-rope-node ρ l r)
   (let-values ([(h p) (rope-node-hash ρ l r)])
     (node-constructor (+ (rope-length l) (rope-length r))
                       (+ (rope-width l) (rope-width r))
                       h p
+                      content=?
                       (add1 (max (rope-depth l) (rope-depth r)))
                       l r)))
 
