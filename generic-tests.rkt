@@ -287,6 +287,9 @@
         (check-equal? leaf nodes)
         (check-equal? nodes leaf))
 
+      (test-case "distinct rope types with equal length and hash are not equal?"
+        (check-false (equal? (make-empty-string-rope) (make-empty-weighted-rope))))
+
       ))
 
   (run-suite! (test-suite "generic-tests.rkt"
