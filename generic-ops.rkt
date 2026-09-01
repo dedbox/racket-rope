@@ -225,8 +225,11 @@
           (cond
             [(rope-leaf? a)
              (define chunk (rope-leaf-chunk a))
-             (values (make-rope-leaf ρ (chunk-slice chunk 0 i))
-                     (make-rope-leaf ρ (chunk-slice chunk i (- (rope-length a) i))))]
+             (cond
+               [(= i 0)               (values (make-empty-rope ρ) a)]
+               [(= i (rope-length a)) (values a (make-empty-rope ρ))]
+               [else (values (make-rope-leaf ρ (chunk-slice chunk 0 i))
+                             (make-rope-leaf ρ (chunk-slice chunk i (- (rope-length a) i))))])]
             [else
              (define l (rope-node-left a))
              (define r (rope-node-right a))
@@ -246,7 +249,7 @@
   (let loop ([a a0] [i i0])
     (cond
       [(rope-leaf? a) (chunk-ref (rope-leaf-chunk a) i)]
-      [(rope-node? a)
+      [else
        (define n (rope-length (rope-node-left a)))
        (if (< i n)
            (loop (rope-node-left a) i)
@@ -281,8 +284,11 @@
           (cond
             [(rope-leaf? a)
              (define chunk (rope-leaf-chunk a))
-             (values (make-rope-leaf ρ (chunk-slice chunk 0 i))
-                     (make-rope-leaf ρ (chunk-slice chunk j (- (rope-length a) j))))]
+             (cond
+               [(and (= i 0) (= j i))               (values (make-empty-rope ρ) a)]
+               [(and (= i (rope-length a)) (= j i)) (values a (make-empty-rope ρ))]
+               [else (values (make-rope-leaf ρ (chunk-slice chunk 0 i))
+                             (make-rope-leaf ρ (chunk-slice chunk j (- (rope-length a) j))))])]
             [else
              (define l (rope-node-left a))
              (define r (rope-node-right a))
