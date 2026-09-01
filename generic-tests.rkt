@@ -8,7 +8,7 @@
            racket/vector
            rackunit
            rackunit/text-ui
-           rope2/generic
+           rope2/generic-ops
            rope2/rope
            rope2/rope-type
            syntax/parse/define)
@@ -48,19 +48,18 @@
 
   (define-rope-type weighted
     #:chunk?        vector?
-    #:elem-size     vector-ref
     #:chunk-limit   (λ () WEIGHTED-CHUNK-LIMIT)
-    #:chunk-empty   vector
-    #:chunk-count   vector-length
-    #:chunk-size    (λ (chunk) (for/sum ([w (in-vector chunk)]) w))
+    #:chunk-empty   #()
+    #:chunk-length  vector-length
+    #:chunk-ref     vector-ref
     #:chunk-slice   (λ (chunk i k) (vector-copy chunk i (+ i k)))
     #:chunk-append  (λ (chunks) (apply vector-append chunks))
-    #:chunk-ref     vector-ref
-    #:chunk-compare weighted-chunk-compare)
+    #:chunk-compare weighted-chunk-compare
+    #:elem-width    vector-ref)
 
   (define (random-weight)           (add1 (random 4)))
   (define (random-weighted-chunk n) (build-vector n (λ (_) (random-weight))))
-  (define (weighted->vec a)         (rope->weighted a))
+  (define (weighted->vec a)         (weighted-rope->chunk a))
 
   (define generic-ops-suite
     (test-suite "generic"
@@ -69,47 +68,46 @@
         (check-true   (rope-chunk? weighted (vector 1 2 3)))
         (check-false  (rope-chunk? weighted "not a vector"))
         (check-equal? (rope-chunk-empty weighted) (vector))
-        (check-equal? (rope-chunk-count weighted (vector 1 2 3)) 3)
-
-        (check-equal? (rope-chunk-size weighted (vector 1 2 3)) 6)
+        (check-equal? (rope-chunk-length weighted (vector 1 2 3)) 3)
+        (check-equal? (rope-chunk-width weighted (vector 1 2 3)) 6)
         (check-equal? (rope-chunk-slice weighted (vector 1 2 3 4) 1 2) (vector 2 3))
         (check-equal? (rope-chunk-append weighted (list (vector 1 2) (vector 3 4)))
                       (vector 1 2 3 4))
         (check-equal? (rope-chunk-ref weighted (vector 10 20 30) 1) 20))
 
       (test-case "leaf-constructor / node-constructor return usable constructors"
-        (check-equal? (make-rope-leaf weighted (vector 1))
-                      (weighted-rope-leaf 1 1 (vector 1)))
-        (check-equal? (make-rope-node weighted
-                                      (make-rope-leaf weighted (vector 1 2))
-                                      (make-rope-leaf weighted (vector 3 4)))
-                      (weighted-rope-node 4 10 1
-                                          (weighted-rope-leaf 2 3 (vector 1 2))
-                                          (weighted-rope-leaf 2 7 (vector 3 4)))))))
+        (let-values ([(h p) (rope-chunk-hash weighted (vector 1))])
+          (check-equal? (make-rope-leaf weighted (vector 1))
+                        (weighted-rope-leaf 1 1 h p (vector 1))))
+        (let*-values ([(l)   (make-rope-leaf weighted (vector 1 2))]
+                      [(r)   (make-rope-leaf weighted (vector 3 4))]
+                      [(h p) (rope-node-hash weighted l r)])
+          (check-equal? (make-rope-node weighted l r)
+                        (weighted-rope-node 4 10 h p 1 l r))))))
 
   (define core-ops-suite
     (test-suite "empty rope, leaves, concat"
-      (test-case "empty rope: zero count/size, empty content, balanced"
+      (test-case "empty rope: zero length/width, empty content, balanced"
         (define e (make-empty-rope weighted))
-        (check-equal? (rope-count e) 0)
-        (check-equal? (rope-size  e) 0)
+        (check-equal? (rope-length e) 0)
+        (check-equal? (rope-width  e) 0)
         (check-true   (rope-empty? e))
-        (check-equal? (rope->weighted e) (vector)))
+        (check-equal? (rope->chunk weighted e) (vector)))
 
-      (test-case "leaf count ≠ leaf size for weighted elements"
+      (test-case "leaf length ≠ leaf width for weighted elements"
         (define l (make-rope-leaf weighted (vector 1 2 3 4)))
         (check-true   (rope-leaf? l))
-        (check-equal? (rope-count l) 4)
-        (check-equal? (rope-size  l) 10))
+        (check-equal? (rope-length l) 4)
+        (check-equal? (rope-width  l) 10))
 
-      (test-case "rope-concat derives count/size correctly"
+      (test-case "rope-concat derives length/width correctly"
         (define n (rope-concat weighted
                                (make-rope-leaf weighted (vector 1 2))
                                (make-rope-leaf weighted (vector 3 4 5))))
-        (check-true   (rope-node? n))
-        (check-equal? (rope-count n) 5)
-        (check-equal? (rope-size  n) 15)
-        (check-equal? (rope->weighted n) (vector 1 2 3 4 5)))))
+        (check-true   (rope-node?  n))
+        (check-equal? (rope-length n) 5)
+        (check-equal? (rope-width  n) 15)
+        (check-equal? (rope->chunk weighted n) (vector 1 2 3 4 5)))))
 
   (define append-suite
     (test-suite "append"
@@ -120,17 +118,17 @@
         (define r (rope-append2 weighted
                                (make-rope-leaf weighted a)
                                (make-rope-leaf weighted b)))
-        (and (= (rope-count r) (+ (vector-length a) (vector-length b)))
-             (= (rope-size  r) (+ (weighted-rope-chunk-size a)
-                                  (weighted-rope-chunk-size b)))
-             (equal? (rope->weighted r) (vector-append a b))
+        (and (= (rope-length r) (+ (vector-length a) (vector-length b)))
+             (= (rope-width  r) (+ (rope-chunk-width weighted a)
+                                   (rope-chunk-width weighted b)))
+             (equal? (rope->chunk weighted r) (vector-append a b))
              (rope-mostly-balanced? r)))
 
       (test-case "empty rope is a left unit and a right unit of rope-concat/lazy"
         (define e (make-empty-rope weighted))
         (define r (make-rope-leaf weighted (vector 1 2 3)))
-        (check-equal? (rope->weighted (rope-append2 weighted e r)) (rope->weighted r))
-        (check-equal? (rope->weighted (rope-append2 weighted r e)) (rope->weighted r)))
+        (check-equal? (rope->chunk weighted (rope-append2 weighted e r)) (rope->chunk weighted r))
+        (check-equal? (rope->chunk weighted (rope-append2 weighted r e)) (rope->chunk weighted r)))
 
       (test-case "rope-append with no ropes returns the empty rope"
         (check-true (rope-empty? (rope-append weighted null))))
@@ -140,7 +138,7 @@
           ([chunks (for/list ([_ (in-range (add1 (random 9)))])
                      (random-weighted-chunk (random 7)))])
         (define r (rope-append weighted (map (λ (c) (make-rope-leaf weighted c)) chunks)))
-        (equal? (rope->weighted r) (apply vector-append chunks)))
+        (equal? (rope->chunk weighted r) (apply vector-append chunks)))
 
       (test-property "rope-rebalance handles non-leaf runs, not just leaves"
           #:trials 100
@@ -160,8 +158,7 @@
           (define r+leaf (rope-append2 weighted r leaf))
           (with-check-info (['iteration i] ['chunk chunk] ['r+leaf r+leaf])
             (check-true (rope-mostly-balanced? r+leaf)))
-          r+leaf)
-        (void))))
+          r+leaf))))
 
   (define split-suite
     (test-suite "split"
@@ -169,18 +166,18 @@
           #:trials 300
           ([chunk (random-weighted-chunk (add1 (random 200)))])
         (define n (vector-length chunk))
-        (define a (weighted->rope chunk))
+        (define a (chunk->rope weighted chunk))
         (for/and ([i (in-range (add1 n))])
-          (define-values (l r) (weighted-rope-split a i))
-          (and (= (rope-count l) i)
-               (= (rope-count r) (- n i))
+          (define-values (l r) (rope-split weighted a i))
+          (and (= (rope-length l) i)
+               (= (rope-length r) (- n i))
                (equal? (vector-append (weighted->vec l) (weighted->vec r)) chunk))))
 
       (test-case "splitting at one end returns an empty rope"
         (define chunk (random-weighted-chunk 30))
-        (define a (weighted->rope chunk))
-        (define-values (l0 r0) (weighted-rope-split a 0))
-        (define-values (ln rn) (weighted-rope-split a (vector-length chunk)))
+        (define a (chunk->rope weighted chunk))
+        (define-values (l0 r0) (rope-split weighted a 0))
+        (define-values (ln rn) (rope-split weighted a (vector-length chunk)))
         (check-true   (rope-empty? l0))
         (check-equal? (weighted->vec r0) chunk)
         (check-equal? (weighted->vec ln) chunk)
@@ -199,8 +196,8 @@
         (define i (random (add1 n)))
         (define k (random (add1 (- n i))))
         (define new-chunk (random-weighted-chunk (random 20)))
-        (define a (weighted->rope new-chunk))
-        (equal? (weighted->vec (weighted-rope-splice (weighted->rope chunk) i k a))
+        (define a (chunk->rope weighted new-chunk))
+        (equal? (weighted->vec (rope-splice weighted (chunk->rope weighted chunk) i k a))
                 (vector-splice chunk i k new-chunk)))
 
       (test-property "rope-slice matches a vector oracle"
@@ -209,19 +206,18 @@
         (define n (vector-length chunk))
         (define i (random (add1 n)))
         (define k (random (add1 (- n i))))
-        (define a (weighted->rope chunk))
-        (equal? (weighted->vec (weighted-rope-slice a i k))
+        (define a (chunk->rope weighted chunk))
+        (equal? (weighted->vec (rope-slice weighted a i k))
                 (vector-copy chunk i (+ i k))))
 
       (test-case "rope-slice/rope-splice don't fail at either end"
         (define chunk (random-weighted-chunk 20))
-        (define a (weighted->rope chunk))
-        (define b (make-empty-weighted-rope))
-        (check-not-exn (λ () (weighted-rope-slice a 0 0)))
-        (check-not-exn (λ () (weighted-rope-slice a (vector-length chunk) 0)))
-        (check-not-exn (λ () (weighted-rope-splice a 0 0 b)))
-        (check-not-exn (λ () (weighted-rope-splice a (vector-length chunk) 0 b))
-                       ))))
+        (define a (chunk->rope weighted chunk))
+        (define b (make-empty-rope weighted))
+        (check-not-exn (λ () (rope-slice weighted a 0 0)))
+        (check-not-exn (λ () (rope-slice weighted a (vector-length chunk) 0)))
+        (check-not-exn (λ () (rope-splice weighted a 0 0 b)))
+        (check-not-exn (λ () (rope-splice weighted a (vector-length chunk) 0 b))))))
 
   (define (owning-index chunk p)
     (let loop ([i 0] [acc 0])
@@ -233,36 +229,36 @@
       (test-property "matches a linear-scan oracle"
           #:trials 200
           ([chunk (random-weighted-chunk (add1 (random 30)))]
-           [a (weighted->rope chunk)]
-           [p (random (rope-size a))]
-           [i (weighted-rope-offset-index a p)]
+           [a (chunk->rope weighted chunk)]
+           [p (random (rope-width a))]
+           [i (rope-offset-index weighted a p)]
            [j (owning-index chunk p)])
         (= i j))
 
       (test-case "at both ends, and one past the end"
         (define chunk (vector 3 1 4 1 5)) ; width 14
-        (define a (make-weighted-rope-leaf chunk))
-        (check-equal? (weighted-rope-offset-index a 0) 0)
-        (check-equal? (weighted-rope-offset-index a 13) 4)
-        (check-not-exn (λ () (weighted-rope-offset-index a 14)))
-        (check-equal? (weighted-rope-offset-index a 14) 4))))
+        (define a (make-rope-leaf weighted chunk))
+        (check-equal? (rope-offset-index weighted a 0) 0)
+        (check-equal? (rope-offset-index weighted a 13) 4)
+        (check-not-exn (λ () (rope-offset-index weighted a 14)))
+        (check-equal? (rope-offset-index weighted a 14) 4))))
 
   (define balance-suite
     (test-suite "conversions and balance"
       (test-property "chunk-rope maintains balance"
           #:trials 100
           ([chunk (random-weighted-chunk (random 500))])
-        (define a (weighted->rope chunk))
+        (define a (chunk->rope weighted chunk))
         (and (equal? (weighted->vec a) chunk) (rope-strictly-balanced? a)))
 
       (test-case "chunk larger than limit produces at least one node"
         (define chunk (random-weighted-chunk (* 3 WEIGHTED-CHUNK-LIMIT)))
-        (check-true (> (rope-depth (weighted->rope chunk)) 0)))
+        (check-true (> (rope-depth (chunk->rope weighted chunk)) 0)))
 
       (test-case "a deeply concatenated rope is unbalanced"
-        (define a (for/fold ([a (make-weighted-rope-leaf (vector 1))])
+        (define a (for/fold ([a (make-rope-leaf weighted (vector 1))])
                             ([_ (in-range 99)])
-                    (weighted-rope-concat a (make-weighted-rope-leaf (vector 1)))))
+                    (rope-concat weighted a (make-rope-leaf weighted (vector 1)))))
         (check-equal? (rope-depth a) 99)
         (check-not-exn (λ () (rope-strictly-balanced? a))) ; fib-bound clamp
         (check-not-exn (λ () (rope-mostly-balanced? a)))   ; doesn't crash
@@ -275,11 +271,16 @@
         (define chunks (list #(3) #() #(2 1)))
         (define leaves (map (λ (c) (make-rope-leaf weighted c)) chunks))
         (define r (rope-append weighted leaves))
-        (define a (rope->weighted r))
+        (define a (rope->chunk weighted r))
         (define b (apply vector-append chunks))
         (check-equal? a b))))
 
   (run-suite! (test-suite "generic-tests.rkt"
-                generic-ops-suite core-ops-suite append-suite split-suite
-                splice/slice-suite offset-index-suite balance-suite
+                generic-ops-suite
+                core-ops-suite
+                append-suite
+                split-suite
+                splice/slice-suite
+                offset-index-suite
+                balance-suite
                 regression-suite)))
