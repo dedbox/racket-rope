@@ -274,7 +274,18 @@
         (define r (rope-append weighted leaves))
         (define a (rope->chunk weighted r))
         (define b (apply vector-append chunks))
-        (check-equal? a b))))
+        (check-equal? a b))
+
+      (test-case "a single-leaf rope is rope-content=? to a many-node variant"
+        (define chars (for/list ([i (in-range 3)]) (integer->char i)))
+        (define leaf (string-chunk->rope (apply string chars)))
+        (define nodes (for/fold ([a (make-empty-string-rope)])
+                                ([char (in-list chars)])
+                        (string-rope-concat a (string-chunk->rope (string char)))))
+        (check-true (string-rope-content=? leaf nodes))
+        (check-equal? leaf nodes))
+
+      ))
 
   (run-suite! (test-suite "generic-tests.rkt"
                 generic-ops-suite
