@@ -330,6 +330,8 @@
 ;; Efficient forest-based rope rebuild. O(log n) amortized
 (define-rope-operation (rope-rebalance ρ a0)
   (let ([a a0])
+    (define slots (make-vector (add1 max-fib-index) #f))
+
     (define (target-slot len)
       ;; A rope with len elements is too large for the current slot if len
       ;; falls beyond the interval [Fₙ, Fₙ₊₁). Thus, we move on to the next
@@ -342,44 +344,43 @@
       (let loop ([i 0])
         (if (>= len (fib-bound (+ i 3))) (loop (add1 i)) i)))
 
-    (define (insert slots0 a)
+    (define (insert! a)
       (define n (target-slot (rope-length a)))
       ;; Consolidate any occupied slots [0, n) into one prefix, oldest-first.
-      (define-values (pfx slots)
-        (for/fold ([pfx #f] [slots slots0])
-                  ([i (in-range n)])
-          (define cur (hash-ref slots i #f))
-          (values (cond [(not cur) pfx]
-                        [(not pfx) cur]
-                        [else (rope-concat ρ cur pfx)])
-                  (if cur (hash-remove slots i) slots))))
+      (define pfx
+        (for/fold ([pfx #f]) ([i (in-range n)])
+          (define cur (vector-ref slots i))
+          (when cur (vector-set! slots i #f))
+          (cond [(not cur) pfx]
+                [(not pfx) cur]
+                [else (rope-concat ρ cur pfx)])))
       (define r (if pfx (rope-concat ρ pfx a) a))
       ;; Cascade upward from slot n.
-      (let cascade ([i n] [cur r] [slots slots])
-        (define next (hash-ref slots i #f))
+      (let cascade ([i n] [cur r])
+        (define next (vector-ref slots i))
         (if next
-            (cascade (add1 i) (rope-concat ρ next cur) (hash-remove slots i))
-            (hash-set slots i cur))))
+            (begin (vector-set! slots i #f)
+                   (cascade (add1 i) (rope-concat ρ next cur)))
+            (vector-set! slots i cur))))
 
-    (define (traverse a slots)
-      (cond
-        ;; must use strict balance here
-        [(or (rope-leaf? a) (rope-strictly-balanced? a))
-         (insert slots a)]
-        [else
-         (traverse (rope-node-right a) (traverse (rope-node-left a) slots))]))
+    (define (traverse a)
+      (if (or (rope-leaf? a) (rope-strictly-balanced? a)) ; must use strict balance here
+          (insert! a)
+          (begin (traverse (rope-node-left a))
+                 (traverse (rope-node-right a)))))
 
     ;; Concatenate on the left, from smallest to largest slot.
-    (define (collapse slots)
-      (for/fold ([result #f])
-                ([i (in-range max-fib-index)])
-        (define slot-i (hash-ref slots i #f))
+    (define (collapse)
+      (for/fold ([result #f]) ([i (in-range max-fib-index)])
+        (define slot-i (vector-ref slots i))
         (cond
           [(not slot-i) result]
           [(not result) slot-i]
           [else (rope-concat ρ slot-i result)])))
 
-    (if (rope-mostly-balanced? a) a (collapse (traverse a (hasheqv))))))
+    (if (rope-mostly-balanced? a)
+        a
+        (begin (traverse a) (collapse)))))
 
 ;; -----------------------------------------------------------------------------
 ;; cursors
