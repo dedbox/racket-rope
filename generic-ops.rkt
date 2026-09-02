@@ -6,6 +6,7 @@
                      racket/syntax
                      rope2/rope-type-descriptor
                      syntax/parse)
+         rope2/cursor
          rope2/rope
          syntax/parse/define)
 
@@ -379,3 +380,27 @@
           [else (rope-concat ρ slot-i result)])))
 
     (if (rope-mostly-balanced? a) a (collapse (traverse a (hasheqv))))))
+
+;; -----------------------------------------------------------------------------
+;; cursors
+;; -----------------------------------------------------------------------------
+
+;; O(depth). O(1) if the rope is not edited
+(define-rope-operation (cursor->rope ρ cur0)
+  (let ([cur cur0])
+    (if (not (cursor-dirty? cur))
+        (cursor-source cur)
+        (rope-ensure-balance ρ
+          (let loop ([a (cursor-leaf cur)] [path (cursor-path cur)])
+            (if (null? path)
+                a
+                (let ([cb (car path)])
+                  (loop (if (eq? (crumb-side cb) 'left)
+                            (rope-concat ρ a (crumb-right cb))
+                            (rope-concat ρ (crumb-left cb) a))
+                        (cdr path)))))))))
+
+;; O(1)
+(define-rope-operation (cursor-peek _ cur0)
+  (let ([cur cur0])
+    (chunk-ref (rope-leaf-chunk (cursor-leaf cur)) (cursor-index cur))))

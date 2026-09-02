@@ -7,6 +7,8 @@
                      rope2/private/rope-type-classes
                      rope2/rope-type-descriptor
                      syntax/parse)
+         racket/sequence
+         rope2/cursor
          rope2/generic-ops
          rope2/private/hash
          rope2/rope
@@ -84,6 +86,13 @@
   #:with *-rope-cut              (mk* "~a-rope-cut")
   #:with *-rope-slice            (mk* "~a-rope-slice")
   #:with *-rope-splice           (mk* "~a-rope-splice")
+
+  ;; cursors
+  #:with *-rope->cursor          (mk* "~a-rope->cursor")
+  #:with cursor->*-rope          (mk* "cursor->~a-rope")
+  #:with *-rope-cursor-peek      (mk* "~a-rope-cursor-peek")
+  #:with *-rope-cursor-advance   (mk* "~a-rope-cursor-advance")
+  #:with *-rope-cursor-retreat   (mk* "~a-rope-cursor-retreat")
 
   (begin
 
@@ -270,5 +279,16 @@
     (define (*-rope-cut          a i k)   (rope-cut          type-id a i k))
     (define (*-rope-slice        a i k)   (rope-slice        type-id a i k))
     (define (*-rope-splice       a i k b) (rope-splice       type-id a i k b))
+
+    ;; -------------------------------------------------------------------------
+    ;; cursors
+    ;; -------------------------------------------------------------------------
+
+    (define (cursor->*-rope     cur) (cursor->rope type-id cur))
+    (define (*-rope-cursor-peek cur) (cursor-peek  type-id cur))
+
+    (define (*-rope->cursor        a [i 0]) (rope->cursor   a i))
+    (define (*-rope-cursor-advance a [k 1]) (cursor-advance a k))
+    ;; (define (*-rope-cursor-retreat a [k 1]) (cursor-retreat a k))
 
     ))
