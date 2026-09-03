@@ -405,3 +405,21 @@
 (define-rope-operation (cursor-peek _ cur0)
   (let ([cur cur0])
     (chunk-ref (rope-leaf-chunk (cursor-leaf cur)) (cursor-index cur))))
+
+(define-rope-operation (mutable-cursor->rope ρ cur0)
+  (let ([cur cur0])
+    (if (not (mutable-cursor-dirty? cur))
+        (mutable-cursor-source cur)
+        (rope-ensure-balance ρ
+          (let loop ([a (mutable-cursor-leaf cur)] [path (mutable-cursor-path cur)])
+            (if (null? path)
+                a
+                (let ([cb (car path)])
+                  (loop (if (eq? (crumb-side cb) 'left)
+                            (rope-concat ρ a (crumb-right cb))
+                            (rope-concat ρ (crumb-left cb) a))
+                        (cdr path)))))))))
+
+(define-rope-operation (mutable-cursor-peek _ cur0)
+  (let ([cur cur0])
+    (chunk-ref (rope-leaf-chunk (mutable-cursor-leaf cur)) (mutable-cursor-index cur))))

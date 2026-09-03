@@ -90,3 +90,92 @@
 
 ;; O(1) amortized
 (define (cursor-retreat cur [k 1]) (cursor-advance cur (- k)))
+
+;; -----------------------------------------------------------------------------
+;; Mutable Cursor
+;; -----------------------------------------------------------------------------
+
+(struct mutable-cursor (leaf index path source dirty?) #:transparent #:mutable)
+
+(define (mutable-cursor->cursor cur)
+  (cursor (mutable-cursor-leaf   cur)
+          (mutable-cursor-index  cur)
+          (mutable-cursor-path   cur)
+          (mutable-cursor-source cur)
+          (mutable-cursor-dirty? cur)))
+
+(define (rope->mutable-cursor a0 [i 0])
+  (let loop ([a a0] [i i] [path null])
+    (if (rope-leaf? a)
+        (mutable-cursor a i path a0 #f)
+        (let* ([l (rope-node-left a)]
+               [r (rope-node-right a)]
+               [n (rope-length l)])
+          (if (< i n)
+              (loop l i (cons (crumb 'left l r) path))
+              (loop r (- i n) (cons (crumb 'right l r) path)))))))
+
+(define (cursor-advance! cur [k 1])
+  (define a    (mutable-cursor-leaf  cur))
+  (define i    (mutable-cursor-index cur))
+  (define path (mutable-cursor-path  cur))
+  (define j (+ i k))
+  (define n (rope-length a))
+  (cond
+    [(and (>= j 0) (< j n)) (set-mutable-cursor-index! cur j) cur]
+    [(>= j n)               (climb-right! cur path (- j n))]
+    [else                   (climb-left!  cur path (- j))]))
+
+(define (climb-right! cur path k)
+  (cond
+    [(null? path)
+     #f]
+    [(eq? (crumb-side (car path)) 'right)
+     (climb-right! cur (cdr path) k)]
+    [else
+     (define old-cb (car path))
+     (define new-cb (crumb 'right (crumb-left old-cb) (crumb-right old-cb)))
+     (descend-forward! cur (crumb-right old-cb) k (cons new-cb (cdr path)))]))
+
+(define (descend-forward! cur a k path)
+  (define n (rope-length a))
+  (if (rope-leaf? a)
+      (if (< k n)
+          (begin (set-mutable-cursor-leaf!  cur a)
+                 (set-mutable-cursor-index! cur k)
+                 (set-mutable-cursor-path!  cur path)
+                 cur)
+          (climb-right! cur path (- k n)))
+      (let* ([l (rope-node-left a)]
+             [r (rope-node-right a)]
+             [m (rope-length l)])
+        (if (< k m)
+            (descend-forward! cur l k       (cons (crumb 'left  l r) path))
+            (descend-forward! cur r (- k m) (cons (crumb 'right l r) path))))))
+
+(define (climb-left! cur path k)
+  (cond
+    [(null? path)
+     #f]
+    [(eq? (crumb-side (car path)) 'left)
+     (climb-left! cur (cdr path) k)]
+    [else
+     (define old-cb (car path))
+     (define new-cb (crumb 'left (crumb-left old-cb) (crumb-right old-cb)))
+     (descend-backward! cur (crumb-left old-cb) k (cons new-cb (cdr path)))]))
+
+(define (descend-backward! cur a k path)
+  (define n (rope-length a))
+  (if (rope-leaf? a)
+      (if (<= k n)
+          (begin (set-mutable-cursor-leaf!  cur a)
+                 (set-mutable-cursor-index! cur k)
+                 (set-mutable-cursor-path!  cur path)
+                 cur)
+          (climb-left! cur path (- k n)))
+      (let* ([l (rope-node-left a)]
+             [r (rope-node-right a)]
+             [m (rope-length r)])
+        (if (<= k m)
+            (descend-backward! cur r k       (cons (crumb 'right l r) path))
+            (descend-backward! cur l (- k m) (cons (crumb 'left  l r) path))))))
