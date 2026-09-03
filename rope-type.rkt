@@ -88,11 +88,11 @@
   #:with *-rope-splice           (mk* "~a-rope-splice")
 
   ;; cursors
-  #:with *-rope->cursor          (mk* "~a-rope->cursor")
   #:with cursor->*-rope          (mk* "cursor->~a-rope")
   #:with *-rope-cursor-peek      (mk* "~a-rope-cursor-peek")
-  #:with *-rope-cursor-advance   (mk* "~a-rope-cursor-advance")
-  #:with *-rope-cursor-retreat   (mk* "~a-rope-cursor-retreat")
+
+  ;; sequences
+  ;; #:with in-*-rope-runtime       (mk* "in-~a-rope-runtime")
 
   (begin
 
@@ -284,11 +284,21 @@
     ;; cursors
     ;; -------------------------------------------------------------------------
 
+    ;; immutable cursors
     (define (cursor->*-rope     cur) (cursor->rope type-id cur))
     (define (*-rope-cursor-peek cur) (cursor-peek  type-id cur))
 
-    (define (*-rope->cursor        a [i 0]) (rope->cursor   a i))
-    (define (*-rope-cursor-advance a [k 1]) (cursor-advance a k))
-    ;; (define (*-rope-cursor-retreat a [k 1]) (cursor-retreat a k))
+    ;; -------------------------------------------------------------------------
+    ;; sequences
+    ;; -------------------------------------------------------------------------
+
+    ;; (define (in-*-rope-runtime a [i 0] [j (rope-length a)] [k 1])
+    ;;   (make-do-sequence
+    ;;    (λ ()
+    ;;      (initiate-sequence
+    ;;       #:pos->element *-cursor-peek
+    ;;       #:next-pos (λ (cur) (cursor-advance cur k))
+    ;;       #:init-pos (rope->cursor a i)
+    ;;       #:continue-with-pos? (λ (cur) (not (*-cursor-at-end? cur)))))))
 
     ))
