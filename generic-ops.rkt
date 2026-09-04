@@ -12,7 +12,25 @@
 
 (provide (all-defined-out))
 
-(define-syntax-parse-rule (define-rope-operation (op-id:id type-id:id arg:id ...) template:expr)
+(begin-for-syntax
+  (define-splicing-syntax-class op-args
+    #:description "operation arguments"
+    ;; Arguments ending with ...
+    (pattern (~seq arg:id ... last-arg:id (~datum ...))
+             #:with (inner-arg ...) (generate-temporaries #'(arg ...))
+             #:with inner-last      (generate-temporary #'last-arg)
+             #:with (inner-pattern ...) #'(inner-arg ... inner-last (... ...))
+             ;; The left and right sides of the inner #:with clause
+             #:with rebind-pattern  #'(arg ... last-arg (... ...))
+             #:with rebind-value    #'(inner-arg ... inner-last (... ...)))
+    ;; Fixed arity arguments
+    (pattern (~seq arg:id ...)
+             #:with (inner-arg ...)     (generate-temporaries #'(arg ...))
+             #:with (inner-pattern ...) #'(inner-arg ...)
+             #:with rebind-pattern      #'(arg ...)
+             #:with rebind-value        #'(inner-arg ...))))
+
+(define-syntax-parse-rule (define-rope-operation (op-id:id type-id:id args:op-args) template:expr)
   ;; The first argument of the outer macro (type-id) binds a rope type name at
   ;; definition time, so it can be passed on to other generic rope operations
   ;; from inside the template.
@@ -60,10 +78,9 @@
   ;; catch-all pattern for the inner macro. To prevent this, we embed
   ;; temporary identifiers into the inner macro's pattern and then bind them
   ;; back to the original identifiers on the inside.
-  #:with inner-ρ         (generate-temporary #'type-id)
-  #:with (inner-arg ...) (generate-temporaries #'(arg ...))
+  #:with inner-ρ (generate-temporary #'type-id)
 
-  (define-syntax-parse-rule (op-id inner-ρ inner-arg ...)
+  (define-syntax-parse-rule (op-id inner-ρ args.inner-pattern ...)
     #:do [(define (raise-op-error msg stx)
             (raise-syntax-error 'op-id msg this-syntax stx))
 
@@ -97,8 +114,8 @@
     #:with content=?        (rope-type-descriptor-content=?        desc)
 
     ;; Rebind the temporary identifiers to the corresponding originals.
-    #:with ρ         #'inner-ρ
-    #:with (arg ...) #'(inner-arg ...)
+    #:with ρ                   #'inner-ρ
+    #:with args.rebind-pattern #'args.rebind-value
 
     template))
 
@@ -383,43 +400,80 @@
         (begin (traverse a) (collapse)))))
 
 ;; -----------------------------------------------------------------------------
-;; cursors
+;; immutable cursors
 ;; -----------------------------------------------------------------------------
 
 ;; O(depth). O(1) if the rope is not edited
-(define-rope-operation (cursor->rope ρ cur0)
-  (let ([cur cur0])
-    (if (not (cursor-dirty? cur))
-        (cursor-source cur)
-        (rope-ensure-balance ρ
-          (let loop ([a (cursor-leaf cur)] [path (cursor-path cur)])
-            (if (null? path)
-                a
-                (let ([cb (car path)])
-                  (loop (if (eq? (crumb-side cb) 'left)
-                            (rope-concat ρ a (crumb-right cb))
-                            (rope-concat ρ (crumb-left cb) a))
-                        (cdr path)))))))))
+(define-rope-operation (cursor->rope ρ cur)
+  (cursor-source cur))
 
 ;; O(1)
 (define-rope-operation (cursor-peek _ cur0)
   (let ([cur cur0])
     (chunk-ref (rope-leaf-chunk (cursor-leaf cur)) (cursor-index cur))))
 
-(define-rope-operation (mutable-cursor->rope ρ cur0)
+;; O(depth)
+(define-rope-operation (cursor-split ρ cur0)
   (let ([cur cur0])
-    (if (not (mutable-cursor-dirty? cur))
-        (mutable-cursor-source cur)
-        (rope-ensure-balance ρ
-          (let loop ([a (mutable-cursor-leaf cur)] [path (mutable-cursor-path cur)])
-            (if (null? path)
-                a
-                (let ([cb (car path)])
-                  (loop (if (eq? (crumb-side cb) 'left)
-                            (rope-concat ρ a (crumb-right cb))
-                            (rope-concat ρ (crumb-left cb) a))
-                        (cdr path)))))))))
+    (define a (cursor-leaf cur))
+    (define i (cursor-index cur))
+    (define c (rope-leaf-chunk a))
+    (let loop ([l (make-rope-leaf ρ (chunk-slice c 0 i))]
+               [r (make-rope-leaf ρ (chunk-slice c i (- (rope-length a) i)))]
+               [path (cursor-path cur)])
+      (if (null? path)
+          (values (rope-ensure-balance ρ l)
+                  (rope-ensure-balance ρ r))
+          (let ([cb (car path)])
+            (if (eq? (crumb-side cb) 'left)
+                (loop l (rope-concat ρ r (crumb-right cb)) (cdr path))
+                (loop (rope-concat ρ (crumb-left cb) l) r (cdr path))))))))
+
+;; -----------------------------------------------------------------------------
+;; mutable cursors
+;; -----------------------------------------------------------------------------
+
+(define-rope-operation (mutable-cursor->rope ρ cur)
+  (mutable-cursor-source cur))
 
 (define-rope-operation (mutable-cursor-peek _ cur0)
   (let ([cur cur0])
     (chunk-ref (rope-leaf-chunk (mutable-cursor-leaf cur)) (mutable-cursor-index cur))))
+
+;; -----------------------------------------------------------------------------
+;; folds
+;; -----------------------------------------------------------------------------
+
+(define (check-same-rope-lengths! name proc a0 as)
+  (define n (rope-length a0))
+  (for ([a (in-list as)])
+    (define m (rope-length a))
+    (unless (= m n)
+      (raise-arguments-error name "all ropes must have the same length"
+                             "first rope length" n
+                             "other rope length" m
+                             "procedure" proc))))
+
+;; O(n)
+(define-rope-operation (rope-foldl ρ proc0 init a00 as0 ...)
+  (let ([proc proc0] [a0 a00] [as (list as0 ...)])
+    (check-same-rope-lengths! 'rope-foldl proc a0 as)
+    (define curs (map rope->mutable-cursor (cons a0 as)))
+    (let loop ([result init] [count (rope-length a0)])
+      (if (zero? count)
+          result
+          (let ([head (for/list ([cur (in-list curs)])
+                        (begin0 (mutable-cursor-peek ρ cur) (cursor-advance! cur)))])
+            (loop (apply proc result head) (sub1 count)))))))
+
+;; O(n)
+(define-rope-operation (rope-foldr ρ proc0 init a00 as0 ...)
+  (let ([proc proc0] [a0 a00] [as (list as0 ...)])
+    (check-same-rope-lengths! 'rope-foldr proc a0 as)
+    (define curs (map rope->mutable-cursor (cons a0 as)))
+    (let loop ([result init] [count (rope-length a0)])
+      (if (zero? count)
+          result
+          (let ([head (for/list ([cur (in-list curs)])
+                        (begin0 (mutable-cursor-peek ρ cur) (cursor-advance! cur)))])
+            (apply proc (loop result (sub1 count)) head))))))

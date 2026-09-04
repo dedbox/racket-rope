@@ -87,11 +87,14 @@
   #:with *-rope-slice               (mk* "~a-rope-slice")
   #:with *-rope-splice              (mk* "~a-rope-splice")
 
-  ;; cursors
+  ;; immutable cursors
   #:with cursor->*-rope             (mk* "cursor->~a-rope")
-  #:with *-rope-cursor-peek         (mk* "~a-rope-cursor-peek")
-  #:with mutable-cursor->*-rope     (mk* "mutable-cursor->*-rope")
-  #:with *-rope-mutable-cursor-peek (mk* "~a-rope-mutable-cursor-peek")
+  #:with *-cursor-peek              (mk* "~a-cursor-peek")
+  #:with *-cursor-split             (mk* "~a-cursor-split")
+
+  ;; immutable cursors
+  #:with mutable-cursor->*-rope     (mk* "mutable-cursor->~a-rope")
+  #:with *-mutable-cursor-peek      (mk* "~a-mutable-cursor-peek")
 
   ;; sequences
   ;; #:with in-*-rope-runtime       (mk* "in-~a-rope-runtime")
@@ -287,12 +290,13 @@
     ;; -------------------------------------------------------------------------
 
     ;; immutable cursors
-    (define (cursor->*-rope     cur) (cursor->rope type-id cur))
-    (define (*-rope-cursor-peek cur) (cursor-peek  type-id cur))
+    (define (cursor->*-rope cur) (cursor->rope type-id cur))
+    (define (*-cursor-peek  cur) (cursor-peek  type-id cur))
+    (define (*-cursor-split cur) (cursor-split type-id cur))
 
     ;; mutable cursors
-    (define (mutable-cursor->*-rope     cur  (mutable-cursor->rope type-id cur)))
-    (define (*-rope-mutable-cursor-peek cur) (mutable-cursor-peek  type-id cur))
+    (define (mutable-cursor->*-rope cur) (mutable-cursor->rope type-id cur))
+    (define (*-mutable-cursor-peek  cur) (mutable-cursor-peek  type-id cur))
 
     ;; -------------------------------------------------------------------------
     ;; sequences
