@@ -8,6 +8,7 @@
            racket/vector
            rackunit
            rackunit/text-ui
+           rope2/cursor
            rope2/generic-ops
            rope2/rope
            rope2/rope-type
@@ -266,6 +267,71 @@
         (check-false (rope-strictly-balanced? a))
         (check-false (rope-mostly-balanced? a)))))
 
+  (define (cursor-position index path)
+    (for/fold ([pos index]) ([fr (in-list path)])
+      (if (eq? (crumb-side fr) 'right)
+          (+ pos (rope-length (crumb-left fr)))
+          pos)))
+
+  (define cursor-suite
+    (test-suite "cursor"
+      (test-property "cursor-advance and cursor-retreat are inverses"
+          #:trials 300
+          ([chunk (random-weighted-chunk (add1 (random 100)))]
+           [a (chunk->rope weighted chunk)]
+           [n (rope-length a)]
+           [i (random n)]
+           [k (- (random n) i)])            ;; keeps i+k in [0, n)
+        (define c0 (rope->cursor a i))
+        (define c1 (cursor-advance c0 k))
+        (define c2 (cursor-advance c1 (- k)))
+        (and c1 c2
+             (= (cursor-position (cursor-index c0) (cursor-path c0))
+                (cursor-position (cursor-index c2) (cursor-path c2)))
+             (equal? (weighted-cursor-peek c0) (weighted-cursor-peek c2))))
+
+      (test-property "cursor-advance by k agrees with k single steps"
+          #:trials 300
+          ([chunk (random-weighted-chunk (add1 (random 100)))]
+           [a (chunk->rope weighted chunk)]
+           [n (rope-length a)]
+           [i (random n)]
+           [k (- (random n) i)])
+        (define jump (cursor-advance (rope->cursor a i) k))
+        (define step
+          (for/fold ([c (rope->cursor a i)]) ([_ (in-range (abs k))])
+            (and c (cursor-advance c (if (positive? k) 1 -1)))))
+        (and jump step
+             (= (cursor-position (cursor-index jump) (cursor-path jump))
+                (cursor-position (cursor-index step) (cursor-path step)))))
+
+      (test-property "mutable-cursor-advance! round-trips"
+          #:trials 300
+          ([chunk (random-weighted-chunk (add1 (random 100)))]
+           [a (chunk->rope weighted chunk)]
+           [n (rope-length a)]
+           [i (random n)]
+           [k (- (random n) i)])
+        (define cur (rope->mutable-cursor a i))
+        (define pos0 (cursor-position (mutable-cursor-index cur) (mutable-cursor-path cur)))
+        (define fwd (cursor-advance! cur k))
+        (define back (and fwd (cursor-advance! cur (- k))))
+        (and fwd back
+             (= pos0 (cursor-position (mutable-cursor-index cur) (mutable-cursor-path cur)))))
+
+      (test-property "mutable-cursor-advance! agrees with cursor-advance"
+          #:trials 300
+          ([chunk (random-weighted-chunk (add1 (random 100)))]
+           [a (chunk->rope weighted chunk)]
+           [n (rope-length a)]
+           [i (random n)]
+           [k (- (random n) i)])
+        (define c  (cursor-advance (rope->cursor a i) k))
+        (define mc (cursor-advance! (rope->mutable-cursor a i) k))
+        (and c mc
+             (= (cursor-position (cursor-index c) (cursor-path c))
+                (cursor-position (mutable-cursor-index mc) (mutable-cursor-path mc)))))))
+
   (define regression-suite
     (test-suite "regressions"
       (test-case "rope-rebalance does not skip intervening occupied slots"
@@ -300,4 +366,5 @@
                 splice/slice-suite
                 offset-index-suite
                 balance-suite
+                cursor-suite
                 regression-suite)))
