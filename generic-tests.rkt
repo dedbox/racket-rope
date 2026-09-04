@@ -273,6 +273,17 @@
           (+ pos (rope-length (crumb-left fr)))
           pos)))
 
+  (define (cursor->vec cur)
+    (apply vector (if (vector-empty? (rope->chunk weighted (cursor-source cur)))
+                      null
+                      (let loop ([cur cur])
+                        (define cur* (cursor-advance cur))
+                        (if (not cur*)
+                            (with-handlers ([exn:fail:contract? (λ (_) null)])
+                              (list (cursor-peek weighted cur)))
+                            (cons (cursor-peek weighted cur)
+                                  (loop cur*)))))))
+
   (define cursor-suite
     (test-suite "cursor"
       (test-property "cursor-advance and cursor-retreat are inverses"
@@ -330,7 +341,43 @@
         (define mc (cursor-advance! (rope->mutable-cursor a i) k))
         (and c mc
              (= (cursor-position (cursor-index c) (cursor-path c))
-                (cursor-position (mutable-cursor-index mc) (mutable-cursor-path mc)))))))
+                (cursor-position (mutable-cursor-index mc) (mutable-cursor-path mc)))))
+
+      (test-property "a full cursor walk reproduces original raw content"
+          #:trials 100
+          ([c (random-weighted-chunk (random (* 4 WEIGHTED-CHUNK-LIMIT)))]
+           [v (cursor->vec (rope->cursor (chunk->rope weighted c)))])
+        (equal? c v))))
+
+  (define fold-suite
+    (test-suite "rope folding"
+      (test-property "rope-foldl cons onto a list reverses order"
+          #:trials 100
+          ([chunk (random-weighted-chunk (add1 (random 60)))])
+        (equal? (rope-foldl weighted cons null (chunk->rope weighted chunk))
+                (reverse (vector->list chunk))))
+
+      (test-property "rope-foldr cons onto a list peserves order"
+          #:trials 100
+          ([chunk (random-weighted-chunk (add1 (random 60)))])
+        (equal? (rope-foldr weighted cons null (chunk->rope weighted chunk))
+                (vector->list chunk)))
+
+      (test-case "multi-rope fold zips elements pairwise"
+        (define a (chunk->rope weighted (vector 1 2 3)))
+        (define b (chunk->rope weighted (vector 10 20 30)))
+        (check-equal? (rope-foldl weighted (λ (x y acc) (cons (cons x y) acc)) null a b)
+                      (list (cons 3 30) (cons 2 20) (cons 1 10)))
+        (check-equal? (rope-foldr weighted (λ (x y acc) (cons (cons x y) acc)) null a b)
+                      (list (cons 1 10) (cons 2 20) (cons 3 30))))
+
+      (test-case "multi-rope fold on mismatched lengths raises an error"
+        (define a (chunk->rope weighted (vector 1 2 3)))
+        (define b (chunk->rope weighted (vector 1 2)))
+        (check-exn exn:fail:contract? (λ () (rope-foldl weighted cons null a b)))
+        (check-exn exn:fail:contract? (λ () (rope-foldr weighted cons null a b))))
+
+      ))
 
   (define regression-suite
     (test-suite "regressions"
@@ -354,9 +401,7 @@
         (check-equal? nodes leaf))
 
       (test-case "distinct rope types with equal length and hash are not equal?"
-        (check-false (equal? (make-empty-string-rope) (make-empty-weighted-rope))))
-
-      ))
+        (check-false (equal? (make-empty-string-rope) (make-empty-weighted-rope))))))
 
   (run-suite! (test-suite "generic-tests.rkt"
                 generic-ops-suite
@@ -367,4 +412,5 @@
                 offset-index-suite
                 balance-suite
                 cursor-suite
+                fold-suite
                 regression-suite)))
