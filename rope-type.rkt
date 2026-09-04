@@ -96,6 +96,10 @@
   #:with mutable-cursor->*-rope     (mk* "mutable-cursor->~a-rope")
   #:with *-mutable-cursor-peek      (mk* "~a-mutable-cursor-peek")
 
+  ;; folds
+  #:with *-rope-foldl               (mk* "~a-rope-foldl")
+  #:with *-rope-foldr               (mk* "~a-rope-foldr")
+
   ;; sequences
   ;; #:with in-*-rope-runtime       (mk* "in-~a-rope-runtime")
 
@@ -297,6 +301,13 @@
     ;; mutable cursors
     (define (mutable-cursor->*-rope cur) (mutable-cursor->rope type-id cur))
     (define (*-mutable-cursor-peek  cur) (mutable-cursor-peek  type-id cur))
+
+    ;; -------------------------------------------------------------------------
+    ;; Folds
+    ;; -------------------------------------------------------------------------
+
+    (define (*-rope-foldl proc init a) (rope-foldl type-id proc init a))
+    (define (*-rope-foldr proc init a) (rope-foldr type-id proc init a))
 
     ;; -------------------------------------------------------------------------
     ;; sequences
