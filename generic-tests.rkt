@@ -274,15 +274,10 @@
           pos)))
 
   (define (cursor->vec cur)
-    (apply vector (if (vector-empty? (rope->chunk weighted (cursor-source cur)))
-                      null
-                      (let loop ([cur cur])
-                        (define cur* (cursor-advance cur))
-                        (if (not cur*)
-                            (with-handlers ([exn:fail:contract? (λ (_) null)])
-                              (list (cursor-peek weighted cur)))
-                            (cons (cursor-peek weighted cur)
-                                  (loop cur*)))))))
+    (list->vector (let loop ([cur cur])
+                    (if cur
+                        (cons (cursor-peek weighted cur) (loop (cursor-advance cur)))
+                        null))))
 
   (define cursor-suite
     (test-suite "cursor"

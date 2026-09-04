@@ -16,15 +16,17 @@
 
 ;; Descends to the leftmost leaf. O(depth) = O(log n)
 (define (rope->cursor a0 [i 0])
-  (let loop ([a a0] [i i] [path null])
-    (if (rope-leaf? a)
-        (cursor a i path a0)
-        (let* ([l (rope-node-left a)]
-               [r (rope-node-right a)]
-               [n (rope-length l)])
-          (if (< i n)
-              (loop l i       (cons (crumb 'left  l r) path))
-              (loop r (- i n) (cons (crumb 'right l r) path)))))))
+  (if (rope-empty? a0)
+      #f
+      (let loop ([a a0] [i i] [path null])
+        (if (rope-leaf? a)
+            (cursor a i path a0)
+            (let* ([l (rope-node-left a)]
+                   [r (rope-node-right a)]
+                   [n (rope-length l)])
+              (if (< i n)
+                  (loop l i       (cons (crumb 'left  l r) path))
+                  (loop r (- i n) (cons (crumb 'right l r) path))))))))
 
 ;; O(1) amortized
 (define (cursor-advance cur [k 1])
@@ -103,15 +105,17 @@
           (mutable-cursor-source cur)))
 
 (define (rope->mutable-cursor a0 [i 0])
-  (let loop ([a a0] [i i] [path null])
-    (if (rope-leaf? a)
-        (mutable-cursor a i path a0)
-        (let* ([l (rope-node-left a)]
-               [r (rope-node-right a)]
-               [n (rope-length l)])
-          (if (< i n)
-              (loop l i (cons (crumb 'left l r) path))
-              (loop r (- i n) (cons (crumb 'right l r) path)))))))
+  (if (rope-empty? a0)
+      #f
+      (let loop ([a a0] [i i] [path null])
+        (if (rope-leaf? a)
+            (mutable-cursor a i path a0)
+            (let* ([l (rope-node-left a)]
+                   [r (rope-node-right a)]
+                   [n (rope-length l)])
+              (if (< i n)
+                  (loop l i (cons (crumb 'left l r) path))
+                  (loop r (- i n) (cons (crumb 'right l r) path))))))))
 
 (define (cursor-advance! cur [k 1])
   (define a    (mutable-cursor-leaf  cur))
