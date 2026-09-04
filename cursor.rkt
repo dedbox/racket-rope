@@ -167,7 +167,7 @@
   (if (rope-leaf? a)
       (if (<= k n)
           (begin (set-mutable-cursor-leaf!  cur a)
-                 (set-mutable-cursor-index! cur k)
+                 (set-mutable-cursor-index! cur (- n k))
                  (set-mutable-cursor-path!  cur path)
                  cur)
           (climb-left! cur path (- k n)))
