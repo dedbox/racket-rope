@@ -92,7 +92,7 @@
   #:with *-cursor-peek              (mk* "~a-cursor-peek")
   #:with *-cursor-split             (mk* "~a-cursor-split")
 
-  ;; immutable cursors
+  ;; mutable cursors
   #:with mutable-cursor->*-rope     (mk* "mutable-cursor->~a-rope")
   #:with *-mutable-cursor-peek      (mk* "~a-mutable-cursor-peek")
 

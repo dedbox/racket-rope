@@ -464,7 +464,7 @@
           result
           (let ([head (for/list ([cur (in-list curs)])
                         (begin0 (mutable-cursor-peek ρ cur) (cursor-advance! cur)))])
-            (loop (apply proc result head) (sub1 count)))))))
+            (loop (apply proc (append head (list result))) (sub1 count)))))))
 
 ;; O(n)
 (define-rope-operation (rope-foldr ρ proc0 init a00 as0 ...)
@@ -476,4 +476,4 @@
           result
           (let ([head (for/list ([cur (in-list curs)])
                         (begin0 (mutable-cursor-peek ρ cur) (cursor-advance! cur)))])
-            (apply proc (loop result (sub1 count)) head))))))
+            (apply proc (append head (list (loop result (sub1 count))))))))))
