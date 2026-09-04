@@ -274,11 +274,11 @@
 ;; Delays the actual splits until it finds the sub-tree(s) containing the
 ;; endpoints of the interval, limiting the number of rebalances to three.
 ;; O(log n) amortized
-(define-rope-operation (rope-cut ρ a0 i0 k0)
+(define-rope-operation (rope-cut ρ a0 i00 k00)
   (let-values
       ([(l r)
-        (let ([i i0])
-          (let loop ([a a0] [i i] [j (+ i k0)])
+        (let* ([i0 i00] [k0 k00] [j0 (+ i0 k0)])
+          (let loop ([a a0] [i (min i0 j0)] [j (max i0 j0)])
             (cond
               [(rope-leaf? a)
                (define chunk (rope-leaf-chunk a))
@@ -292,15 +292,15 @@
                (define r (rope-node-right a))
                (define n (rope-length l))
                (cond
-                 ;; (end of) interval must be in the left sub-tree
+                 ;; end of interval must be in the left sub-tree
                  [(<= j n)
                   (define-values (ll lr) (loop l i j))
                   (values ll (rope-concat ρ lr r))]
-                 ;; (start of) interval must be in the right sub-tree
+                 ;; start of interval must be in the right sub-tree
                  [(>= i n)
                   (define-values (rl rr) (loop r (- i n) (- j n)))
                   (values (rope-concat ρ l rl) rr)]
-                 ;; interval touches both sub-trees
+                 ;; interval spans both sub-trees
                  [else
                   (define-values (ll _lr) (rope-split ρ l i))
                   (define-values (_rl rr) (rope-split ρ r (- j n)))
@@ -310,10 +310,10 @@
 
 ;; The complement of rope-cut. Keeps only the interval [i, i + k). O(log n)
 ;; amortized
-(define-rope-operation (rope-slice ρ a0 i0 k0)
+(define-rope-operation (rope-slice ρ a0 i00 k00)
   (rope-ensure-balance ρ
-    (let ([i i0])
-      (let loop ([a a0] [i i] [j (+ i k0)])
+    (let* ([i0 i00] [k0 k00] [j0 (+ i0 k0)])
+      (let loop ([a a0] [i (min i0 j0)] [j (max i0 j0)])
         (cond
           [(rope-leaf? a)
            (make-rope-leaf ρ (chunk-slice (rope-leaf-chunk a) i (- j i)))]
