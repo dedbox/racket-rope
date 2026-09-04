@@ -18,7 +18,7 @@
 (define (rope->cursor a0 [i 0])
   (let loop ([a a0] [i i] [path null])
     (if (rope-leaf? a)
-        (cursor a i path a0 #f)
+        (cursor a i path a0)
         (let* ([l (rope-node-left a)]
                [r (rope-node-right a)]
                [n (rope-length l)])
@@ -105,7 +105,7 @@
 (define (rope->mutable-cursor a0 [i 0])
   (let loop ([a a0] [i i] [path null])
     (if (rope-leaf? a)
-        (mutable-cursor a i path a0 #f)
+        (mutable-cursor a i path a0)
         (let* ([l (rope-node-left a)]
                [r (rope-node-right a)]
                [n (rope-length l)])
