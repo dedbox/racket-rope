@@ -410,13 +410,13 @@
 ;; O(1)
 (define-rope-operation (cursor-peek _ cur0)
   (let ([cur cur0])
-    (chunk-ref (rope-leaf-chunk (cursor-leaf cur)) (cursor-index cur))))
+    (chunk-ref (rope-leaf-chunk (cursor-leaf cur)) (cursor-rel-idx cur))))
 
 ;; O(depth)
 (define-rope-operation (cursor-split ρ cur0)
   (let ([cur cur0])
     (define a (cursor-leaf cur))
-    (define i (cursor-index cur))
+    (define i (cursor-rel-idx cur))
     (define c (rope-leaf-chunk a))
     (let loop ([l (make-rope-leaf ρ (chunk-slice c 0 i))]
                [r (make-rope-leaf ρ (chunk-slice c i (- (rope-length a) i)))]
@@ -438,7 +438,7 @@
 
 (define-rope-operation (mutable-cursor-peek _ cur0)
   (let ([cur cur0])
-    (chunk-ref (rope-leaf-chunk (mutable-cursor-leaf cur)) (mutable-cursor-index cur))))
+    (chunk-ref (rope-leaf-chunk (mutable-cursor-leaf cur)) (mutable-cursor-rel-idx cur))))
 
 ;; -----------------------------------------------------------------------------
 ;; folds

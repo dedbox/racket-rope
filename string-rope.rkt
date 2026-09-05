@@ -36,4 +36,5 @@
 
 (require rope2/generic-ops)
 (require rope2/cursor)
+(require rope2/rope)
 (require racket/sequence)

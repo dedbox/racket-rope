@@ -292,8 +292,8 @@
         (define c1 (cursor-advance c0 k))
         (define c2 (cursor-advance c1 (- k)))
         (and c1 c2
-             (= (cursor-position (cursor-index c0) (cursor-path c0))
-                (cursor-position (cursor-index c2) (cursor-path c2)))
+             (= (cursor-position (cursor-rel-idx c0) (cursor-path c0))
+                (cursor-position (cursor-rel-idx c2) (cursor-path c2)))
              (equal? (weighted-cursor-peek c0) (weighted-cursor-peek c2))))
 
       (test-property "cursor-advance by k agrees with k single steps"
@@ -308,8 +308,8 @@
           (for/fold ([c (rope->cursor a i)]) ([_ (in-range (abs k))])
             (and c (cursor-advance c (if (positive? k) 1 -1)))))
         (and jump step
-             (= (cursor-position (cursor-index jump) (cursor-path jump))
-                (cursor-position (cursor-index step) (cursor-path step)))))
+             (= (cursor-position (cursor-rel-idx jump) (cursor-path jump))
+                (cursor-position (cursor-rel-idx step) (cursor-path step)))))
 
       (test-property "mutable-cursor-advance! round-trips"
           #:trials 300
@@ -319,11 +319,11 @@
            [i (random n)]
            [k (- (random n) i)])
         (define cur (rope->mutable-cursor a i))
-        (define pos0 (cursor-position (mutable-cursor-index cur) (mutable-cursor-path cur)))
+        (define pos0 (cursor-position (mutable-cursor-rel-idx cur) (mutable-cursor-path cur)))
         (define fwd (cursor-advance! cur k))
         (define back (and fwd (cursor-advance! cur (- k))))
         (and fwd back
-             (= pos0 (cursor-position (mutable-cursor-index cur) (mutable-cursor-path cur)))))
+             (= pos0 (cursor-position (mutable-cursor-rel-idx cur) (mutable-cursor-path cur)))))
 
       (test-property "mutable-cursor-advance! agrees with cursor-advance"
           #:trials 300
@@ -335,8 +335,8 @@
         (define c  (cursor-advance (rope->cursor a i) k))
         (define mc (cursor-advance! (rope->mutable-cursor a i) k))
         (and c mc
-             (= (cursor-position (cursor-index c) (cursor-path c))
-                (cursor-position (mutable-cursor-index mc) (mutable-cursor-path mc)))))
+             (= (cursor-position (cursor-rel-idx c) (cursor-path c))
+                (cursor-position (mutable-cursor-rel-idx mc) (mutable-cursor-path mc)))))
 
       (test-property "a full cursor walk reproduces original raw content"
           #:trials 100

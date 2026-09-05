@@ -12,7 +12,7 @@
 ;; Immutable Cursor
 ;; -----------------------------------------------------------------------------
 
-(struct cursor (leaf index path source) #:transparent)
+(struct cursor (leaf rel-idx path source) #:transparent)
 
 ;; Descends to the leftmost leaf. O(depth) = O(log n)
 (define (rope->cursor a0 [i 0])
@@ -30,10 +30,10 @@
 
 ;; O(1) amortized
 (define (cursor-advance cur [k 1])
-  (define a      (cursor-leaf   cur))
-  (define i      (cursor-index  cur))
-  (define path   (cursor-path   cur))
-  (define a0     (cursor-source cur))
+  (define a      (cursor-leaf    cur))
+  (define i      (cursor-rel-idx cur))
+  (define path   (cursor-path    cur))
+  (define a0     (cursor-source  cur))
   (define j (+ i k))
   (define n (rope-length a))
   (cond
@@ -96,13 +96,25 @@
 ;; Mutable Cursor
 ;; -----------------------------------------------------------------------------
 
-(struct mutable-cursor (leaf index path source) #:transparent #:mutable)
+(struct mutable-cursor (leaf rel-idx path source) #:transparent #:mutable)
+
+(define (copy-mutable-cursor cur)
+  (mutable-cursor (mutable-cursor-leaf    cur)
+                  (mutable-cursor-rel-idx cur)
+                  (mutable-cursor-path    cur)
+                  (mutable-cursor-source  cur)))
+
+(define (cursor->mutable-cursor cur)
+  (mutable-cursor (cursor-leaf    cur)
+                  (cursor-rel-idx cur)
+                  (cursor-path    cur)
+                  (cursor-source  cur)))
 
 (define (mutable-cursor->cursor cur)
-  (cursor (mutable-cursor-leaf   cur)
-          (mutable-cursor-index  cur)
-          (mutable-cursor-path   cur)
-          (mutable-cursor-source cur)))
+  (cursor (mutable-cursor-leaf    cur)
+          (mutable-cursor-rel-idx cur)
+          (mutable-cursor-path    cur)
+          (mutable-cursor-source  cur)))
 
 (define (rope->mutable-cursor a0 [i 0])
   (if (rope-empty? a0)
@@ -118,13 +130,13 @@
                   (loop r (- i n) (cons (crumb 'right l r) path))))))))
 
 (define (cursor-advance! cur [k 1])
-  (define a    (mutable-cursor-leaf  cur))
-  (define i    (mutable-cursor-index cur))
-  (define path (mutable-cursor-path  cur))
+  (define a    (mutable-cursor-leaf    cur))
+  (define i    (mutable-cursor-rel-idx cur))
+  (define path (mutable-cursor-path    cur))
   (define j (+ i k))
   (define n (rope-length a))
   (cond
-    [(and (>= j 0) (< j n)) (set-mutable-cursor-index! cur j) cur]
+    [(and (>= j 0) (< j n)) (set-mutable-cursor-rel-idx! cur j) cur]
     [(>= j n)               (climb-right! cur path (- j n))]
     [else                   (climb-left!  cur path (- j))]))
 
@@ -143,9 +155,9 @@
   (define n (rope-length a))
   (if (rope-leaf? a)
       (if (< k n)
-          (begin (set-mutable-cursor-leaf!  cur a)
-                 (set-mutable-cursor-index! cur k)
-                 (set-mutable-cursor-path!  cur path)
+          (begin (set-mutable-cursor-leaf!    cur a)
+                 (set-mutable-cursor-rel-idx! cur k)
+                 (set-mutable-cursor-path!    cur path)
                  cur)
           (climb-right! cur path (- k n)))
       (let* ([l (rope-node-left a)]
@@ -170,9 +182,9 @@
   (define n (rope-length a))
   (if (rope-leaf? a)
       (if (<= k n)
-          (begin (set-mutable-cursor-leaf!  cur a)
-                 (set-mutable-cursor-index! cur (- n k))
-                 (set-mutable-cursor-path!  cur path)
+          (begin (set-mutable-cursor-leaf!    cur a)
+                 (set-mutable-cursor-rel-idx! cur (- n k))
+                 (set-mutable-cursor-path!    cur path)
                  cur)
           (climb-left! cur path (- k n)))
       (let* ([l (rope-node-left a)]
