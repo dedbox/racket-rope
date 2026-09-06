@@ -487,17 +487,8 @@
   (let ([a a0] [i i0] [j j0] [k k0])
     (when (zero? k)
       (raise-argument-error 'in-rope "(and/c exact-integer? (not/c zero?))" k))
-
     (define k>0? (> k 0))
     (define stop (or j (if k>0? (rope-length a) -1)))
-
-    (when (and (< i stop) (< k 0))
-      (raise-arguments-error 'in-rope "starting index less than stopping index, but given a negative step"
-                             "starting index" i "stopping index" stop "step" k))
-    (when (and (> i stop) (> k 0))
-      (raise-arguments-error 'in-rope "starting index more than stopping index, but given a positive step"
-                             "starting index" i "stopping index" stop "step" k))
-
     (if (if k>0? (>= i stop) (<= i stop))
         (in-list null)
         (make-do-sequence
@@ -535,14 +526,6 @@
            (begin
              (when (zero? k)
                (raise-argument-error 'in-rope "(and/c exact-integer? (not/c zero?))" k))
-             (when (and (< i stop) (< k 0))
-               (raise-arguments-error 'in-rope
-                                      "starting index less than stopping index, but given a negative step"
-                                      "starting index" i "stopping index" stop "step" k))
-             (when (and (> i stop) (> k 0))
-               (raise-arguments-error 'in-rope
-                                      "starting index more than stopping index, but given a positive step"
-                                      "starting index" i "stopping index" stop "step" k))
              (define cur (rope->mutable-cursor a i)))
            ;; Loop bindings
            ()
@@ -561,22 +544,9 @@
   (let ([cur0 cur00] [di di0] [dj dj0] [k k0])
     (when (zero? k)
       (raise-argument-error 'in-cursor "(and/c exact-integer? (not/c zero?))" k))
-
     (define k>0? (> k 0))
     (define i (+ (cursor-abs-idx cur0) di))
     (define j (+ (cursor-abs-idx cur0) (or dj (if k>0? (rope-length (cursor-source cur0)) -1))))
-
-    (when (and (< i j) (< k 0))
-      (raise-arguments-error 'in-cursor "starting index less than stopping index, but given a negative step"
-                             "starting index" i
-                             "stopping index" j
-                             "step" k))
-    (when (and (> i j) (> k 0))
-      (raise-arguments-error 'in-cursor "starting index more than stopping index, but given a positive step"
-                             "starting index" i
-                             "stopping index" j
-                             "step" k))
-
     (if ((if k>0? < >) j i)
         (in-list null)
         (make-do-sequence
@@ -617,14 +587,6 @@
            (begin
              (when (zero? k)
                (raise-argument-error 'in-rope "(and/c exact-integer? (not/c zero?))" k))
-             (when (and j (< i j) (< k 0))
-               (raise-arguments-error 'in-rope
-                                      "starting index less than stopping index, but given a negative step"
-                                      "starting index" i "stopping index" j "step" k))
-             (when (and j (> i j) (> k 0))
-               (raise-arguments-error 'in-rope
-                                      "starting index more than stopping index, but given a positive step"
-                                      "starting index" i "stopping index" j "step" k))
              (define cur (cursor-advance! (cursor->mutable-cursor cur0) di)))
            ;; Loop bindings
            ()
