@@ -398,6 +398,103 @@
       (test-case "distinct rope types with equal length and hash are not equal?"
         (check-false (equal? (make-empty-string-rope) (make-empty-weighted-rope))))))
 
+  (define sequence-suite
+    (test-suite "sequences"
+      (test-case "in-cursor with default stop walks backward to the rope's start"
+        ;; regression for the wrong-default-j bug above
+        (define chunk (random-weighted-chunk 10))
+        (define a (chunk->rope weighted chunk))
+        (define cur (rope->cursor a 7))
+        (check-equal? (for/list ([x (in-cursor weighted cur 0 #f -1)]) x)
+                      (for/list ([i (in-range 7 -1 -1)]) (vector-ref chunk i))))
+
+      (test-case "in-cursor with default stop walks forward to the rope's end"
+        (define chunk (random-weighted-chunk 10))
+        (define a (chunk->rope weighted chunk))
+        (define cur (rope->cursor a 3))
+        (check-equal? (for/list ([x (in-cursor weighted cur)]) x)
+                      (for/list ([i (in-range 3 10)]) (vector-ref chunk i))))
+
+      (test-property "in-rope (fast path) matches a vector oracle, forward"
+          #:trials 200
+          ([chunk (random-weighted-chunk (add1 (random 60)))])
+        (define a (chunk->rope weighted chunk))
+        (equal? (for/list ([x (in-rope weighted a)]) x) (vector->list chunk)))
+
+      (test-property "in-rope (fast path) matches a vector oracle, backward"
+          #:trials 200
+          ([chunk (random-weighted-chunk (add1 (random 60)))]
+           [n (vector-length chunk)])
+        (define a (chunk->rope weighted chunk))
+        (equal? (for/list ([x (in-rope weighted a (sub1 n) -1 -1)]) x)
+                (reverse (vector->list chunk))))
+
+      (test-property "in-rope with start/stop/step matches in-range's own semantics"
+          #:trials 300
+          ([chunk (random-weighted-chunk (add1 (random 60)))]
+           [n (vector-length chunk)]
+           [i (random n)]
+           [j (random (add1 n))]
+           [step (let ([s (add1 (random 5))]) (if (zero? (random 2)) s (- s)))])
+        (define a (chunk->rope weighted chunk))
+        (equal? (for/list ([x (in-rope weighted a i j step)]) x)
+                (for/list ([idx (in-range i j step)]) (vector-ref chunk idx))))
+
+      (test-case "in-rope: mismatched direction is empty, not an error, both ways"
+        (define a (chunk->rope weighted (random-weighted-chunk 10)))
+        (check-equal? (for/list ([x (in-rope weighted a 8 2 1)])  x) null)  ;; j<i, k>0
+        (check-equal? (for/list ([x (in-rope weighted a 2 8 -1)]) x) null)) ;; j>i, k<0
+
+      (test-case "in-rope: zero step is a contract error"
+        (define a (chunk->rope weighted (random-weighted-chunk 10)))
+        (check-exn exn:fail:contract? (λ () (for/list ([x (in-rope weighted a 0 #f 0)]) x))))
+
+      (test-case "in-rope on an empty rope is empty, no error"
+        (define e (make-empty-weighted-rope))
+        (check-equal? (for/list ([x (in-rope weighted e)]) x) null)
+        (check-equal? (for/list ([x (in-rope weighted e 0 #f -1)]) x) null))
+
+      (test-property "in-cursor relative to a mid-rope cursor matches a vector slice"
+          #:trials 200
+          ([chunk (random-weighted-chunk (add1 (random 60)))]
+           [n (vector-length chunk)]
+           [start (random n)]
+           [di (- (random n) start)]
+           [dj (- (random (add1 n)) start)]
+           [step (let ([s (add1 (random 5))]) (if (zero? (random 2)) s (- s)))])
+        (define a (chunk->rope weighted chunk))
+        (define cur (rope->cursor a start))
+        (equal? (for/list ([x (in-cursor weighted cur di dj step)]) x)
+                (for/list ([idx (in-range (+ start di) (+ start dj) step)])
+                  (vector-ref chunk idx))))
+
+      (test-property "in-rope fast path (for) agrees with the runtime fallback"
+          #:trials 200
+          ([chunk (random-weighted-chunk (add1 (random 60)))]
+           [n (vector-length chunk)]
+           [i (random n)]
+           [j (random (add1 n))]
+           [step (let ([s (add1 (random 5))]) (if (zero? (random 2)) s (- s)))])
+        (define a (chunk->rope weighted chunk))
+        (define fast (for/list ([x (in-rope weighted a i j step)]) x))
+        (define seq (in-rope weighted a i j step))   ;; bound to a variable — forces the fallback
+        (define slow (for/list ([x seq]) x))
+        (equal? fast slow))
+
+      (test-property "in-cursor fast path (for) agrees with the runtime fallback"
+          #:trials 200
+          ([chunk (random-weighted-chunk (add1 (random 60)))]
+           [n (vector-length chunk)]
+           [start (random n)]
+           [di (- (random n) start)]
+           [dj (- (random (add1 n)) start)]
+           [step (let ([s (add1 (random 5))]) (if (zero? (random 2)) s (- s)))])
+        (define a (chunk->rope weighted chunk))
+        (define fast (for/list ([x (in-cursor weighted (rope->cursor a start) di dj step)]) x))
+        (define seq (in-cursor weighted (rope->cursor a start) di dj step))
+        (define slow (for/list ([x seq]) x))
+        (equal? fast slow))))
+
   (run-suite! (test-suite "generic-tests.rkt"
                 generic-ops-suite
                 core-ops-suite
@@ -408,4 +505,5 @@
                 balance-suite
                 cursor-suite
                 fold-suite
-                regression-suite)))
+                regression-suite
+                sequence-suite)))
