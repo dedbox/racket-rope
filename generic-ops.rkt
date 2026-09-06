@@ -525,7 +525,7 @@
            (begin
              (when (zero? k)
                (raise-argument-error 'in-rope "(and/c exact-integer? (not/c zero?))" k))
-             (define cur (rope->mutable-cursor a i)))
+             (define cur (and ((if k>0? < >) i stop) (rope->mutable-cursor a i))))
            ;; Loop bindings
            ()
            ;; Positional guard (Checks if iteration should continue)
@@ -599,7 +599,8 @@
            (begin
              (when (zero? k)
                (raise-argument-error 'in-rope "(and/c exact-integer? (not/c zero?))" k))
-             (define cur (cursor-advance! (cursor->mutable-cursor cur0) di)))
+             (define cur (and ((if k>0? < >) i j)
+                              (cursor-advance! (cursor->mutable-cursor cur0) di))))
            ;; Loop bindings
            ()
            ;; Positional guard (Checks if iteration should continue)
