@@ -593,8 +593,9 @@
                (define k>0? (> k 0))
                (values cur0 di
                        (+ (cursor-abs-idx cur0) di)
-                       (+ (cursor-abs-idx cur0)
-                          (or dj (if k>0? (rope-length (cursor-source cur0)) -1)))
+                       (if dj
+                           (+ (cursor-abs-idx cur0) dj)
+                           (if k>0? (rope-length (cursor-source cur0)) -1))
                        k k>0?))])
            ;; Outer checks (Validation rules)
            (begin
