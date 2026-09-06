@@ -563,8 +563,8 @@
       (raise-argument-error 'in-cursor "(and/c exact-integer? (not/c zero?))" k))
 
     (define k>0? (> k 0))
-    (define i (+ (cursor-abs-idx cur) di))
-    (define j (+ (cursor-abs-idx cur) (or dj (if k>0? (rope-length (cursor-source cur)) -1))))
+    (define i (+ (cursor-abs-idx cur0) di))
+    (define j (+ (cursor-abs-idx cur0) (or dj (if k>0? (rope-length (cursor-source cur0)) -1))))
 
     (when (and (< i j) (< k 0))
       (raise-arguments-error 'in-cursor "starting index less than stopping index, but given a negative step"
@@ -593,8 +593,6 @@
                             (~optional j:expr #:defaults ([j #'#f]))
                             (~optional k:expr #:defaults ([k #'1])))
   (in-cursor-runtime ρ cur i j k))
-
-(require racket/pretty)
 
 (define-sequence-syntax in-cursor
   (λ () #'in-cursor-fallback)

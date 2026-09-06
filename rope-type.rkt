@@ -318,6 +318,6 @@
       (in-rope type-id a i j k))
 
     (define (in-*-cursor cur [i 0] [j #f] [k 1])
-      (in-cursor-runtime type-id cur i j k))
+      (in-cursor type-id cur i j k))
 
     ))
