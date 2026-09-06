@@ -257,7 +257,6 @@
              (loop chunk pos (list* (rope-node-left (car stack))
                                     (rope-node-right (car stack))
                                     (cdr stack)))])))
-
       (or (eq? a b)
           (and (= (rope-length a) (rope-length b))
                (equal? (rope-hash1 a) (rope-hash1 b))
@@ -268,7 +267,7 @@
                  (define-values (cb* pb* sb*) (advance cb-chunk cb-pos cb-stack))
                  (cond
                    [(and (not ca*) (not cb*)) #t]
-                   [(or (not ca*) (not cb*)) #f]
+                   [(or  (not ca*) (not cb*)) #f]
                    [else
                     (define k (min (- (chunk-length ca*) pa*)
                                    (- (chunk-length cb*) pb*)))
