@@ -540,6 +540,19 @@
            ;; Loop updates (Advances the cursor and index for the next iteration)
            [])]])))
 
+(define-syntax (define-rope-sequence stx)
+  (syntax-parse stx
+    [(_ seq-id:id type-id:id)
+     #'(define-sequence-syntax seq-id
+         (λ () #'(λ (a [i 0] [j #f] [k 1]) (in-rope-fallback type-id a i j k)))
+         (λ (inner-stx)
+           (syntax-parse inner-stx
+             [[(id:id) (_ a:expr
+                          (~optional i:expr #:defaults ([i #'0]))
+                          (~optional j:expr #:defaults ([j #'#f]))
+                          (~optional k:expr #:defaults ([k #'1])))]
+              #'[(id) (in-rope type-id a i j k)]])))]))
+
 (define-rope-operation (in-cursor-runtime ρ cur00 di0 dj0 k0)
   (let ([cur0 cur00] [di di0] [dj dj0] [k k0])
     (when (zero? k)
@@ -600,3 +613,16 @@
            (cursor-advance! cur k)
            ;; Loop updates (Advances the cursor and index for the next iteration)
            [])]])))
+
+(define-syntax (define-cursor-sequence stx)
+  (syntax-parse stx
+    [(_ seq-id:id type-id:id)
+     #'(define-sequence-syntax seq-id
+         (λ () #'(λ (a [i 0] [j #f] [k 1]) (in-cursor-fallback type-id a i j k)))
+         (λ (inner-stx)
+           (syntax-parse inner-stx
+             [[(id:id) (_ a:expr
+                          (~optional i:expr #:defaults ([i #'0]))
+                          (~optional j:expr #:defaults ([j #'#f]))
+                          (~optional k:expr #:defaults ([k #'1])))]
+              #'[(id) (in-cursor type-id a i j k)]])))]))

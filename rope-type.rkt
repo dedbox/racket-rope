@@ -314,10 +314,7 @@
     ;; sequences
     ;; -------------------------------------------------------------------------
 
-    (define (in-*-rope a [i 0] [j #f] [k 1])
-      (in-rope type-id a i j k))
-
-    (define (in-*-cursor cur [i 0] [j #f] [k 1])
-      (in-cursor type-id cur i j k))
+    (define-rope-sequence   in-*-rope   type-id)
+    (define-cursor-sequence in-*-cursor type-id)
 
     ))
