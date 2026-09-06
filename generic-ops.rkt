@@ -579,9 +579,9 @@
              (let ([cur0 cur00] [di di0] [dj dj0] [k k0])
                (define k>0? (> k 0))
                (values cur0 di
-                       (+ (cursor-abs-idx cur) di)
-                       (+ (cursor-abs-idx cur)
-                          (or dj (if k>0? (rope-length (cursor-source cur)) -1)))
+                       (+ (cursor-abs-idx cur0) di)
+                       (+ (cursor-abs-idx cur0)
+                          (or dj (if k>0? (rope-length (cursor-source cur0)) -1)))
                        k k>0?))])
            ;; Outer checks (Validation rules)
            (begin
