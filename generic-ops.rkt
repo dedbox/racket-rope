@@ -6,6 +6,7 @@
                      racket/syntax
                      rope2/rope-type-descriptor
                      syntax/parse)
+         racket/sequence
          rope2/cursor
          rope2/rope
          syntax/parse/define)
@@ -477,3 +478,165 @@
           (let ([head (for/list ([cur (in-list curs)])
                         (begin0 (mutable-cursor-peek ρ cur) (cursor-advance! cur)))])
             (apply proc (append head (list (loop result (sub1 count))))))))))
+
+;; -----------------------------------------------------------------------------
+;; sequences
+;; -----------------------------------------------------------------------------
+
+(define-rope-operation (in-rope-runtime ρ a0 i0 j0 k0)
+  (let ([a a0] [i i0] [j j0] [k k0])
+    (when (zero? k)
+      (raise-argument-error 'in-rope "(and/c exact-integer? (not/c zero?))" k))
+
+    (define k>0? (> k 0))
+    (define stop (or j (if k>0? (rope-length a) -1)))
+
+    (when (and (< i stop) (< k 0))
+      (raise-arguments-error 'in-rope "starting index less than stopping index, but given a negative step"
+                             "starting index" i "stopping index" stop "step" k))
+    (when (and (> i stop) (> k 0))
+      (raise-arguments-error 'in-rope "starting index more than stopping index, but given a positive step"
+                             "starting index" i "stopping index" stop "step" k))
+
+    (if (if k>0? (>= i stop) (<= i stop))
+        (in-list null)
+        (make-do-sequence
+         (λ ()
+           (define abs-i i)
+           (initiate-sequence
+            #:pos->element       (λ (cur) (mutable-cursor-peek ρ cur))
+            #:next-pos           (λ (cur) (set! abs-i (+ abs-i k)) (cursor-advance! cur k))
+            #:init-pos           (rope->mutable-cursor a i)
+            #:continue-with-pos? (λ (cur) (and cur (if k>0? (< abs-i stop) (> abs-i stop))))))))))
+
+(define-syntax-parse-rule (in-rope-fallback ρ:id a:expr
+                            (~optional i:expr #:defaults ([i #'0]))
+                            (~optional j:expr #:defaults ([j #'#f]))
+                            (~optional k:expr #:defaults ([k #'1])))
+  (in-rope-runtime ρ a i j k))
+
+(define-sequence-syntax in-rope
+  (λ () #'in-rope-fallback)
+  (λ (stx)
+    (syntax-parse stx
+      [[(x:id) (_ ρ:id a0:expr
+                  (~optional i0:expr #:defaults ([i0 #'0]))
+                  (~optional j0:expr #:defaults ([j0 #'#f]))
+                  (~optional k0:expr #:defaults ([k0 #'1])))]
+       #'[(x)
+          (:do-in
+           ;; Outer bindings (Evaluated exactly once before the loop begins)
+           ([(a i k stop k>0?)
+             (let ([a a0] [i i0] [j j0] [k k0])
+               (define k>0? (> k 0))
+               (define stop (or j (if k>0? (rope-length a) -1)))
+               (values a i k stop k>0?))])
+           ;; Outer checks (Validation rules)
+           (begin
+             (when (zero? k)
+               (raise-argument-error 'in-rope "(and/c exact-integer? (not/c zero?))" k))
+             (when (and (< i stop) (< k 0))
+               (raise-arguments-error 'in-rope
+                                      "starting index less than stopping index, but given a negative step"
+                                      "starting index" i "stopping index" stop "step" k))
+             (when (and (> i stop) (> k 0))
+               (raise-arguments-error 'in-rope
+                                      "starting index more than stopping index, but given a positive step"
+                                      "starting index" i "stopping index" stop "step" k))
+             (define cur (rope->mutable-cursor a i)))
+           ;; Loop bindings
+           ()
+           ;; Positional guard (Checks if iteration should continue)
+           (and cur ((if k>0? < >) (mutable-cursor-abs-idx cur) stop))
+           ;; Inner bindings (Extracts the current element)
+           ([(x) (mutable-cursor-peek ρ cur)])
+           ;; Pre-guard
+           #t
+           ;; Post-guard
+           (cursor-advance! cur k)
+           ;; Loop updates (Advances the cursor and index for the next iteration)
+           [])]])))
+
+(define-rope-operation (in-cursor-runtime ρ cur00 di0 dj0 k0)
+  (let ([cur0 cur00] [di di0] [dj dj0] [k k0])
+    (when (zero? k)
+      (raise-argument-error 'in-cursor "(and/c exact-integer? (not/c zero?))" k))
+
+    (define k>0? (> k 0))
+    (define i (+ (cursor-abs-idx cur) di))
+    (define j (+ (cursor-abs-idx cur) (or dj (if k>0? (rope-length (cursor-source cur)) -1))))
+
+    (when (and (< i j) (< k 0))
+      (raise-arguments-error 'in-cursor "starting index less than stopping index, but given a negative step"
+                             "starting index" i
+                             "stopping index" j
+                             "step" k))
+    (when (and (> i j) (> k 0))
+      (raise-arguments-error 'in-cursor "starting index more than stopping index, but given a positive step"
+                             "starting index" i
+                             "stopping index" j
+                             "step" k))
+
+    (if ((if k>0? < >) j i)
+        (in-list null)
+        (make-do-sequence
+         (λ ()
+           (define abs-i i)
+           (initiate-sequence
+            #:pos->element       (λ (cur) (mutable-cursor-peek ρ cur))
+            #:next-pos           (λ (cur) (cursor-advance! cur k))
+            #:init-pos           (cursor-advance! (cursor->mutable-cursor cur0) di0)
+            #:continue-with-pos? (λ (cur) (and cur ((if k>0? < >) (mutable-cursor-abs-idx cur) j)))))))))
+
+(define-syntax-parse-rule (in-cursor-fallback ρ:id cur:expr
+                            (~optional i:expr #:defaults ([i #'0]))
+                            (~optional j:expr #:defaults ([j #'#f]))
+                            (~optional k:expr #:defaults ([k #'1])))
+  (in-cursor-runtime ρ cur i j k))
+
+(require racket/pretty)
+
+(define-sequence-syntax in-cursor
+  (λ () #'in-cursor-fallback)
+  (λ (stx)
+    (syntax-parse stx
+      [[(x:id) (_ ρ:id cur00:expr
+                  (~optional di0:expr #:defaults ([di0 #'0]))
+                  (~optional dj0:expr #:defaults ([dj0 #'#f]))
+                  (~optional k0:expr #:defaults  ([k0  #'1])))]
+       #'[(x)
+          (:do-in
+           ;; Outer bindings (Evaluated exactly once before the loop begins)
+           ([(cur0 di i j k k>0?)
+             (let ([cur0 cur00] [di di0] [dj dj0] [k k0])
+               (define k>0? (> k 0))
+               (values cur0 di
+                       (+ (cursor-abs-idx cur) di)
+                       (+ (cursor-abs-idx cur)
+                          (or dj (if k>0? (rope-length (cursor-source cur)) -1)))
+                       k k>0?))])
+           ;; Outer checks (Validation rules)
+           (begin
+             (when (zero? k)
+               (raise-argument-error 'in-rope "(and/c exact-integer? (not/c zero?))" k))
+             (when (and j (< i j) (< k 0))
+               (raise-arguments-error 'in-rope
+                                      "starting index less than stopping index, but given a negative step"
+                                      "starting index" i "stopping index" j "step" k))
+             (when (and j (> i j) (> k 0))
+               (raise-arguments-error 'in-rope
+                                      "starting index more than stopping index, but given a positive step"
+                                      "starting index" i "stopping index" j "step" k))
+             (define cur (cursor-advance! (cursor->mutable-cursor cur0) di)))
+           ;; Loop bindings
+           ()
+           ;; Positional guard (Checks if iteration should continue)
+           (and cur ((if k>0? < >) (mutable-cursor-abs-idx cur) j))
+           ;; Inner bindings (Extracts the current element)
+           ([(x) (mutable-cursor-peek ρ cur)])
+           ;; Pre-guard
+           #t
+           ;; Post-guard
+           (cursor-advance! cur k)
+           ;; Loop updates (Advances the cursor and index for the next iteration)
+           [])]])))

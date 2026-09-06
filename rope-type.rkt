@@ -101,7 +101,8 @@
   #:with *-rope-foldr               (mk* "~a-rope-foldr")
 
   ;; sequences
-  ;; #:with in-*-rope-runtime       (mk* "in-~a-rope-runtime")
+  #:with in-*-rope                  (mk* "in-~a-rope")
+  #:with in-*-cursor                (mk* "in-~a-cursor")
 
   (begin
 
@@ -313,13 +314,10 @@
     ;; sequences
     ;; -------------------------------------------------------------------------
 
-    ;; (define (in-*-rope-runtime a [i 0] [j (rope-length a)] [k 1])
-    ;;   (make-do-sequence
-    ;;    (λ ()
-    ;;      (initiate-sequence
-    ;;       #:pos->element *-cursor-peek
-    ;;       #:next-pos (λ (cur) (cursor-advance cur k))
-    ;;       #:init-pos (rope->cursor a i)
-    ;;       #:continue-with-pos? (λ (cur) (not (*-cursor-at-end? cur)))))))
+    (define (in-*-rope a [i 0] [j #f] [k 1])
+      (in-rope type-id a i j k))
+
+    (define (in-*-cursor cur [i 0] [j #f] [k 1])
+      (in-cursor-runtime type-id cur i j k))
 
     ))
