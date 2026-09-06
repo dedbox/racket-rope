@@ -489,16 +489,15 @@
       (raise-argument-error 'in-rope "(and/c exact-integer? (not/c zero?))" k))
     (define k>0? (> k 0))
     (define stop (or j (if k>0? (rope-length a) -1)))
-    (if (if k>0? (>= i stop) (<= i stop))
+    (if ((if k>0? < >) stop i)
         (in-list null)
         (make-do-sequence
          (λ ()
-           (define abs-i i)
            (initiate-sequence
             #:pos->element       (λ (cur) (mutable-cursor-peek ρ cur))
-            #:next-pos           (λ (cur) (set! abs-i (+ abs-i k)) (cursor-advance! cur k))
+            #:next-pos           (λ (cur) (cursor-advance! cur k))
             #:init-pos           (rope->mutable-cursor a i)
-            #:continue-with-pos? (λ (cur) (and cur (if k>0? (< abs-i stop) (> abs-i stop))))))))))
+            #:continue-with-pos? (λ (cur) (and cur ((if k>0? < >) (mutable-cursor-abs-idx cur) stop)))))))))
 
 (define-syntax-parse-rule (in-rope-fallback ρ:id a:expr
                             (~optional i:expr #:defaults ([i #'0]))
@@ -564,7 +563,6 @@
         (in-list null)
         (make-do-sequence
          (λ ()
-           (define abs-i i)
            (initiate-sequence
             #:pos->element       (λ (cur) (mutable-cursor-peek ρ cur))
             #:next-pos           (λ (cur) (cursor-advance! cur k))
