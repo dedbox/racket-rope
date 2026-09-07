@@ -14,6 +14,7 @@
    chunk-ref
    chunk-slice
    chunk-append
+   chunk=?
    chunk-compare
    chunk-overlap=?
    chunk-compare-overlap

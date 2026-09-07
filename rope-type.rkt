@@ -24,6 +24,7 @@
                             #:chunk-ref    chunk-ref:id+fun2
                             #:chunk-slice  chunk-slice:id+fun3
                             #:chunk-append chunk-append:id+fun1
+                            (~optional (~seq #:chunk=?               chunk=?:id+fun2))
                             (~optional (~seq #:chunk-compare         chunk-compare:id+fun2))
                             (~optional (~seq #:chunk-overlap=?       chunk-overlap=?:id+fun5))
                             (~optional (~seq #:chunk-compare-overlap chunk-compare-overlap:id+fun5))
@@ -45,6 +46,7 @@
   #:with *-rope-chunk-ref             (mk* "~a-rope-chunk-ref")
   #:with *-rope-chunk-slice           (mk* "~a-rope-chunk-slice")
   #:with *-rope-chunk-append          (mk* "~a-rope-chunk-append")
+  #:with *-rope-chunk=?               (mk* "~a-rope-chunk=?")
   #:with *-rope-chunk-compare         (mk* "~a-rope-chunk-compare")
   #:with *-rope-chunk-overlap=?       (mk* "~a-rope-chunk-overlap=?")
   #:with *-rope-chunk-compare-overlap (mk* "~a-rope-chunk-compare-overlap")
@@ -129,6 +131,7 @@
                             #'*-rope-chunk-ref
                             #'*-rope-chunk-slice
                             #'*-rope-chunk-append
+                            #'*-rope-chunk=?
                             #'*-rope-chunk-compare
                             #'*-rope-chunk-overlap=?
                             #'*-rope-chunk-compare-overlap
@@ -141,8 +144,7 @@
                             #'*-rope-chunk-hash
                             #'*-rope-node-hash
                             #'make-*-rope-hash
-                            #'*-rope-content=?
-                            ))
+                            #'*-rope-content=?))
 
     ;; -------------------------------------------------------------------------
     ;; per-chunk primitives
@@ -155,6 +157,7 @@
     (define (*-rope-chunk-ref    c i)   (chunk-ref    c i))
     (define (*-rope-chunk-slice  c i k) (chunk-slice  c i k))
     (define (*-rope-chunk-append cs)    (chunk-append cs))
+    (define (*-rope-chunk=?      c d)   ((~? chunk=? equal?) c d))
 
     (define *-rope-chunk-width
       (if (number? elem-width)
@@ -303,11 +306,14 @@
                    [(and (not ca**) (not cb**)) #t]
                    [(or  (not ca**) (not cb**)) #f]
                    [else
-                    (define k (min (- (chunk-length ca**) ia**)
-                                   (- (chunk-length cb**) ib**)))
-                    (and (*-rope-chunk-overlap=? ca** cb** ia** ib** k)
-                         (walk ca** (+ ia** k) stack-a**
-                               cb** (+ ib** k) stack-b**))])))))
+                    (define len-a (chunk-length ca**))
+                    (define len-b (chunk-length cb**))
+                    (if (and (= len-a len-b) (= ia** ib**))
+                        (*-rope-chunk=? ca** cb**)
+                        (let ([k (min (- len-a ia**) (- len-b ib**))])
+                          (and (*-rope-chunk-overlap=? ca** cb** ia** ib** k)
+                               (walk ca** (+ ia** k) stack-a**
+                                     cb** (+ ib** k) stack-b**))))])))))
 
     ;; -------------------------------------------------------------------------
     ;; basic operations

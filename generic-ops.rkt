@@ -58,6 +58,7 @@
   #:with chunk-ref             (mk-op "chunk-ref")
   #:with chunk-slice           (mk-op "chunk-slice")
   #:with chunk-append          (mk-op "chunk-append")
+  #:with chunk=?               (mk-op "chunk=?")
   #:with chunk-compare         (mk-op "chunk-compare")
   #:with chunk-overlap=?       (mk-op "chunk-overlap=?")
   #:with chunk-compare-overlap (mk-op "chunk-compare-overlap")
@@ -102,6 +103,7 @@
     #:with chunk-ref              (rope-type-descriptor-chunk-ref              desc)
     #:with chunk-slice            (rope-type-descriptor-chunk-slice            desc)
     #:with chunk-append           (rope-type-descriptor-chunk-append           desc)
+    #:with chunk=?                (rope-type-descriptor-chunk=?                desc)
     #:with chunk-compare          (rope-type-descriptor-chunk-compare          desc)
     #:with chunk-overlap=?        (rope-type-descriptor-chunk-overlap=?        desc)
     #:with chunk-compare-overlap  (rope-type-descriptor-chunk-compare-overlap  desc)
@@ -138,6 +140,7 @@
 (define-rope-operation (rope-chunk-ref             _ c i)   (chunk-ref             c i))
 (define-rope-operation (rope-chunk-slice           _ c i k) (chunk-slice           c i k))
 (define-rope-operation (rope-chunk-append          _ cs)    (chunk-append          cs))
+(define-rope-operation (rope-chunk=?               _ c d)   (chunk=?               c d))
 (define-rope-operation (rope-chunk-compare         _ c d)   (chunk-compare         c d))
 (define-rope-operation (rope-chunk-overlap=?       _ c d)   (chunk-overlap=?       c d))
 (define-rope-operation (rope-chunk-compare-overlap _ c d)   (chunk-compare-overlap c d))
@@ -545,7 +548,7 @@
            #t
            ;; Post-guard
            (cursor-advance! cur k)
-           ;; Loop updates (Advances the cursor and index for the next iteration)
+           ;; Loop updates
            [])]])))
 
 (define-syntax (define-rope-sequence stx)
@@ -620,7 +623,7 @@
            #t
            ;; Post-guard
            (cursor-advance! cur k)
-           ;; Loop updates (Advances the cursor and index for the next iteration)
+           ;; Loop updates
            [])]])))
 
 (define-syntax (define-cursor-sequence stx)
