@@ -24,85 +24,95 @@
                             #:chunk-ref    chunk-ref:id+fun2
                             #:chunk-slice  chunk-slice:id+fun3
                             #:chunk-append chunk-append:id+fun1
-                            (~optional (~seq #:chunk-compare   chunk-compare:id+fun2))
-                            (~optional (~seq #:chunk-overlap=? chunk-overlap=?:id+fun5))
+                            (~optional (~seq #:chunk-compare         chunk-compare:id+fun2))
+                            (~optional (~seq #:chunk-overlap=?       chunk-overlap=?:id+fun5))
+                            (~optional (~seq #:chunk-compare-overlap chunk-compare-overlap:id+fun5))
                             #:elem-width   elem-width:nat+id+fun2
-                            (~optional (~seq #:elem-hash elem-hash:id+fun1)))
+                            (~optional (~seq #:elem-hash elem-hash:id+fun1))
+                            (~optional (~seq #:elem<? elem<?:id+fun2))
+                            (~optional (~seq #:elem>? elem>?:id+fun2)))
   #:do [(define (mk* fmt) (format-id (attribute type-id) fmt (syntax-e #'type-id)))]
 
   ;; rope type descriptor
-  #:with (~var rope:*)              (mk* "rope:~a")
+  #:with (~var rope:*)                (mk* "rope:~a")
 
   ;; per-chunk primitives
-  #:with *-rope-chunk?              (mk* "~a-rope-chunk?")
-  #:with *-rope-chunk-limit         (mk* "~a-rope-chunk-limit")
-  #:with *-rope-chunk-empty         (mk* "~a-rope-chunk-empty")
-  #:with *-rope-chunk-length        (mk* "~a-rope-chunk-length")
-  #:with *-rope-chunk-width         (mk* "~a-rope-chunk-width")
-  #:with *-rope-chunk-ref           (mk* "~a-rope-chunk-ref")
-  #:with *-rope-chunk-slice         (mk* "~a-rope-chunk-slice")
-  #:with *-rope-chunk-append        (mk* "~a-rope-chunk-append")
-  #:with *-rope-chunk-compare       (mk* "~a-rope-chunk-compare")
-  #:with *-rope-chunk-overlap=?     (mk* "~a-rope-chunk-overlap=?")
+  #:with *-rope-chunk?                (mk* "~a-rope-chunk?")
+  #:with *-rope-chunk-limit           (mk* "~a-rope-chunk-limit")
+  #:with *-rope-chunk-empty           (mk* "~a-rope-chunk-empty")
+  #:with *-rope-chunk-length          (mk* "~a-rope-chunk-length")
+  #:with *-rope-chunk-width           (mk* "~a-rope-chunk-width")
+  #:with *-rope-chunk-ref             (mk* "~a-rope-chunk-ref")
+  #:with *-rope-chunk-slice           (mk* "~a-rope-chunk-slice")
+  #:with *-rope-chunk-append          (mk* "~a-rope-chunk-append")
+  #:with *-rope-chunk-compare         (mk* "~a-rope-chunk-compare")
+  #:with *-rope-chunk-overlap=?       (mk* "~a-rope-chunk-overlap=?")
+  #:with *-rope-chunk-compare-overlap (mk* "~a-rope-chunk-compare-overlap")
 
   ;; per-element primitives
-  #:with *-rope-elem-width          (mk* "~a-rope-elem-width")
-  #:with *-rope-elem-hash           (mk* "~a-rope-elem-hash")
+  #:with *-rope-elem-width            (mk* "~a-rope-elem-width")
+  #:with *-rope-elem-hash             (mk* "~a-rope-elem-hash")
+  #:with *-rope-elem<?                (mk* "~a-rope-elem<?")
+  #:with *-rope-elem>?                (mk* "~a-rope-elem>?")
 
   ;; per-rope primitives
-  #:with *-rope-chunk-hash          (mk* "~a-rope-chunk-hash")
-  #:with *-rope-node-hash           (mk* "~a-rope-node-hash")
+  #:with *-rope-chunk-hash            (mk* "~a-rope-chunk-hash")
+  #:with *-rope-node-hash             (mk* "~a-rope-node-hash")
 
   ;; rope structs
-  #:with *-rope-equal+hash-impl     (mk* "~a-rope-equal+hash-impl")
-  #:with *-rope-leaf                (mk* "~a-rope-leaf")
-  #:with *-rope-node                (mk* "~a-rope-node")
+  #:with *-rope-equal+hash-impl       (mk* "~a-rope-equal+hash-impl")
+  #:with *-rope-leaf                  (mk* "~a-rope-leaf")
+  #:with *-rope-node                  (mk* "~a-rope-node")
 
   ;; rope predicates
-  #:with *-rope-leaf?               (mk* "~a-rope-leaf?")
-  #:with *-rope-node?               (mk* "~a-rope-node?")
-  #:with *-rope?                    (mk* "~a-rope?")
+  #:with *-rope-leaf?                 (mk* "~a-rope-leaf?")
+  #:with *-rope-node?                 (mk* "~a-rope-node?")
+  #:with *-rope?                      (mk* "~a-rope?")
 
   ;; content-based hashing & equality
-  #:with make-*-rope-hash           (mk* "make-~a-rope-hash")
-  #:with *-rope-content=?           (mk* "~a-rope-content=?")
+  #:with make-*-rope-hash             (mk* "make-~a-rope-hash")
+  #:with *-rope-content=?             (mk* "~a-rope-content=?")
 
   ;; smart constructors
-  #:with make-*-rope-leaf           (mk* "make-~a-rope-leaf")
-  #:with make-*-rope-node           (mk* "make-~a-rope-node")
-  #:with make-empty-*-rope          (mk* "make-empty-~a-rope")
+  #:with make-*-rope-leaf             (mk* "make-~a-rope-leaf")
+  #:with make-*-rope-node             (mk* "make-~a-rope-node")
+  #:with make-empty-*-rope            (mk* "make-empty-~a-rope")
 
   ;; conversions
-  #:with *-chunk->rope              (mk* "~a-chunk->rope")
-  #:with *-rope->chunk              (mk* "~a-rope->chunk")
+  #:with *-chunk->rope                (mk* "~a-chunk->rope")
+  #:with *-rope->chunk                (mk* "~a-rope->chunk")
 
   ;; basic operations
-  #:with *-rope-concat              (mk* "~a-rope-concat")
-  #:with *-rope-append2             (mk* "~a-rope-append2")
-  #:with *-rope-append              (mk* "~a-rope-append")
-  #:with *-rope-split               (mk* "~a-rope-split")
-  #:with *-rope-ref                 (mk* "~a-rope-ref")
-  #:with *-rope-offset-index        (mk* "~a-rope-offset-index")
-  #:with *-rope-cut                 (mk* "~a-rope-cut")
-  #:with *-rope-slice               (mk* "~a-rope-slice")
-  #:with *-rope-splice              (mk* "~a-rope-splice")
+  #:with *-rope-concat                (mk* "~a-rope-concat")
+  #:with *-rope-append2               (mk* "~a-rope-append2")
+  #:with *-rope-append                (mk* "~a-rope-append")
+  #:with *-rope-split                 (mk* "~a-rope-split")
+  #:with *-rope-ref                   (mk* "~a-rope-ref")
+  #:with *-rope-offset-index          (mk* "~a-rope-offset-index")
+  #:with *-rope-cut                   (mk* "~a-rope-cut")
+  #:with *-rope-slice                 (mk* "~a-rope-slice")
+  #:with *-rope-splice                (mk* "~a-rope-splice")
 
   ;; immutable cursors
-  #:with cursor->*-rope             (mk* "cursor->~a-rope")
-  #:with *-cursor-peek              (mk* "~a-cursor-peek")
-  #:with *-cursor-split             (mk* "~a-cursor-split")
+  #:with cursor->*-rope               (mk* "cursor->~a-rope")
+  #:with *-cursor-peek                (mk* "~a-cursor-peek")
+  #:with *-cursor-split               (mk* "~a-cursor-split")
 
   ;; mutable cursors
-  #:with mutable-cursor->*-rope     (mk* "mutable-cursor->~a-rope")
-  #:with *-mutable-cursor-peek      (mk* "~a-mutable-cursor-peek")
+  #:with mutable-cursor->*-rope       (mk* "mutable-cursor->~a-rope")
+  #:with *-mutable-cursor-peek        (mk* "~a-mutable-cursor-peek")
 
   ;; folds
-  #:with *-rope-foldl               (mk* "~a-rope-foldl")
-  #:with *-rope-foldr               (mk* "~a-rope-foldr")
+  #:with *-rope-foldl                 (mk* "~a-rope-foldl")
+  #:with *-rope-foldr                 (mk* "~a-rope-foldr")
 
   ;; sequences
-  #:with in-*-rope                  (mk* "in-~a-rope")
-  #:with in-*-cursor                (mk* "in-~a-cursor")
+  #:with in-*-rope                    (mk* "in-~a-rope")
+  #:with in-*-cursor                  (mk* "in-~a-cursor")
+
+  ;; comparison relations
+  #:with *-rope-compare-with          (mk* "~a-rope-compare-with")
+  #:with *-rope-compare               (mk* "~a-rope-compare")
 
   (begin
 
@@ -121,8 +131,11 @@
                             #'*-rope-chunk-append
                             #'*-rope-chunk-compare
                             #'*-rope-chunk-overlap=?
+                            #'*-rope-chunk-compare-overlap
                             #'*-rope-elem-width
                             #'*-rope-elem-hash
+                            #'*-rope-elem<?
+                            #'*-rope-elem>?
                             #'*-rope-leaf
                             #'*-rope-node
                             #'*-rope-chunk-hash
@@ -153,14 +166,27 @@
           (λ _ (error '*-rope-chunk-compare "operation not defined"))))
 
     ;; The default overlap equality check loops over the elements in a chunk.
-    ;; This is generally faster for strings but slower for bytes.
+    ;; This is generally faster for boxed collections strings but slower for bytes.
     (define *-rope-chunk-overlap=?
       (λ (ac bc ap bp k)
         (~? (chunk-overlap=? ac bc ap bp k)
+            ;; (for/and ([i (in-range k)])
+            ;;   (equal? (chunk-ref ac (+ ap i)) (chunk-ref bc (+ bp i))))
+
             (let loop ([i 0])
               (or (= i k) (and (equal? (chunk-ref ac (+ ap i))
                                        (chunk-ref bc (+ bp i)))
                                (loop (add1 i))))))))
+
+    (define *-rope-chunk-compare-overlap
+      (λ (ac bc ap bp k)
+        (~? (chunk-compare-overlap ac bc ap bp k)
+            (~? (let loop ([i 0])
+                  (cond [(= i k) '=]
+                        [(elem<? (chunk-ref ac (+ ap i)) (chunk-ref bc (+ bp i))) '<]
+                        [(elem>? (chunk-ref ac (+ ap i)) (chunk-ref bc (+ bp i))) '>]
+                        [else (loop (add1 i))]))
+                (error '*-rope-chunk-compare-overlap "operation not defined")))))
 
     ;; -------------------------------------------------------------------------
     ;; per-element primitives
@@ -168,6 +194,8 @@
 
     (define (*-rope-elem-width c i) (elem-width c i))
     (define (*-rope-elem-hash  c)   (~? (elem-hash c) (equal-hash-code c)))
+    (define (*-rope-elem<?     c d) (~? (elem<? c d) (error '*-rope-elem<? "operation not defined")))
+    (define (*-rope-elem>?     c d) (~? (elem>? c d) (error '*-rope-elem>? "operation not defined")))
 
     ;; -------------------------------------------------------------------------
     ;; rope structs & predicates
@@ -315,5 +343,12 @@
 
     (define-rope-sequence   in-*-rope   type-id)
     (define-cursor-sequence in-*-cursor type-id)
+
+    ;; -------------------------------------------------------------------------
+    ;; sequences
+    ;; -------------------------------------------------------------------------
+
+    (define (*-rope-compare-with proc a b) (rope-compare-with type-id proc a b))
+    (define (*-rope-compare      a b)      (rope-compare      type-id a b))
 
     ))

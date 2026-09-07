@@ -50,28 +50,31 @@
   #:do [(define (mk-op name) (format-id this-syntax name))]
 
   ;; per-chunk primitives
-  #:with chunk?              (mk-op "chunk?")
-  #:with chunk-limit         (mk-op "chunk-limit")
-  #:with chunk-empty         (mk-op "chunk-empty")
-  #:with chunk-length        (mk-op "chunk-length")
-  #:with chunk-width         (mk-op "chunk-width")
-  #:with chunk-ref           (mk-op "chunk-ref")
-  #:with chunk-slice         (mk-op "chunk-slice")
-  #:with chunk-append        (mk-op "chunk-append")
-  #:with chunk-compare       (mk-op "chunk-compare")
-  #:with chunk-overlap=?     (mk-op "chunk-overlap=?")
-  #:with chunk-hash          (mk-op "chunk-hash")
+  #:with chunk?                (mk-op "chunk?")
+  #:with chunk-limit           (mk-op "chunk-limit")
+  #:with chunk-empty           (mk-op "chunk-empty")
+  #:with chunk-length          (mk-op "chunk-length")
+  #:with chunk-width           (mk-op "chunk-width")
+  #:with chunk-ref             (mk-op "chunk-ref")
+  #:with chunk-slice           (mk-op "chunk-slice")
+  #:with chunk-append          (mk-op "chunk-append")
+  #:with chunk-compare         (mk-op "chunk-compare")
+  #:with chunk-overlap=?       (mk-op "chunk-overlap=?")
+  #:with chunk-compare-overlap (mk-op "chunk-compare-overlap")
+  #:with chunk-hash            (mk-op "chunk-hash")
 
   ;; per-element primitives
-  #:with elem-width          (mk-op "elem-width")
-  #:with elem-hash           (mk-op "elem-hash")
+  #:with elem-width            (mk-op "elem-width")
+  #:with elem-hash             (mk-op "elem-hash")
+  #:with elem<?                (mk-op "elem<?")
+  #:with elem>?                (mk-op "elem>?")
 
   ;; per-rope primitives
-  #:with leaf-constructor    (mk-op "leaf-constructor")
-  #:with node-constructor    (mk-op "node-constructor")
-  #:with node-hash           (mk-op "node-hash")
-  #:with rope-hashing        (mk-op "rope-hashing")
-  #:with content=?           (mk-op "content=?")
+  #:with leaf-constructor      (mk-op "leaf-constructor")
+  #:with node-constructor      (mk-op "node-constructor")
+  #:with node-hash             (mk-op "node-hash")
+  #:with rope-hashing          (mk-op "rope-hashing")
+  #:with content=?             (mk-op "content=?")
 
   ;; Passing arbitrary user-supplied arguments directly to the inner macro
   ;; definition is not safe because syntax/parse binds _ as the no-bind
@@ -91,28 +94,31 @@
             (raise-op-error "expected a rope type descriptor" #'inner-ρ))]
 
     ;; per-chunk primitives
-    #:with chunk?           (rope-type-descriptor-chunk?           desc)
-    #:with chunk-limit      (rope-type-descriptor-chunk-limit      desc)
-    #:with chunk-empty      (rope-type-descriptor-chunk-empty      desc)
-    #:with chunk-length     (rope-type-descriptor-chunk-length     desc)
-    #:with chunk-width      (rope-type-descriptor-chunk-width      desc)
-    #:with chunk-ref        (rope-type-descriptor-chunk-ref        desc)
-    #:with chunk-slice      (rope-type-descriptor-chunk-slice      desc)
-    #:with chunk-append     (rope-type-descriptor-chunk-append     desc)
-    #:with chunk-compare    (rope-type-descriptor-chunk-compare    desc)
-    #:with chunk-overlap=?  (rope-type-descriptor-chunk-overlap=?  desc)
-    #:with chunk-hash       (rope-type-descriptor-rope-chunk-hash  desc)
+    #:with chunk?                 (rope-type-descriptor-chunk?                 desc)
+    #:with chunk-limit            (rope-type-descriptor-chunk-limit            desc)
+    #:with chunk-empty            (rope-type-descriptor-chunk-empty            desc)
+    #:with chunk-length           (rope-type-descriptor-chunk-length           desc)
+    #:with chunk-width            (rope-type-descriptor-chunk-width            desc)
+    #:with chunk-ref              (rope-type-descriptor-chunk-ref              desc)
+    #:with chunk-slice            (rope-type-descriptor-chunk-slice            desc)
+    #:with chunk-append           (rope-type-descriptor-chunk-append           desc)
+    #:with chunk-compare          (rope-type-descriptor-chunk-compare          desc)
+    #:with chunk-overlap=?        (rope-type-descriptor-chunk-overlap=?        desc)
+    #:with chunk-compare-overlap  (rope-type-descriptor-chunk-compare-overlap  desc)
+    #:with chunk-hash             (rope-type-descriptor-rope-chunk-hash        desc)
 
     ;; per-element primitives
-    #:with elem-width       (rope-type-descriptor-elem-width       desc)
-    #:with elem-hash        (rope-type-descriptor-elem-hash        desc)
+    #:with elem-width             (rope-type-descriptor-elem-width             desc)
+    #:with elem-hash              (rope-type-descriptor-elem-hash              desc)
+    #:with elem<?                 (rope-type-descriptor-elem<?                 desc)
+    #:with elem>?                 (rope-type-descriptor-elem>?                 desc)
 
     ;; per-rope primitives
-    #:with leaf-constructor (rope-type-descriptor-leaf-constructor desc)
-    #:with node-constructor (rope-type-descriptor-node-constructor desc)
-    #:with node-hash        (rope-type-descriptor-rope-node-hash   desc)
-    #:with rope-hashing     (rope-type-descriptor-make-rope-hash   desc)
-    #:with content=?        (rope-type-descriptor-content=?        desc)
+    #:with leaf-constructor       (rope-type-descriptor-leaf-constructor       desc)
+    #:with node-constructor       (rope-type-descriptor-node-constructor       desc)
+    #:with node-hash              (rope-type-descriptor-rope-node-hash         desc)
+    #:with rope-hashing           (rope-type-descriptor-make-rope-hash         desc)
+    #:with content=?              (rope-type-descriptor-content=?              desc)
 
     ;; Rebind the temporary identifiers to the corresponding originals.
     #:with ρ                   #'inner-ρ
@@ -124,32 +130,35 @@
 ;; per-chunk primitives
 ;; -----------------------------------------------------------------------------
 
-(define-rope-operation (rope-chunk?          _ x)     (chunk?          x))
-(define-rope-operation (rope-chunk-limit     _)       (chunk-limit))
-(define-rope-operation (rope-chunk-empty     _)       (chunk-empty))
-(define-rope-operation (rope-chunk-length    _ c)     (chunk-length    c))
-(define-rope-operation (rope-chunk-width     _ c)     (chunk-width     c))
-(define-rope-operation (rope-chunk-ref       _ c i)   (chunk-ref       c i))
-(define-rope-operation (rope-chunk-slice     _ c i k) (chunk-slice     c i k))
-(define-rope-operation (rope-chunk-append    _ cs)    (chunk-append    cs))
-(define-rope-operation (rope-chunk-compare   _ c d)   (chunk-compare   c d))
-(define-rope-operation (rope-chunk-overlap=? _ c d)   (chunk-overlap=? c d))
-(define-rope-operation (rope-chunk-hash      _ c)     (chunk-hash      c))
+(define-rope-operation (rope-chunk?                _ x)     (chunk?                x))
+(define-rope-operation (rope-chunk-limit           _)       (chunk-limit))
+(define-rope-operation (rope-chunk-empty           _)       (chunk-empty))
+(define-rope-operation (rope-chunk-length          _ c)     (chunk-length          c))
+(define-rope-operation (rope-chunk-width           _ c)     (chunk-width           c))
+(define-rope-operation (rope-chunk-ref             _ c i)   (chunk-ref             c i))
+(define-rope-operation (rope-chunk-slice           _ c i k) (chunk-slice           c i k))
+(define-rope-operation (rope-chunk-append          _ cs)    (chunk-append          cs))
+(define-rope-operation (rope-chunk-compare         _ c d)   (chunk-compare         c d))
+(define-rope-operation (rope-chunk-overlap=?       _ c d)   (chunk-overlap=?       c d))
+(define-rope-operation (rope-chunk-compare-overlap _ c d)   (chunk-compare-overlap c d))
+(define-rope-operation (rope-chunk-hash            _ c)     (chunk-hash            c))
 
 ;; -----------------------------------------------------------------------------
 ;; per-element primitives
 ;; -----------------------------------------------------------------------------
 
-(define-rope-operation (rope-elem-width      _ c i)   (elem-width      c i))
-(define-rope-operation (rope-elem-hash       _ e)     (elem-hash       e))
+(define-rope-operation (rope-elem-width _ c i)   (elem-width c i))
+(define-rope-operation (rope-elem-hash  _ e)     (elem-hash  e))
+(define-rope-operation (rope-elem<?     _ c d)   (elem<?     c d))
+(define-rope-operation (rope-elem>?     _ c d)   (elem>?     c d))
 
 ;; -----------------------------------------------------------------------------
 ;; content-based hashing * equality
 ;; -----------------------------------------------------------------------------
 
-(define-rope-operation (rope-node-hash       _ l r)   (node-hash       l r))
-(define-rope-operation (make-rope-hash       _ a)     (rope-hashing    a))
-(define-rope-operation (rope-content=?       _ a b)   (content=?       a b))
+(define-rope-operation (rope-node-hash _ l r)   (node-hash    l r))
+(define-rope-operation (make-rope-hash _ a)     (rope-hashing a))
+(define-rope-operation (rope-content=? _ a b)   (content=?    a b))
 
 ;; -----------------------------------------------------------------------------
 ;; smart constructors
@@ -626,3 +635,35 @@
                           (~optional j:expr #:defaults ([j #'#f]))
                           (~optional k:expr #:defaults ([k #'1])))]
               #'[(id) (in-cursor type-id a i j k)]])))]))
+
+;; -----------------------------------------------------------------------------
+;; Comparison Relations
+;; -----------------------------------------------------------------------------
+
+(define-rope-operation (rope-compare-with ρ proc a b)
+  (let loop ([cur-a (rope->mutable-cursor a)]
+             [cur-b (rope->mutable-cursor b)])
+    (cond
+      [(and (not cur-a) (not cur-b)) '=]
+      [(not cur-a) '<]
+      [(not cur-b) '>]
+      [else
+       (define la (mutable-cursor-leaf cur-a))
+       (define lb (mutable-cursor-leaf cur-b))
+       (define pa (mutable-cursor-rel-idx cur-a))
+       (define pb (mutable-cursor-rel-idx cur-b))
+       (define k (min (- (rope-length la) pa) (- (rope-length lb) pb)))
+       (define result (proc (rope-leaf-chunk la) (rope-leaf-chunk lb) pa pb k))
+       (if (not (eq? result '=))
+           result
+           (loop (cursor-advance! cur-a k) (cursor-advance! cur-b k)))])))
+
+(define-rope-operation (rope-compare ρ a b) (rope-compare-with ρ chunk-compare-overlap a b))
+
+;; (define-rope-operation (rope=?  ρ a b) (rope-content=? ρ a b))
+;; (define-rope-operation (rope<=? ρ a b) (or (rope=? ρ a b) (rope<? ρ a b)))
+;; (define-rope-operation (rope>=? ρ a b) (or (rope=? ρ a b) (rope>? ρ a b)))
+
+;; O(n)
+;; (define-rope-operation (rope<? ρ a b)
+;;   )

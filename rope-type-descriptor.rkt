@@ -16,8 +16,11 @@
    chunk-append
    chunk-compare
    chunk-overlap=?
+   chunk-compare-overlap
    elem-width
    elem-hash
+   elem<?
+   elem>?
    ;; automatically generated operations
    leaf-constructor
    node-constructor
