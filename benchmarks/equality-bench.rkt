@@ -23,6 +23,14 @@
 ;;                           60-bit combined hash only astronomically
 ;;                           rarely), so equal? should return #f in O(1)-ish
 ;;                           time regardless of n or where the difference is
+;;   - rewrapped children  : a brand new top-level node built from `a`'s own
+;;                           (rope-node-left a)/(rope-node-right a) -- a
+;;                           different, non-eq? object with identical
+;;                           content, sharing every leaf with `a`. hash1/
+;;                           hash2 match, so this is the one scenario that
+;;                           actually reaches the content=? walk while
+;;                           having something to skip -- the target case for
+;;                           shared-subtree (eq?) skipping in the walk.
 ;;
 ;; Raw hashing cost on its own is already covered by poly-hash-bench.rkt;
 ;; this benchmark is about what equal? does with those hashes once they
@@ -30,6 +38,7 @@
 
 (require racket/format
          rope2/generic-ops
+         rope2/rope
          rope2/rope-type
          rope2/string-rope)
 
@@ -58,6 +67,14 @@
     (define end (min n (+ start piece-size)))
     (string-rope-append2 acc (string-chunk->rope (substring s start end)))))
 
+;; A different top-level rope object with identical content, built by
+;; re-wrapping `a`'s own two immediate children in a brand new node -- every
+;; leaf is shared (eq?) with `a`, only the top node is a fresh allocation.
+;; #f if `a` is a single leaf (nothing to rewrap).
+(define (rewrapped-rope-of a)
+  (and (rope-node? a)
+       (string-rope-concat (rope-node-left a) (rope-node-right a))))
+
 (define (differing-string s pos)
   (define c (string-ref s pos))
   (string-append (substring s 0 pos)
@@ -68,31 +85,49 @@
   (apply min (for/list ([_ (in-range TRIALS)]) (time-ms thunk))))
 
 (module+ main
-  (printf "| ~a | ~a | ~a | ~a | ~a | ~a |\n"
+  (printf "| ~a | ~a | ~a | ~a | ~a | ~a | ~a |\n"
           (~a "Size"                #:min-width 8)
           (~a "identical object"    #:min-width 18 #:align 'right)
           (~a "same content/shape"  #:min-width 18 #:align 'right)
           (~a "same content/fragmented" #:min-width 22 #:align 'right)
           (~a "differ at start"     #:min-width 18 #:align 'right)
-          (~a "differ at end"       #:min-width 18 #:align 'right))
+          (~a "differ at end"       #:min-width 18 #:align 'right)
+          (~a "rewrapped children"  #:min-width 18 #:align 'right))
   (printf "|-\n")
 
   (for ([n (in-list SIZES)])
     (define s (make-string n #\a))
+
     (define a (string-chunk->rope s))
 
-    (define t-identical    (bench-min (λ () (equal? a a))))
-    (define t-same-shape   (let ([b (string-chunk->rope s)]) (bench-min (λ () (equal? a b)))))
-    (define t-fragmented   (let ([b (fragmented-rope-of s)]) (bench-min (λ () (equal? a b)))))
-    (define t-differ-start (let ([b (string-chunk->rope (differing-string s 0))])
-                             (bench-min (λ () (equal? a b)))))
-    (define t-differ-end   (let ([b (string-chunk->rope (differing-string s (sub1 n)))])
-                             (bench-min (λ () (equal? a b)))))
+    (define t-identical (bench-min (λ () (equal? a a))))
 
-    (printf "| ~a | ~a | ~a | ~a | ~a | ~a |\n"
+    (define t-same-shape
+      (let ([b (string-chunk->rope s)])
+        (bench-min (λ () (equal? a b)))))
+
+    (define t-fragmented
+      (let ([b (fragmented-rope-of s)])
+        (bench-min (λ () (equal? a b)))))
+
+    (define t-differ-start
+      (let ([b (string-chunk->rope (differing-string s 0))])
+        (bench-min (λ () (equal? a b)))))
+
+    (define t-differ-end
+      (let ([b (string-chunk->rope (differing-string s (sub1 n)))])
+        (bench-min (λ () (equal? a b)))))
+
+    (define t-rewrapped
+      (let ([b (rewrapped-rope-of a)])
+        (if b (bench-min (λ () (equal? a b))) +nan.0)))
+
+    (printf "| ~a | ~a | ~a | ~a | ~a | ~a | ~a |\n"
             (~a n #:min-width 8)
             (~a (format-result t-identical)    #:min-width 18 #:align 'right)
             (~a (format-result t-same-shape)   #:min-width 18 #:align 'right)
             (~a (format-result t-fragmented)   #:min-width 22 #:align 'right)
             (~a (format-result t-differ-start) #:min-width 18 #:align 'right)
-            (~a (format-result t-differ-end)   #:min-width 18 #:align 'right))))
+            (~a (format-result t-differ-end)   #:min-width 18 #:align 'right)
+            (~a (if (nan? t-rewrapped) "n/a (single leaf)" (format-result t-rewrapped))
+                #:min-width 18 #:align 'right))))
