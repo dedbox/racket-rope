@@ -267,36 +267,47 @@
           (*-rope-node-hash (rope-node-left a) (rope-node-right a))))
 
     (define (*-rope-content=? a b)
-      (define (advance chunk pos stack)
-        (let loop ([chunk chunk] [pos pos] [stack stack])
+      (define (chunk-done? c i)
+        (or (not c) (>= i (chunk-length c))))
+      (define (skip-shared ca ia stack-a cb ib stack-b)
+        (if (and (chunk-done? ca ia)
+                 (chunk-done? cb ib)
+                 (pair? stack-a)
+                 (pair? stack-b)
+                 (eq? (car stack-a) (car stack-b)))
+            (skip-shared #f 0 (cdr stack-a) #f 0 (cdr stack-b))
+            (values ca ia stack-a cb ib stack-b)))
+      (define (advance c i stack)
+        (let loop ([c c] [i i] [stack stack])
           (cond
-            [(and chunk (< pos (chunk-length chunk)))
-             (values chunk pos stack)]
+            [(and c (< i (chunk-length c)))
+             (values c i stack)]
             [(null? stack)
              (values #f 0 null)]
             [(rope-leaf? (car stack))
              (loop (rope-leaf-chunk (car stack)) 0 (cdr stack))]
             [else
-             (loop chunk pos (list* (rope-node-left (car stack))
-                                    (rope-node-right (car stack))
-                                    (cdr stack)))])))
+             (loop c i (list* (rope-node-left (car stack))
+                              (rope-node-right (car stack))
+                              (cdr stack)))])))
       (or (eq? a b)
           (and (= (rope-length a) (rope-length b))
                (equal? (rope-hash1 a) (rope-hash1 b))
                (equal? (rope-hash2 a) (rope-hash2 b))
-               (let walk ([ca-chunk #f] [ca-pos 0] [ca-stack (list a)]
-                                        [cb-chunk #f] [cb-pos 0] [cb-stack (list b)])
-                 (define-values (ca* pa* sa*) (advance ca-chunk ca-pos ca-stack))
-                 (define-values (cb* pb* sb*) (advance cb-chunk cb-pos cb-stack))
+               (let walk ([ca #f] [ia 0] [stack-a (list a)] [cb #f] [ib 0] [stack-b (list b)])
+                 (define-values (ca* ia* stack-a* cb* ib* stack-b*)
+                   (skip-shared ca ia stack-a cb ib stack-b))
+                 (define-values (ca** ia** stack-a**) (advance ca* ia* stack-a*))
+                 (define-values (cb** ib** stack-b**) (advance cb* ib* stack-b*))
                  (cond
-                   [(and (not ca*) (not cb*)) #t]
-                   [(or  (not ca*) (not cb*)) #f]
+                   [(and (not ca**) (not cb**)) #t]
+                   [(or  (not ca**) (not cb**)) #f]
                    [else
-                    (define k (min (- (chunk-length ca*) pa*)
-                                   (- (chunk-length cb*) pb*)))
-                    (and (*-rope-chunk-overlap=? ca* cb* pa* pb* k)
-                         (walk ca* (+ pa* k) sa*
-                               cb* (+ pb* k) sb*))])))))
+                    (define k (min (- (chunk-length ca**) ia**)
+                                   (- (chunk-length cb**) ib**)))
+                    (and (*-rope-chunk-overlap=? ca** cb** ia** ib** k)
+                         (walk ca** (+ ia** k) stack-a**
+                               cb** (+ ib** k) stack-b**))])))))
 
     ;; -------------------------------------------------------------------------
     ;; basic operations
