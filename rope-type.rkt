@@ -170,13 +170,8 @@
     (define *-rope-chunk-overlap=?
       (λ (ac bc ap bp k)
         (~? (chunk-overlap=? ac bc ap bp k)
-            ;; (for/and ([i (in-range k)])
-            ;;   (equal? (chunk-ref ac (+ ap i)) (chunk-ref bc (+ bp i))))
-
-            (let loop ([i 0])
-              (or (= i k) (and (equal? (chunk-ref ac (+ ap i))
-                                       (chunk-ref bc (+ bp i)))
-                               (loop (add1 i))))))))
+            (for/and ([i (in-range k)])
+              (equal? (chunk-ref ac (+ ap i)) (chunk-ref bc (+ bp i)))))))
 
     (define *-rope-chunk-compare-overlap
       (λ (ac bc ap bp k)
