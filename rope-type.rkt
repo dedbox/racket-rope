@@ -171,12 +171,16 @@
     (define *-rope-chunk-compare-overlap
       (λ (ca cb ia ib k)
         (~? (chunk-compare-overlap ca cb ia ib k)
-            (~? (let loop ([i 0])
-                  (cond [(= i k) '=]
-                        [(elem<? (chunk-ref ca (+ ia i)) (chunk-ref cb (+ ib i))) '<]
-                        [(elem>? (chunk-ref ca (+ ia i)) (chunk-ref cb (+ ib i))) '>]
-                        [else (loop (add1 i))]))
-                (error '*-rope-chunk-compare-overlap "operation not defined")))))
+            (~@ (define (elem-loop-compare)
+                  (~? (let loop ([i 0])
+                        (cond [(= i k) '=]
+                              [(elem<? (chunk-ref ca (+ ia i)) (chunk-ref cb (+ ib i))) '<]
+                              [(elem>? (chunk-ref ca (+ ia i)) (chunk-ref cb (+ ib i))) '>]
+                              [else (loop (add1 i))]))
+                      (error '*-rope-chunk-compare-overlap "operation not defined")))
+                (if (and (= ia 0) (= ib 0) (= k (chunk-length ca)) (= k (chunk-length cb)))
+                    (~? (chunk-compare ca cb) (elem-loop-compare))
+                    (elem-loop-compare))))))
 
     (define *-rope-chunk-overlap=?
       (λ (ca cb ia ib k)
