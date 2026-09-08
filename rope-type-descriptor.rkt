@@ -16,8 +16,8 @@
    chunk-append
    chunk=?
    chunk-compare
-   chunk-overlap=?
    chunk-compare-overlap
+   chunk-overlap=?
    elem-width
    elem-hash
    elem<?

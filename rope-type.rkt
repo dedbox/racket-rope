@@ -48,8 +48,8 @@
   #:with *-rope-chunk-append          (mk* "~a-rope-chunk-append")
   #:with *-rope-chunk=?               (mk* "~a-rope-chunk=?")
   #:with *-rope-chunk-compare         (mk* "~a-rope-chunk-compare")
-  #:with *-rope-chunk-overlap=?       (mk* "~a-rope-chunk-overlap=?")
   #:with *-rope-chunk-compare-overlap (mk* "~a-rope-chunk-compare-overlap")
+  #:with *-rope-chunk-overlap=?       (mk* "~a-rope-chunk-overlap=?")
 
   ;; per-element primitives
   #:with *-rope-elem-width            (mk* "~a-rope-elem-width")
@@ -133,8 +133,8 @@
                             #'*-rope-chunk-append
                             #'*-rope-chunk=?
                             #'*-rope-chunk-compare
-                            #'*-rope-chunk-overlap=?
                             #'*-rope-chunk-compare-overlap
+                            #'*-rope-chunk-overlap=?
                             #'*-rope-elem-width
                             #'*-rope-elem-hash
                             #'*-rope-elem<?
@@ -165,26 +165,24 @@
           (λ (c) (for/sum ([i (in-range (chunk-length c))]) (elem-width c i)))))
 
     (define *-rope-chunk-compare
-      (~? (λ (a b) (chunk-compare a b))
+      (~? (λ (c d) (chunk-compare c d))
           (λ _ (error '*-rope-chunk-compare "operation not defined"))))
 
-    ;; The default overlap equality check loops over the elements in a chunk.
-    ;; This is generally faster for boxed collections strings but slower for bytes.
-    (define *-rope-chunk-overlap=?
-      (λ (ac bc ap bp k)
-        (~? (chunk-overlap=? ac bc ap bp k)
-            (for/and ([i (in-range k)])
-              (equal? (chunk-ref ac (+ ap i)) (chunk-ref bc (+ bp i)))))))
-
     (define *-rope-chunk-compare-overlap
-      (λ (ac bc ap bp k)
-        (~? (chunk-compare-overlap ac bc ap bp k)
+      (λ (ca cb ia ib k)
+        (~? (chunk-compare-overlap ca cb ia ib k)
             (~? (let loop ([i 0])
                   (cond [(= i k) '=]
-                        [(elem<? (chunk-ref ac (+ ap i)) (chunk-ref bc (+ bp i))) '<]
-                        [(elem>? (chunk-ref ac (+ ap i)) (chunk-ref bc (+ bp i))) '>]
+                        [(elem<? (chunk-ref ca (+ ia i)) (chunk-ref cb (+ ib i))) '<]
+                        [(elem>? (chunk-ref ca (+ ia i)) (chunk-ref cb (+ ib i))) '>]
                         [else (loop (add1 i))]))
                 (error '*-rope-chunk-compare-overlap "operation not defined")))))
+
+    (define *-rope-chunk-overlap=?
+      (λ (ca cb ia ib k)
+        (~? (chunk-overlap=? ca cb ia ib k)
+            (for/and ([i (in-range k)])
+              (equal? (chunk-ref ca (+ ia i)) (chunk-ref cb (+ ib i)))))))
 
     ;; -------------------------------------------------------------------------
     ;; per-element primitives
@@ -343,7 +341,7 @@
     (define (*-mutable-cursor-peek  cur) (mutable-cursor-peek  type-id cur))
 
     ;; -------------------------------------------------------------------------
-    ;; Folds
+    ;; folds
     ;; -------------------------------------------------------------------------
 
     (define (*-rope-foldl proc init a) (rope-foldl type-id proc init a))
@@ -357,7 +355,7 @@
     (define-cursor-sequence in-*-cursor type-id)
 
     ;; -------------------------------------------------------------------------
-    ;; sequences
+    ;; comparison relations
     ;; -------------------------------------------------------------------------
 
     (define (*-rope-compare-with proc a b) (rope-compare-with type-id proc a b))
