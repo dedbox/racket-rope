@@ -661,12 +661,10 @@
            result
            (loop (cursor-advance! cur-a k) (cursor-advance! cur-b k)))])))
 
-(define-rope-operation (rope-compare ρ a b) (rope-compare-with ρ chunk-compare-overlap a b))
-
-;; (define-rope-operation (rope=?  ρ a b) (rope-content=? ρ a b))
-;; (define-rope-operation (rope<=? ρ a b) (or (rope=? ρ a b) (rope<? ρ a b)))
-;; (define-rope-operation (rope>=? ρ a b) (or (rope=? ρ a b) (rope>? ρ a b)))
-
 ;; O(n)
-;; (define-rope-operation (rope<? ρ a b)
-;;   )
+(define-rope-operation (rope-compare ρ a b) (rope-compare-with ρ chunk-compare-overlap a b))
+(define-rope-operation (rope=?       ρ a b) (rope-content=? ρ a b))
+(define-rope-operation (rope<?       ρ a b) (eq? (rope-compare ρ a b) '<))
+(define-rope-operation (rope>?       ρ a b) (eq? (rope-compare ρ a b) '>))
+(define-rope-operation (rope<=?      ρ a b) (or (rope=? ρ a b) (rope<? ρ a b)))
+(define-rope-operation (rope>=?      ρ a b) (or (rope=? ρ a b) (rope>? ρ a b)))
