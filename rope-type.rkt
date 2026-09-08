@@ -361,4 +361,13 @@
     (define (*-rope-compare-with proc a b) (rope-compare-with type-id proc a b))
     (define (*-rope-compare      a b)      (rope-compare      type-id a b))
 
+    ;; TODO eliminate per-sep cursor-advance! in sequence iterators (and folds?)
+    ;; TODO cursor-based variants (how to handle unequal lengths? probably same as in-cursor?)
+    ;; TODO rope-prefix / rope-suffix
+    ;; TODO longest common prefix / length
+    ;; TODO partial orders
+    ;; TODO gen:order (data/order) ???
+
+    ;; TODO later: substring search (rope-contains?)
+
     ))
