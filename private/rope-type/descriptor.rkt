@@ -1,6 +1,6 @@
 #lang racket/base
 
-;; rope/rope-type-descriptor.rkt
+;; rope/private/rope-type/descriptor.rkt
 
 (provide (all-defined-out))
 
