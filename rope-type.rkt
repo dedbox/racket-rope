@@ -4,7 +4,7 @@
 
 (require (for-syntax racket/base
                      racket/syntax
-                     rope2/private/rope-type-classes
+                     rope2/private/rope-type/stxclasses
                      rope2/private/rope-type/descriptor
                      syntax/parse)
          racket/sequence
