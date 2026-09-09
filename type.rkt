@@ -1,6 +1,6 @@
 #lang racket/base
 
-;; rope/rope-type.rkt
+;; rope/type.rkt
 
 (require (for-syntax racket/base
                      racket/syntax

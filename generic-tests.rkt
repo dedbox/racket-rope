@@ -11,7 +11,7 @@
            rope2/cursor
            rope2/generic-ops
            rope2/rope
-           rope2/rope-type
+           rope2/type
            rope2/string-rope
            syntax/parse/define)
 

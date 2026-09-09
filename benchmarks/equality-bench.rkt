@@ -39,7 +39,7 @@
 (require racket/format
          rope2/generic-ops
          rope2/rope
-         rope2/rope-type
+         rope2/type
          rope2/string-rope)
 
 (define SIZES  '(10 100 1000 10000 100000 1000000 10000000))

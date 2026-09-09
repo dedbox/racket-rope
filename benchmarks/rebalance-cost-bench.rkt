@@ -12,7 +12,7 @@
 (require racket/format
          rope2/generic-ops
          rope2/rope
-         rope2/rope-type
+         rope2/type
          rope2/string-rope)
 
 (define SESSION-LENGTH 20000)

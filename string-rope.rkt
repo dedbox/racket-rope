@@ -2,7 +2,7 @@
 
 ;; rope/string-rope.rkt
 
-(require rope2/rope-type)
+(require rope2/type)
 
 (provide (all-defined-out))
 
