@@ -16,52 +16,52 @@
 ;; after changing the iterators to only touch the cursor once per leaf
 ;; crossing, to see the effect directly.
 
-(require racket/format
-         rope2/cursor
-         rope2/string-rope)
+;; (require racket/format
+;;          rope2/cursor
+;;          rope2/string-rope)
 
-(define SIZES  '(1000 10000 100000 1000000 10000000))
-(define TRIALS 10)
+;; (define SIZES  '(1000 10000 100000 1000000 10000000))
+;; (define TRIALS 10)
 
-(define (format-result ms)
-  (cond [(>= ms 1.0)    (format "~a msec" (real->decimal-string ms 3))]
-        [(>= ms 1.0e-3) (format "~a μsec" (real->decimal-string (* ms 1.0e3) 2))]
-        [else           (format "~a nsec" (real->decimal-string (* ms 1.0e6) 2))]))
+;; (define (format-result ms)
+;;   (cond [(>= ms 1.0)    (format "~a msec" (real->decimal-string ms 3))]
+;;         [(>= ms 1.0e-3) (format "~a μsec" (real->decimal-string (* ms 1.0e3) 2))]
+;;         [else           (format "~a nsec" (real->decimal-string (* ms 1.0e6) 2))]))
 
-(define (time-ms thunk)
-  (define start (current-inexact-monotonic-milliseconds))
-  (thunk)
-  (- (current-inexact-monotonic-milliseconds) start))
+;; (define (time-ms thunk)
+;;   (define start (current-inexact-monotonic-milliseconds))
+;;   (thunk)
+;;   (- (current-inexact-monotonic-milliseconds) start))
 
-(define (bench-min thunk)
-  (apply min (for/list ([_ (in-range TRIALS)]) (time-ms thunk))))
+;; (define (bench-min thunk)
+;;   (apply min (for/list ([_ (in-range TRIALS)]) (time-ms thunk))))
 
-(module+ main
-  (printf "| ~a | ~a | ~a | ~a |\n"
-          (~a "Size"                  #:min-width 8)
-          (~a "in-string-rope"        #:min-width 16 #:align 'right)
-          (~a "in-string-cursor"      #:min-width 16 #:align 'right)
-          (~a "in-string (reference)" #:min-width 22 #:align 'right))
-  (printf "|-\n")
+;; (module+ main
+;;   (printf "| ~a | ~a | ~a | ~a |\n"
+;;           (~a "Size"                  #:min-width 8)
+;;           (~a "in-string-rope"        #:min-width 16 #:align 'right)
+;;           (~a "in-string-cursor"      #:min-width 16 #:align 'right)
+;;           (~a "in-string (reference)" #:min-width 22 #:align 'right))
+;;   (printf "|-\n")
 
-  (for ([n (in-list SIZES)])
-    (define s (make-string n #\a))
-    (define a (string-chunk->rope s))
+;;   (for ([n (in-list SIZES)])
+;;     (define s (make-string n #\a))
+;;     (define a (string-chunk->rope s))
 
-    ;; (in-string-rope ...) / (in-string-cursor ...) appear literally inside
-    ;; the for clause on purpose -- this is what triggers the :do-in
-    ;; compile-time specialization instead of the make-do-sequence fallback.
-    (define t-in-rope
-      (bench-min (λ () (for/sum ([x (in-string-rope a)]) (char->integer x)))))
+;;     ;; (in-string-rope ...) / (in-string-cursor ...) appear literally inside
+;;     ;; the for clause on purpose -- this is what triggers the :do-in
+;;     ;; compile-time specialization instead of the make-do-sequence fallback.
+;;     (define t-in-rope
+;;       (bench-min (λ () (for/sum ([x (in-string-rope a)]) (char->integer x)))))
 
-    (define t-in-cursor
-      (bench-min (λ () (for/sum ([x (in-string-cursor (rope->cursor a))]) (char->integer x)))))
+;;     (define t-in-cursor
+;;       (bench-min (λ () (for/sum ([x (in-string-cursor (rope->cursor a))]) (char->integer x)))))
 
-    (define t-in-string
-      (bench-min (λ () (for/sum ([x (in-string s)]) (char->integer x)))))
+;;     (define t-in-string
+;;       (bench-min (λ () (for/sum ([x (in-string s)]) (char->integer x)))))
 
-    (printf "| ~a | ~a | ~a | ~a |\n"
-            (~a n #:min-width 8)
-            (~a (format-result t-in-rope)   #:min-width 16 #:align 'right)
-            (~a (format-result t-in-cursor) #:min-width 16 #:align 'right)
-            (~a (format-result t-in-string) #:min-width 22 #:align 'right))))
+;;     (printf "| ~a | ~a | ~a | ~a |\n"
+;;             (~a n #:min-width 8)
+;;             (~a (format-result t-in-rope)   #:min-width 16 #:align 'right)
+;;             (~a (format-result t-in-cursor) #:min-width 16 #:align 'right)
+;;             (~a (format-result t-in-string) #:min-width 22 #:align 'right))))

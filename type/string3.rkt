@@ -2,7 +2,8 @@
 
 ;; rope/type/string3.rkt
 
-(require rope2/type)
+(require rope2/class
+         rope2/type)
 
 (provide (all-defined-out))
 
@@ -29,7 +30,9 @@
   #:elem<?                char<?
   #:elem>?                char>?)
 
-(require rope2/generic-ops)
-(require rope2/cursor)
-(require rope2/rope)
-(require racket/sequence)
+;; (require rope2/generic-ops)
+;; (require rope2/cursor)
+;; (require rope2/rope)
+;; (require racket/sequence)
+
+(define-rope-Eq-instance string3)

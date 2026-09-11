@@ -13,14 +13,14 @@
 ;;; The Data Structure
 ;;; ----------------------------------------------------------------------------
 
-(struct rope (length width hash1 hash2 equal-fun)
+(struct rope (length width hash-h hash-p equal-fun)
   #:transparent
   #:methods gen:equal+hash
   [(define (equal-proc a b _)
      (define a-fun (rope-equal-fun a))
      (and (eq? a-fun (rope-equal-fun b)) (a-fun a b)))
-   (define (hash-proc a _) (rope-hash1 a))
-   (define (hash2-proc a _) (rope-hash2 a))])
+   (define (hash-proc  a _) (rope-hash-h a))
+   (define (hash2-proc a _) (rope-hash-p a))])
 
 ;; length = the number of elements in `chunk`
 ;; width  = the number of valid indices spanning the elements of `chunk`

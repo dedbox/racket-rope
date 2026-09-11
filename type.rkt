@@ -131,20 +131,21 @@
                             #'*-rope-chunk-ref
                             #'*-rope-chunk-slice
                             #'*-rope-chunk-append
-                            #'*-rope-chunk=?
+                            ;; #'*-rope-chunk=?
                             #'*-rope-chunk-compare
                             #'*-rope-chunk-compare-overlap
-                            #'*-rope-chunk-overlap=?
+                            ;; #'*-rope-chunk-overlap=?
                             #'*-rope-elem-width
-                            #'*-rope-elem-hash
+                            ;; #'*-rope-elem-hash
                             #'*-rope-elem<?
                             #'*-rope-elem>?
                             #'*-rope-leaf
                             #'*-rope-node
-                            #'*-rope-chunk-hash
-                            #'*-rope-node-hash
-                            #'make-*-rope-hash
-                            #'*-rope-content=?))
+                            ;; #'*-rope-chunk-hash
+                            ;; #'*-rope-node-hash
+                            ;; #'make-*-rope-hash
+                            ;; #'*-rope-content=?
+                            ))
 
     ;; -------------------------------------------------------------------------
     ;; per-chunk primitives
@@ -157,54 +158,54 @@
     (define (*-rope-chunk-ref    c i)   (chunk-ref    c i))
     (define (*-rope-chunk-slice  c i k) (chunk-slice  c i k))
     (define (*-rope-chunk-append cs)    (chunk-append cs))
-    (define (*-rope-chunk=?      c d)   ((~? chunk=? equal?) c d))
+    ;; (define (*-rope-chunk=?      c d)   ((~? chunk=? equal?) c d))
 
-    (define *-rope-chunk-width
-      (if (number? elem-width)
-          (λ (c) (* (chunk-length c) elem-width))
-          (λ (c) (for/sum ([i (in-range (chunk-length c))]) (elem-width c i)))))
+    ;; (define *-rope-chunk-width
+    ;;   (if (number? elem-width)
+    ;;       (λ (c) (* (chunk-length c) elem-width))
+    ;;       (λ (c) (for/sum ([i (in-range (chunk-length c))]) (elem-width c i)))))
 
-    (define *-rope-chunk-compare
-      (~? (λ (c d) (chunk-compare c d))
-          (λ _ (error '*-rope-chunk-compare "operation not defined"))))
+    ;; (define *-rope-chunk-compare
+    ;;   (~? (λ (c d) (chunk-compare c d))
+    ;;       (λ _ (error '*-rope-chunk-compare "operation not defined"))))
 
-    (define *-rope-chunk-compare-overlap
-      (λ (ca cb ia ib k)
-        (~? (chunk-compare-overlap ca cb ia ib k)
-            (~@ (define (elem-loop-compare)
-                  (~? (let loop ([i 0])
-                        (cond [(= i k) '=]
-                              [(elem<? (chunk-ref ca (+ ia i)) (chunk-ref cb (+ ib i))) '<]
-                              [(elem>? (chunk-ref ca (+ ia i)) (chunk-ref cb (+ ib i))) '>]
-                              [else (loop (add1 i))]))
-                      (error '*-rope-chunk-compare-overlap "operation not defined")))
-                (if (and (= ia 0) (= ib 0) (= k (chunk-length ca)) (= k (chunk-length cb)))
-                    (~? (chunk-compare ca cb) (elem-loop-compare))
-                    (elem-loop-compare))))))
+    ;; (define *-rope-chunk-compare-overlap
+    ;;   (λ (ca cb ia ib k)
+    ;;     (~? (chunk-compare-overlap ca cb ia ib k)
+    ;;         (~@ (define (elem-loop-compare)
+    ;;               (~? (let loop ([i 0])
+    ;;                     (cond [(= i k) '=]
+    ;;                           [(elem<? (chunk-ref ca (+ ia i)) (chunk-ref cb (+ ib i))) '<]
+    ;;                           [(elem>? (chunk-ref ca (+ ia i)) (chunk-ref cb (+ ib i))) '>]
+    ;;                           [else (loop (add1 i))]))
+    ;;                   (error '*-rope-chunk-compare-overlap "operation not defined")))
+    ;;             (if (and (= ia 0) (= ib 0) (= k (chunk-length ca)) (= k (chunk-length cb)))
+    ;;                 (~? (chunk-compare ca cb) (elem-loop-compare))
+    ;;                 (elem-loop-compare))))))
 
-    (define *-rope-chunk-overlap=?
-      (λ (ca cb ia ib k)
-        (~? (chunk-overlap=? ca cb ia ib k)
-            (for/and ([i (in-range k)])
-              (equal? (chunk-ref ca (+ ia i)) (chunk-ref cb (+ ib i)))))))
+    ;; (define *-rope-chunk-overlap=?
+    ;;   (λ (ca cb ia ib k)
+    ;;     (~? (chunk-overlap=? ca cb ia ib k)
+    ;;         (for/and ([i (in-range k)])
+    ;;           (equal? (chunk-ref ca (+ ia i)) (chunk-ref cb (+ ib i)))))))
 
     ;; -------------------------------------------------------------------------
     ;; per-element primitives
     ;; -------------------------------------------------------------------------
 
-    (define (*-rope-elem-width c i) (elem-width c i))
-    (define (*-rope-elem-hash  c)   (~? (elem-hash c) (equal-hash-code c)))
-    (define (*-rope-elem<?     c d) (~? (elem<? c d) (error '*-rope-elem<? "operation not defined")))
-    (define (*-rope-elem>?     c d) (~? (elem>? c d) (error '*-rope-elem>? "operation not defined")))
+    ;; (define (*-rope-elem-width c i) (elem-width c i))
+    ;; ;; (define (*-rope-elem-hash  c)   (~? (elem-hash c) (equal-hash-code c)))
+    ;; (define (*-rope-elem<?     c d) (~? (elem<? c d) (error '*-rope-elem<? "operation not defined")))
+    ;; (define (*-rope-elem>?     c d) (~? (elem>? c d) (error '*-rope-elem>? "operation not defined")))
 
     ;; -------------------------------------------------------------------------
     ;; rope structs & predicates
     ;; -------------------------------------------------------------------------
 
-    (define *-rope-equal+hash-impl
-      (list (λ (a b _) (*-rope-content=? a b))
-            (λ (a _) (rope-hash1 a))
-            (λ (a _) (rope-hash2 a))))
+    ;; (define *-rope-equal+hash-impl
+    ;;   (list (λ (a b _) (*-rope-content=? a b))
+    ;;         (λ (a _) (rope-hash1 a))
+    ;;         (λ (a _) (rope-hash2 a))))
 
     (struct *-rope-leaf rope-leaf () #:transparent)
     (struct *-rope-node rope-node () #:transparent)
@@ -215,155 +216,155 @@
     ;; smart constructors
     ;; -------------------------------------------------------------------------
 
-    (define (make-*-rope-leaf c)   (make-rope-leaf  type-id c))
-    (define (make-*-rope-node l r) (make-rope-node  type-id l r))
-    (define (make-empty-*-rope)    (make-empty-rope type-id))
+    ;; (define (make-*-rope-leaf c)   (make-rope-leaf  type-id c))
+    ;; (define (make-*-rope-node l r) (make-rope-node  type-id l r))
+    ;; (define (make-empty-*-rope)    (make-empty-rope type-id))
 
     ;; -------------------------------------------------------------------------
     ;; conversions
     ;; -------------------------------------------------------------------------
 
-    (define (*-chunk->rope c) (chunk->rope type-id c))
-    (define (*-rope->chunk a) (rope->chunk type-id a))
+    ;; (define (*-chunk->rope c) (chunk->rope type-id c))
+    ;; (define (*-rope->chunk a) (rope->chunk type-id a))
 
     ;; -------------------------------------------------------------------------
     ;; content-based hashing & equality
     ;; -------------------------------------------------------------------------
 
-    (define (*-rope-chunk-hash c)
-      ;; h = h₀ + X·h₁ + X²·h₂ + X³·h₃    hₖ = Σⱼ e₄ⱼ₊ₖ·(X⁴)ʲ
-      (define n   (chunk-length c))
-      (define n/4 (quotient n 4))
-      (let loop ([j 0] [h0 0] [h1 0] [h2 0] [h3 0] [q 1])
-        (cond
-          [(< j n/4)
-           (define base (* j 4))
-           (define e0 (bitwise-and (*-rope-elem-hash (chunk-ref c base))          M))
-           (define e1 (bitwise-and (*-rope-elem-hash (chunk-ref c (+ base 1)))  M))
-           (define e2 (bitwise-and (*-rope-elem-hash (chunk-ref c (+ base 2)))  M))
-           (define e3 (bitwise-and (*-rope-elem-hash (chunk-ref c (+ base 3)))  M))
-           (loop (+ j 1)
-                 (fxmodulo-M (+ h0 (* e0 q)))
-                 (fxmodulo-M (+ h1 (* e1 q)))
-                 (fxmodulo-M (+ h2 (* e2 q)))
-                 (fxmodulo-M (+ h3 (* e3 q)))
-                 (fxmodulo-M (* q X⁴)))]
-          [else
-           (define h (fxmodulo-M (+ h0 (* X (fxmodulo-M (+ h1 (* X (fxmodulo-M (+ h2 (* X h3))))))))))
-           (let tail ([i (* n/4 4)] [h h] [p q])
-             (if (= i n)
-                 (values h p)
-                 (let ([e (bitwise-and (*-rope-elem-hash (chunk-ref c i)) M)])
-                   (tail (+ i 1)
-                         (fxmodulo-M (+ h (* e p)))
-                         (fxmodulo-M (* p X))))))])))
+    ;; (define (*-rope-chunk-hash c)
+    ;;   ;; h = h₀ + X·h₁ + X²·h₂ + X³·h₃    hₖ = Σⱼ e₄ⱼ₊ₖ·(X⁴)ʲ
+    ;;   (define n   (chunk-length c))
+    ;;   (define n/4 (quotient n 4))
+    ;;   (let loop ([j 0] [h0 0] [h1 0] [h2 0] [h3 0] [q 1])
+    ;;     (cond
+    ;;       [(< j n/4)
+    ;;        (define base (* j 4))
+    ;;        (define e0 (bitwise-and (*-rope-elem-hash (chunk-ref c base))          M))
+    ;;        (define e1 (bitwise-and (*-rope-elem-hash (chunk-ref c (+ base 1)))  M))
+    ;;        (define e2 (bitwise-and (*-rope-elem-hash (chunk-ref c (+ base 2)))  M))
+    ;;        (define e3 (bitwise-and (*-rope-elem-hash (chunk-ref c (+ base 3)))  M))
+    ;;        (loop (+ j 1)
+    ;;              (fxmodulo-M (+ h0 (* e0 q)))
+    ;;              (fxmodulo-M (+ h1 (* e1 q)))
+    ;;              (fxmodulo-M (+ h2 (* e2 q)))
+    ;;              (fxmodulo-M (+ h3 (* e3 q)))
+    ;;              (fxmodulo-M (* q X⁴)))]
+    ;;       [else
+    ;;        (define h (fxmodulo-M (+ h0 (* X (fxmodulo-M (+ h1 (* X (fxmodulo-M (+ h2 (* X h3))))))))))
+    ;;        (let tail ([i (* n/4 4)] [h h] [p q])
+    ;;          (if (= i n)
+    ;;              (values h p)
+    ;;              (let ([e (bitwise-and (*-rope-elem-hash (chunk-ref c i)) M)])
+    ;;                (tail (+ i 1)
+    ;;                      (fxmodulo-M (+ h (* e p)))
+    ;;                      (fxmodulo-M (* p X))))))])))
 
-    (define (*-rope-node-hash l r)
-      (define hl (rope-hash1 l))
-      (define pl (rope-hash2 l))
-      (define hr (rope-hash1 r))
-      (define pr (rope-hash2 r))
-      (values (fxmodulo-M (+ hl (* pl hr)))
-              (fxmodulo-M (* pl pr))))
+    ;; (define (*-rope-node-hash l r)
+    ;;   (define hl (rope-hash1 l))
+    ;;   (define pl (rope-hash2 l))
+    ;;   (define hr (rope-hash1 r))
+    ;;   (define pr (rope-hash2 r))
+    ;;   (values (fxmodulo-M (+ hl (* pl hr)))
+    ;;           (fxmodulo-M (* pl pr))))
 
-    (define (make-*-rope-hash a)
-      (if (rope-leaf? a)
-          (*-rope-chunk-hash (rope-leaf-chunk a))
-          (*-rope-node-hash (rope-node-left a) (rope-node-right a))))
+    ;; (define (make-*-rope-hash a)
+    ;;   (if (rope-leaf? a)
+    ;;       (*-rope-chunk-hash (rope-leaf-chunk a))
+    ;;       (*-rope-node-hash (rope-node-left a) (rope-node-right a))))
 
-    (define (*-rope-content=? a b)
-      (define (chunk-done? c i)
-        (or (not c) (>= i (chunk-length c))))
-      (define (skip-shared ca ia stack-a cb ib stack-b)
-        (if (and (chunk-done? ca ia)
-                 (chunk-done? cb ib)
-                 (pair? stack-a)
-                 (pair? stack-b)
-                 (eq? (car stack-a) (car stack-b)))
-            (skip-shared #f 0 (cdr stack-a) #f 0 (cdr stack-b))
-            (values ca ia stack-a cb ib stack-b)))
-      (define (advance c i stack)
-        (let loop ([c c] [i i] [stack stack])
-          (cond
-            [(and c (< i (chunk-length c)))
-             (values c i stack)]
-            [(null? stack)
-             (values #f 0 null)]
-            [(rope-leaf? (car stack))
-             (loop (rope-leaf-chunk (car stack)) 0 (cdr stack))]
-            [else
-             (loop c i (list* (rope-node-left (car stack))
-                              (rope-node-right (car stack))
-                              (cdr stack)))])))
-      (or (eq? a b)
-          (and (= (rope-length a) (rope-length b))
-               (equal? (rope-hash1 a) (rope-hash1 b))
-               (equal? (rope-hash2 a) (rope-hash2 b))
-               (let walk ([ca #f] [ia 0] [stack-a (list a)] [cb #f] [ib 0] [stack-b (list b)])
-                 (define-values (ca* ia* stack-a* cb* ib* stack-b*)
-                   (skip-shared ca ia stack-a cb ib stack-b))
-                 (define-values (ca** ia** stack-a**) (advance ca* ia* stack-a*))
-                 (define-values (cb** ib** stack-b**) (advance cb* ib* stack-b*))
-                 (cond
-                   [(and (not ca**) (not cb**)) #t]
-                   [(or  (not ca**) (not cb**)) #f]
-                   [else
-                    (define len-a (chunk-length ca**))
-                    (define len-b (chunk-length cb**))
-                    (if (and (= len-a len-b) (= ia** ib**))
-                        (*-rope-chunk=? ca** cb**)
-                        (let ([k (min (- len-a ia**) (- len-b ib**))])
-                          (and (*-rope-chunk-overlap=? ca** cb** ia** ib** k)
-                               (walk ca** (+ ia** k) stack-a**
-                                     cb** (+ ib** k) stack-b**))))])))))
+    ;; (define (*-rope-content=? a b)
+    ;;   (define (chunk-done? c i)
+    ;;     (or (not c) (>= i (chunk-length c))))
+    ;;   (define (skip-shared ca ia stack-a cb ib stack-b)
+    ;;     (if (and (chunk-done? ca ia)
+    ;;              (chunk-done? cb ib)
+    ;;              (pair? stack-a)
+    ;;              (pair? stack-b)
+    ;;              (eq? (car stack-a) (car stack-b)))
+    ;;         (skip-shared #f 0 (cdr stack-a) #f 0 (cdr stack-b))
+    ;;         (values ca ia stack-a cb ib stack-b)))
+    ;;   (define (advance c i stack)
+    ;;     (let loop ([c c] [i i] [stack stack])
+    ;;       (cond
+    ;;         [(and c (< i (chunk-length c)))
+    ;;          (values c i stack)]
+    ;;         [(null? stack)
+    ;;          (values #f 0 null)]
+    ;;         [(rope-leaf? (car stack))
+    ;;          (loop (rope-leaf-chunk (car stack)) 0 (cdr stack))]
+    ;;         [else
+    ;;          (loop c i (list* (rope-node-left (car stack))
+    ;;                           (rope-node-right (car stack))
+    ;;                           (cdr stack)))])))
+    ;;   (or (eq? a b)
+    ;;       (and (= (rope-length a) (rope-length b))
+    ;;            (equal? (rope-hash1 a) (rope-hash1 b))
+    ;;            (equal? (rope-hash2 a) (rope-hash2 b))
+    ;;            (let walk ([ca #f] [ia 0] [stack-a (list a)] [cb #f] [ib 0] [stack-b (list b)])
+    ;;              (define-values (ca* ia* stack-a* cb* ib* stack-b*)
+    ;;                (skip-shared ca ia stack-a cb ib stack-b))
+    ;;              (define-values (ca** ia** stack-a**) (advance ca* ia* stack-a*))
+    ;;              (define-values (cb** ib** stack-b**) (advance cb* ib* stack-b*))
+    ;;              (cond
+    ;;                [(and (not ca**) (not cb**)) #t]
+    ;;                [(or  (not ca**) (not cb**)) #f]
+    ;;                [else
+    ;;                 (define len-a (chunk-length ca**))
+    ;;                 (define len-b (chunk-length cb**))
+    ;;                 (if (and (= len-a len-b) (= ia** ib**))
+    ;;                     (*-rope-chunk=? ca** cb**)
+    ;;                     (let ([k (min (- len-a ia**) (- len-b ib**))])
+    ;;                       (and (*-rope-chunk-overlap=? ca** cb** ia** ib** k)
+    ;;                            (walk ca** (+ ia** k) stack-a**
+    ;;                                  cb** (+ ib** k) stack-b**))))])))))
 
     ;; -------------------------------------------------------------------------
     ;; basic operations
     ;; -------------------------------------------------------------------------
 
-    (define (*-rope-concat       a b)     (rope-concat       type-id a b))
-    (define (*-rope-append2      a b)     (rope-append2      type-id a b))
-    (define (*-rope-append       as)      (rope-append       type-id as))
-    (define (*-rope-split        a i)     (rope-split        type-id a i))
-    (define (*-rope-ref          a i)     (rope-ref          type-id a i))
-    (define (*-rope-offset-index a p)     (rope-offset-index type-id a p))
-    (define (*-rope-cut          a i k)   (rope-cut          type-id a i k))
-    (define (*-rope-slice        a i k)   (rope-slice        type-id a i k))
-    (define (*-rope-splice       a i k b) (rope-splice       type-id a i k b))
+    ;; (define (*-rope-concat       a b)     (rope-concat       type-id a b))
+    ;; (define (*-rope-append2      a b)     (rope-append2      type-id a b))
+    ;; (define (*-rope-append       as)      (rope-append       type-id as))
+    ;; (define (*-rope-split        a i)     (rope-split        type-id a i))
+    ;; (define (*-rope-ref          a i)     (rope-ref          type-id a i))
+    ;; (define (*-rope-offset-index a p)     (rope-offset-index type-id a p))
+    ;; (define (*-rope-cut          a i k)   (rope-cut          type-id a i k))
+    ;; (define (*-rope-slice        a i k)   (rope-slice        type-id a i k))
+    ;; (define (*-rope-splice       a i k b) (rope-splice       type-id a i k b))
 
     ;; -------------------------------------------------------------------------
     ;; cursors
     ;; -------------------------------------------------------------------------
 
     ;; immutable cursors
-    (define (cursor->*-rope cur) (cursor->rope type-id cur))
-    (define (*-cursor-peek  cur) (cursor-peek  type-id cur))
-    (define (*-cursor-split cur) (cursor-split type-id cur))
+    ;; (define (cursor->*-rope cur) (cursor->rope type-id cur))
+    ;; (define (*-cursor-peek  cur) (cursor-peek  type-id cur))
+    ;; (define (*-cursor-split cur) (cursor-split type-id cur))
 
     ;; mutable cursors
-    (define (mutable-cursor->*-rope cur) (mutable-cursor->rope type-id cur))
-    (define (*-mutable-cursor-peek  cur) (mutable-cursor-peek  type-id cur))
+    ;; (define (mutable-cursor->*-rope cur) (mutable-cursor->rope type-id cur))
+    ;; (define (*-mutable-cursor-peek  cur) (mutable-cursor-peek  type-id cur))
 
     ;; -------------------------------------------------------------------------
     ;; folds
     ;; -------------------------------------------------------------------------
 
-    (define (*-rope-foldl proc init a) (rope-foldl type-id proc init a))
-    (define (*-rope-foldr proc init a) (rope-foldr type-id proc init a))
+    ;; (define (*-rope-foldl proc init a) (rope-foldl type-id proc init a))
+    ;; (define (*-rope-foldr proc init a) (rope-foldr type-id proc init a))
 
     ;; -------------------------------------------------------------------------
     ;; sequences
     ;; -------------------------------------------------------------------------
 
-    (define-rope-sequence   in-*-rope   type-id)
-    (define-cursor-sequence in-*-cursor type-id)
+    ;; (define-rope-sequence   in-*-rope   type-id)
+    ;; (define-cursor-sequence in-*-cursor type-id)
 
     ;; -------------------------------------------------------------------------
     ;; comparison relations
     ;; -------------------------------------------------------------------------
 
-    (define (*-rope-compare-with proc a b) (rope-compare-with type-id proc a b))
-    (define (*-rope-compare      a b)      (rope-compare      type-id a b))
+    ;; (define (*-rope-compare-with proc a b) (rope-compare-with type-id proc a b))
+    ;; (define (*-rope-compare      a b)      (rope-compare      type-id a b))
 
     ;; TODO eliminate per-sep cursor-advance! in sequence iterators (and folds?)
     ;; TODO cursor-based variants (how to handle unequal lengths? probably same as in-cursor?)

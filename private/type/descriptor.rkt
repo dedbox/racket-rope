@@ -14,19 +14,20 @@
    chunk-ref
    chunk-slice
    chunk-append
-   chunk=?
+   ;; chunk=?
    chunk-compare
    chunk-compare-overlap
-   chunk-overlap=?
+   ;; chunk-overlap=?
    elem-width
-   elem-hash
+   ;; elem-hash
    elem<?
    elem>?
    ;; automatically generated operations
    leaf-constructor
    node-constructor
-   rope-chunk-hash
-   rope-node-hash
-   make-rope-hash
-   content=?)
+   ;; rope-chunk-hash
+   ;; rope-node-hash
+   ;; make-rope-hash
+   ;; content=?
+   )
   #:transparent)

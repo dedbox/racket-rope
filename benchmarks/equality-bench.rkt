@@ -36,98 +36,98 @@
 ;; this benchmark is about what equal? does with those hashes once they
 ;; exist.
 
-(require racket/format
-         rope2/generic-ops
-         rope2/rope
-         rope2/type
-         rope2/string-rope)
+;; (require racket/format
+;;          rope2/generic-ops
+;;          rope2/rope
+;;          rope2/type
+;;          rope2/string-rope)
 
-(define SIZES  '(10 100 1000 10000 100000 1000000 10000000))
-(define TRIALS 10)
+;; (define SIZES  '(10 100 1000 10000 100000 1000000 10000000))
+;; (define TRIALS 10)
 
-(define (format-result ms)
-  (cond [(>= ms 1.0)    (format "~a msec" (real->decimal-string ms 3))]
-        [(>= ms 1.0e-3) (format "~a μsec" (real->decimal-string (* ms 1.0e3) 2))]
-        [else           (format "~a nsec" (real->decimal-string (* ms 1.0e6) 2))]))
+;; (define (format-result ms)
+;;   (cond [(>= ms 1.0)    (format "~a msec" (real->decimal-string ms 3))]
+;;         [(>= ms 1.0e-3) (format "~a μsec" (real->decimal-string (* ms 1.0e3) 2))]
+;;         [else           (format "~a nsec" (real->decimal-string (* ms 1.0e6) 2))]))
 
-(define (time-ms thunk)
-  (define start (current-inexact-monotonic-milliseconds))
-  (thunk)
-  (- (current-inexact-monotonic-milliseconds) start))
+;; (define (time-ms thunk)
+;;   (define start (current-inexact-monotonic-milliseconds))
+;;   (thunk)
+;;   (- (current-inexact-monotonic-milliseconds) start))
 
-;; A rope over the same content as (string-chunk->rope s), but built by
-;; concatenating deliberately mis-sized pieces (not aligned with the
-;; 512-char chunk-limit) so its leaf boundaries land nowhere near the ones
-;; chunk->rope would have produced for the same string.
-(define (fragmented-rope-of s)
-  (define n (string-length s))
-  (define piece-size 37) ;; coprime-ish with 512 on purpose
-  (for/fold ([acc (make-empty-string-rope)])
-            ([start (in-range 0 n piece-size)])
-    (define end (min n (+ start piece-size)))
-    (string-rope-append2 acc (string-chunk->rope (substring s start end)))))
+;; ;; A rope over the same content as (string-chunk->rope s), but built by
+;; ;; concatenating deliberately mis-sized pieces (not aligned with the
+;; ;; 512-char chunk-limit) so its leaf boundaries land nowhere near the ones
+;; ;; chunk->rope would have produced for the same string.
+;; (define (fragmented-rope-of s)
+;;   (define n (string-length s))
+;;   (define piece-size 37) ;; coprime-ish with 512 on purpose
+;;   (for/fold ([acc (make-empty-string-rope)])
+;;             ([start (in-range 0 n piece-size)])
+;;     (define end (min n (+ start piece-size)))
+;;     (string-rope-append2 acc (string-chunk->rope (substring s start end)))))
 
-;; A different top-level rope object with identical content, built by
-;; re-wrapping `a`'s own two immediate children in a brand new node -- every
-;; leaf is shared (eq?) with `a`, only the top node is a fresh allocation.
-;; #f if `a` is a single leaf (nothing to rewrap).
-(define (rewrapped-rope-of a)
-  (and (rope-node? a)
-       (string-rope-concat (rope-node-left a) (rope-node-right a))))
+;; ;; A different top-level rope object with identical content, built by
+;; ;; re-wrapping `a`'s own two immediate children in a brand new node -- every
+;; ;; leaf is shared (eq?) with `a`, only the top node is a fresh allocation.
+;; ;; #f if `a` is a single leaf (nothing to rewrap).
+;; (define (rewrapped-rope-of a)
+;;   (and (rope-node? a)
+;;        (string-rope-concat (rope-node-left a) (rope-node-right a))))
 
-(define (differing-string s pos)
-  (define c (string-ref s pos))
-  (string-append (substring s 0 pos)
-                 (string (if (char=? c #\a) #\b #\a))
-                 (substring s (add1 pos))))
+;; (define (differing-string s pos)
+;;   (define c (string-ref s pos))
+;;   (string-append (substring s 0 pos)
+;;                  (string (if (char=? c #\a) #\b #\a))
+;;                  (substring s (add1 pos))))
 
-(define (bench-min thunk)
-  (apply min (for/list ([_ (in-range TRIALS)]) (time-ms thunk))))
+;; (define (bench-min thunk)
+;;   (apply min (for/list ([_ (in-range TRIALS)]) (time-ms thunk))))
 
-(module+ main
-  (printf "| ~a | ~a | ~a | ~a | ~a | ~a | ~a |\n"
-          (~a "Size"                #:min-width 8)
-          (~a "identical object"    #:min-width 18 #:align 'right)
-          (~a "same content/shape"  #:min-width 18 #:align 'right)
-          (~a "same content/fragmented" #:min-width 22 #:align 'right)
-          (~a "differ at start"     #:min-width 18 #:align 'right)
-          (~a "differ at end"       #:min-width 18 #:align 'right)
-          (~a "rewrapped children"  #:min-width 18 #:align 'right))
-  (printf "|-\n")
+;; (module+ main
+;;   (printf "| ~a | ~a | ~a | ~a | ~a | ~a | ~a |\n"
+;;           (~a "Size"                #:min-width 8)
+;;           (~a "identical object"    #:min-width 18 #:align 'right)
+;;           (~a "same content/shape"  #:min-width 18 #:align 'right)
+;;           (~a "same content/fragmented" #:min-width 22 #:align 'right)
+;;           (~a "differ at start"     #:min-width 18 #:align 'right)
+;;           (~a "differ at end"       #:min-width 18 #:align 'right)
+;;           (~a "rewrapped children"  #:min-width 18 #:align 'right))
+;;   (printf "|-\n")
 
-  (for ([n (in-list SIZES)])
-    (define s (make-string n #\a))
+;;   (for ([n (in-list SIZES)])
+;;     (define s (make-string n #\a))
 
-    (define a (string-chunk->rope s))
+;;     (define a (string-chunk->rope s))
 
-    (define t-identical (bench-min (λ () (equal? a a))))
+;;     (define t-identical (bench-min (λ () (equal? a a))))
 
-    (define t-same-shape
-      (let ([b (string-chunk->rope s)])
-        (bench-min (λ () (equal? a b)))))
+;;     (define t-same-shape
+;;       (let ([b (string-chunk->rope s)])
+;;         (bench-min (λ () (equal? a b)))))
 
-    (define t-fragmented
-      (let ([b (fragmented-rope-of s)])
-        (bench-min (λ () (equal? a b)))))
+;;     (define t-fragmented
+;;       (let ([b (fragmented-rope-of s)])
+;;         (bench-min (λ () (equal? a b)))))
 
-    (define t-differ-start
-      (let ([b (string-chunk->rope (differing-string s 0))])
-        (bench-min (λ () (equal? a b)))))
+;;     (define t-differ-start
+;;       (let ([b (string-chunk->rope (differing-string s 0))])
+;;         (bench-min (λ () (equal? a b)))))
 
-    (define t-differ-end
-      (let ([b (string-chunk->rope (differing-string s (sub1 n)))])
-        (bench-min (λ () (equal? a b)))))
+;;     (define t-differ-end
+;;       (let ([b (string-chunk->rope (differing-string s (sub1 n)))])
+;;         (bench-min (λ () (equal? a b)))))
 
-    (define t-rewrapped
-      (let ([b (rewrapped-rope-of a)])
-        (if b (bench-min (λ () (equal? a b))) +nan.0)))
+;;     (define t-rewrapped
+;;       (let ([b (rewrapped-rope-of a)])
+;;         (if b (bench-min (λ () (equal? a b))) +nan.0)))
 
-    (printf "| ~a | ~a | ~a | ~a | ~a | ~a | ~a |\n"
-            (~a n #:min-width 8)
-            (~a (format-result t-identical)    #:min-width 18 #:align 'right)
-            (~a (format-result t-same-shape)   #:min-width 18 #:align 'right)
-            (~a (format-result t-fragmented)   #:min-width 22 #:align 'right)
-            (~a (format-result t-differ-start) #:min-width 18 #:align 'right)
-            (~a (format-result t-differ-end)   #:min-width 18 #:align 'right)
-            (~a (if (nan? t-rewrapped) "n/a (single leaf)" (format-result t-rewrapped))
-                #:min-width 18 #:align 'right))))
+;;     (printf "| ~a | ~a | ~a | ~a | ~a | ~a | ~a |\n"
+;;             (~a n #:min-width 8)
+;;             (~a (format-result t-identical)    #:min-width 18 #:align 'right)
+;;             (~a (format-result t-same-shape)   #:min-width 18 #:align 'right)
+;;             (~a (format-result t-fragmented)   #:min-width 22 #:align 'right)
+;;             (~a (format-result t-differ-start) #:min-width 18 #:align 'right)
+;;             (~a (format-result t-differ-end)   #:min-width 18 #:align 'right)
+;;             (~a (if (nan? t-rewrapped) "n/a (single leaf)" (format-result t-rewrapped))
+;;                 #:min-width 18 #:align 'right))))
