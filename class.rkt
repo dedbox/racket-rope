@@ -16,15 +16,15 @@
 ;; Needed for custom equal+hash:
 ;;
 ;;   Derived:
-;;     *-rope-chunk-hash
-;;     *-rope-node-hash
+;;     *-chunk-hash
+;;     *-node-hash
 ;;     *-rope-hash
 ;;     *-rope-content=?
 ;;
 ;;   Primitive:
-;;     *-rope-elem-hash        (has default)
-;;     *-rope-chunk=?          (has default)
-;;     *-rope-chunk-overlap=?  (has default)
+;;     *-elem-hash        (has default)
+;;     *-chunk=?          (has default)
+;;     *-chunk-overlap=?  (has default)
 ;;
 ;; Every type has a default Eq instance. It can be overriden for better
 ;; performancee, but can't be removed.
@@ -38,7 +38,7 @@
 
 ;; Defines the public Eq API. Types without an Eq instance will use the
 ;; default hashing and content-based equality operations internally, but the
-;; user-facing derived operations (*-rope-chunk-hash, *-rope-node-hash,
+;; user-facing derived operations (*-chunk-hash, *-node-hash,
 ;; *-rope-content=?) will not be defined. Calling this macro with no keyword
 ;; arguments will bind these operations to the defaults.
 (define-syntax-parse-rule (define-rope-Eq-instance type-id:id
