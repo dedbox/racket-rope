@@ -2,9 +2,30 @@
 
 ;; rope/type/string.rkt
 
-(require rope2/type)
+(require rope2/class
+         rope2/type)
 
 (provide (all-defined-out))
+
+(define-rope-type string
+  #:chunk?       string?
+  #:chunk-limit  512
+  #:chunk-empty  ""
+  #:chunk-length string-length
+  #:chunk-ref    string-ref
+  #:chunk-slice  (λ (c i k) (substring c i (+ i k)))
+  #:chunk-append (λ (cs) (apply string-append cs))
+  #:elem-width   1)
+
+(define-rope-Eq-instance string
+  #:chunk=?         string=?
+  ;; #:chunk-overlap=? (λ (ca cb ia ib k)
+  ;;                     (for/and ([i (in-range k)])
+  ;;                       (char=? (string-ref ca (+ ia i)) (string-ref cb (+ ib i)))))
+  #:elem=?          char=?
+  #:elem-hash       char->integer)
+
+
 
 ;; (define-rope-type string
 ;;   #:chunk?                string?

@@ -11,9 +11,9 @@
          ;; racket/sequence
          ;; rope2/cursor
          rope2/generic
-         ;; rope2/private/hash
          rope2/rope
-         syntax/parse/define)
+         syntax/parse/define
+         "./private/hash.rkt")
 
 (provide (all-defined-out))
 
@@ -138,7 +138,25 @@
   #:do [(define (mk* fmt) (format-id (attribute type-id) fmt (syntax-e #'type-id)))
         (define desc-id (format-id (attribute type-id) "rope:~a:Eq" (syntax-e #'type-id)))
         (define desc (syntax-local-value desc-id (λ () #f)))
-        (define (Eq-prim x) (and desc (assoc x (rope-class-descriptor-primitives desc))))]
+        (define (Eq-prim x) (and desc (cdr (assoc x (rope-class-descriptor-primitives desc)))))]
+
+  ;; core operations
+  #:with *-chunk?       (mk* "~a-chunk?")
+  #:with *-chunk-limit  (mk* "~a-chunk-limit")
+  #:with *-chunk-empty  (mk* "~a-chunk-empty")
+  #:with *-chunk-length (mk* "~a-chunk-length")
+  #:with *-chunk-width  (mk* "~a-chunk-width")
+  #:with *-chunk-ref    (mk* "~a-chunk-ref")
+  #:with *-chunk-slice  (mk* "~a-chunk-slice")
+  #:with *-chunk-append (mk* "~a-chunk-append")
+  #:with *-elem-width   (mk* "~a-elem-width")
+
+  ;; tree construction
+  #:with *-rope-leaf    (mk* "~a-rope-leaf")
+  #:with *-rope-node    (mk* "~a-rope-node")
+  #:with *-rope-leaf?   (mk* "~a-rope-leaf?")
+  #:with *-rope-node?   (mk* "~a-rope-node?")
+  #:with *-rope?        (mk* "~a-rope?")
 
   ;; smart constructors
   #:with make-*-rope-leaf  (mk* "make-~a-rope-leaf")
@@ -146,15 +164,30 @@
   #:with make-empty-*-rope (mk* "make-empty-~a-rope")
 
   ;; Eq members
-  #:with *-chunk=?   (or (Eq-prim 'chunk=?)   #'equal)
-  #:with *-elem=?    (or (Eq-prim 'elem=?)    #'equal)
-  #:with *-elem-hash (or (Eq-prim 'elem-hash) #'equal-hash-code)
-  #:with ((~optional *-chunk-overlap=?)) (if desc (list (Eq-prim 'chunk-overlap=?)) null)
+  #:with *-chunk=?   (or (Eq-prim 'x-chunk=?)   #'equal?)
+  #:with *-elem=?    (or (Eq-prim 'x-elem=?)    #'equal?)
+  #:with *-elem-hash (or (Eq-prim 'x-elem-hash) #'equal-hash-code)
+  #:with ((~optional *-chunk-overlap=?)) (if desc (list (Eq-prim 'x-chunk-overlap=?)) null)
 
   ;; internal hashing / equality
   #:with *-chunk-hash     (mk* "~a-chunk-hash")
   #:with *-node-hash      (mk* "~a-node-hash")
   #:with *-rope-content=? (mk* "~a-rope-content=?")
+
+  ;; conversions
+  #:with *->rope (mk* "~a->rope")
+  #:with rope->* (mk* "rope->~a")
+
+  ;; basic operations
+  #:with *-rope-concat       (mk* "~a-rope-concat")
+  #:with *-rope-append2      (mk* "~a-rope-append2")
+  #:with *-rope-append       (mk* "~a-rope-append")
+  #:with *-rope-split        (mk* "~a-rope-split")
+  #:with *-rope-ref          (mk* "~a-rope-ref")
+  #:with *-rope-offset-index (mk* "~a-rope-offset-index")
+  #:with *-rope-cut          (mk* "~a-rope-cut")
+  #:with *-rope-slice        (mk* "~a-rope-slice")
+  #:with *-rope-splice       (mk* "~a-rope-splice")
 
   (begin
 
@@ -215,8 +248,8 @@
         (~? *-chunk-overlap=?
             (λ (c d ic id k)
               (for/and ([i (in-range k)])
-                (*-elem=? (chunk-ref c (+ ic i))
-                          (chunk-ref d (+ id i)))))))
+                (*-elem=? (*-chunk-ref c (+ ic i))
+                          (*-chunk-ref d (+ id i)))))))
 
       (define (chunk-done? c i)
         (or (not c) (>= i (*-chunk-length c))))
@@ -264,4 +297,27 @@
                         (let ([k (min (- len-a ia**) (- len-b ib**))])
                           (and (overlap=? ca** cb** ia** ib** k)
                                (walk ca** (+ ia** k) stack-a**
-                                     cb** (+ ib** k) stack-b**))))])))))))
+                                     cb** (+ ib** k) stack-b**))))])))))
+
+    ;; -------------------------------------------------------------------------
+    ;; Conversions
+    ;; -------------------------------------------------------------------------
+
+    (define (*->rope c) (chunk->rope type-id c))
+    (define (rope->* a) (rope->chunk type-id a))
+
+    ;; -------------------------------------------------------------------------
+    ;; Basic Operations
+    ;; -------------------------------------------------------------------------
+
+    (define (*-rope-concat a b) (rope-concat type-id a b))
+    (define (*-rope-append2 a b) (rope-append2 type-id a b))
+    ;; (define (*-rope-append       as)      (rope-append       type-id as))
+    ;; (define (*-rope-split        a i)     (rope-split        type-id a i))
+    ;; (define (*-rope-ref          a i)     (rope-ref          type-id a i))
+    ;; (define (*-rope-offset-index a p)     (rope-offset-index type-id a p))
+    ;; (define (*-rope-cut          a i k)   (rope-cut          type-id a i k))
+    ;; (define (*-rope-slice        a i k)   (rope-slice        type-id a i k))
+    ;; (define (*-rope-splice       a i k b) (rope-splice       type-id a i k b))
+
+    ))

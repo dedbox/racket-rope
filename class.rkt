@@ -31,17 +31,35 @@
   ;; rope class descriptor
   #:with (~var rope:*:%)   (mk* "rope:~a:Eq")
 
+  ;; type primitives
+  #:with *-chunk?       (rope-type-descriptor-chunk?       desc)
+  #:with *-chunk-limit  (rope-type-descriptor-chunk-limit  desc)
+  #:with *-chunk-empty  (rope-type-descriptor-chunk-empty  desc)
+  #:with *-chunk-length (rope-type-descriptor-chunk-length desc)
+  #:with *-chunk-width  (rope-type-descriptor-chunk-width  desc)
+  #:with *-chunk-ref    (rope-type-descriptor-chunk-ref    desc)
+  #:with *-chunk-slice  (rope-type-descriptor-chunk-slice  desc)
+  #:with *-chunk-append (rope-type-descriptor-chunk-append desc)
+  #:with *-elem-width   (rope-type-descriptor-elem-width   desc)
+  #:with *-make-leaf    (rope-type-descriptor-make-leaf    desc)
+  #:with *-make-node    (rope-type-descriptor-make-node    desc)
+
+  ;; hashing / equality
+  #:with *-chunk-hash             (rope-type-descriptor-chunk-hash        desc)
+  #:with *-node-hash              (rope-type-descriptor-node-hash         desc)
+  #:with *-rope-content=?         (rope-type-descriptor-rope-content=?    desc)
+
   ;; class primitives
   #:with *-chunk=?         (mk* "~a-chunk=?")
   #:with *-chunk-overlap=? (mk* "~a-chunk-overlap=?")
   #:with *-elem=?          (mk* "~a-elem=?")
   #:with *-elem-hash       (mk* "~a-elem-hash")
 
-  ;; hashing / equality
-  #:with *-chunk-hash      (mk* "~a-chunk-hash")
-  #:with *-node-hash       (mk* "~a-node-hash")
-  #:with *-rope-hash       (mk* "~a-rope-hash")
-  #:with *-rope-content=?  (mk* "~a-rope-content=?")
+  ;; ;; hashing / equality
+  ;; #:with *-chunk-hash      (mk* "~a-chunk-hash")
+  ;; #:with *-node-hash       (mk* "~a-node-hash")
+  ;; #:with *-rope-hash       (mk* "~a-rope-hash")
+  ;; #:with *-rope-content=?  (mk* "~a-rope-content=?")
 
   (begin
 
@@ -50,10 +68,10 @@
     ;; -------------------------------------------------------------------------
 
     (define-syntax rope:*:% (rope-class-descriptor
-                             (list (cons 'chunk=?         #'*-chunk=?)
-                                   (cons 'chunk-overlap=? #'*-chunk-overlap=?)
-                                   (cons 'elem=?          #'*-elem=?)
-                                   (cons 'elem-hash       #'*-elem-hash))))
+                             (list (cons 'x-chunk=?         #'*-chunk=?)
+                                   (cons 'x-chunk-overlap=? #'*-chunk-overlap=?)
+                                   (cons 'x-elem=?          #'*-elem=?)
+                                   (cons 'x-elem-hash       #'*-elem-hash))))
 
     (define (*-chunk=? c d) ((~? chunk=? equal?) c d))
     (define (*-elem=? x y) ((~? elem=? equal?) x y))
@@ -62,8 +80,8 @@
     (define (*-chunk-overlap=? c d ic id k)
       (~? (chunk-overlap=? c d ic id k)
           (for/and ([i (in-range k)])
-            (*-elem=? (chunk-ref c (+ ic i))
-                      (chunk-ref d (+ id i))))))))
+            (*-elem=? (*-chunk-ref c (+ ic i))
+                      (*-chunk-ref d (+ id i))))))))
 
 ;; ;; Needed for custom equal+hash:
 ;; ;;

@@ -59,7 +59,6 @@
   ;; #:with *-chunk-compare         (mk-op "*-chunk-compare")
   ;; #:with *-chunk-overlap=?       (mk-op "*-chunk-overlap=?")
   ;; #:with *-chunk-compare-overlap (mk-op "*-chunk-compare-overlap")
-  ;; #:with *-chunk-hash            (mk-op "*-chunk-hash")
 
   ;; element operations
   #:with *-elem-width            (mk-op "*-elem-width")
@@ -70,9 +69,12 @@
   ;; smart constructors
   #:with *-make-leaf      (mk-op "*-make-leaf")
   #:with *-make-node      (mk-op "*-make-node")
-  ;; #:with *-node-hash             (mk-op "*-node-hash")
+
+  ;; internal hashing / equality
+  #:with *-chunk-hash            (mk-op "*-chunk-hash")
+  #:with *-node-hash             (mk-op "*-node-hash")
   ;; #:with *-rope-hashing          (mk-op "*-rope-hashing")
-  ;; #:with *-content=?             (mk-op "*-content=?")
+  #:with *-rope-content=?        (mk-op "*-rope-content=?")
 
   ;; Passing arbitrary user-supplied arguments directly to the inner macro
   ;; definition is not safe because syntax/parse binds _ as the no-bind
