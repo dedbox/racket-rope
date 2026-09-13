@@ -6,7 +6,6 @@
 
 (require (for-syntax racket/base
                      syntax/parse)
-         racket/fixnum
          syntax/parse/define)
 
 (provide (all-defined-out))
@@ -55,17 +54,17 @@
 ;; reduction is idempotent for any X < M, we can safely fix the number of
 ;; iterations at two to avoid stalling on a missed branch prediction.
 
-(define-syntax-parse-rule (fxmodulo-M n:expr)
+(define-syntax-parse-rule (modulo-M n:expr)
   (let* ([N n]
          ;; First iteration, reduces ≤ 60 bits down to ≤ 36 bits.
-         [H₁ (fxrshift N 30)]
-         [L₁ (fxand N U)]
-         [x₁ (fx+ (fx* H₁ C) L₁)]
+         [H₁ (arithmetic-shift N -30)]
+         [L₁ (bitwise-and N U)]
+         [x₁ (+ (* H₁ C) L₁)]
          ;; Second iteration, reduces ≤ 36 bits down to ≤ 2³⁰ + 1153
-         [H₂ (fxrshift x₁ 30)]
-         [L₂ (fxand x₁ U)]
-         [x₂ (fx+ (fx* H₂ C) L₂)])
+         [H₂ (arithmetic-shift x₁ -30)]
+         [L₂ (bitwise-and x₁ U)]
+         [x₂ (+ (* H₂ C) L₂)])
     ;; Now x₂ < 2M, so a conditional subtraction guarantees x₂ < M. This
     ;; should be optimized to a branchless conditional move (cmov).
-    (if (fx>= x₂ M) (fx- x₂ M) x₂)))
+    (if (>= x₂ M) (- x₂ M) x₂)))
 

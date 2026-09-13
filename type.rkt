@@ -225,28 +225,28 @@
            (define e2 (bitwise-and (*-elem-hash (*-chunk-ref c (+ base 2)))  M))
            (define e3 (bitwise-and (*-elem-hash (*-chunk-ref c (+ base 3)))  M))
            (loop (+ j 1)
-                 (fxmodulo-M (+ h0 (* e0 q)))
-                 (fxmodulo-M (+ h1 (* e1 q)))
-                 (fxmodulo-M (+ h2 (* e2 q)))
-                 (fxmodulo-M (+ h3 (* e3 q)))
-                 (fxmodulo-M (* q X⁴)))]
+                 (modulo-M (+ h0 (* e0 q)))
+                 (modulo-M (+ h1 (* e1 q)))
+                 (modulo-M (+ h2 (* e2 q)))
+                 (modulo-M (+ h3 (* e3 q)))
+                 (modulo-M (* q X⁴)))]
           [else
-           (define h (fxmodulo-M (+ h0 (* X (fxmodulo-M (+ h1 (* X (fxmodulo-M (+ h2 (* X h3))))))))))
+           (define h (modulo-M (+ h0 (* X (modulo-M (+ h1 (* X (modulo-M (+ h2 (* X h3))))))))))
            (let tail ([i (* n/4 4)] [h h] [p q])
              (if (= i n)
                  (values h p)
                  (let ([e (bitwise-and (*-elem-hash (*-chunk-ref c i)) M)])
                    (tail (+ i 1)
-                         (fxmodulo-M (+ h (* e p)))
-                         (fxmodulo-M (* p X))))))])))
+                         (modulo-M (+ h (* e p)))
+                         (modulo-M (* p X))))))])))
 
     (define (*-node-hash l r)
       (define hl (rope-hash-h l))
       (define pl (rope-hash-p l))
       (define hr (rope-hash-h r))
       (define pr (rope-hash-p r))
-      (values (fxmodulo-M (+ hl (* pl hr)))
-              (fxmodulo-M (* pl pr))))
+      (values (modulo-M (+ hl (* pl hr)))
+              (modulo-M (* pl pr))))
 
     ;; -------------------------------------------------------------------------
     ;; Content-Based Equality
