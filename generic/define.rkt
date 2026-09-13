@@ -45,34 +45,26 @@
   #:do [(define (mk-op name) (format-id this-syntax name))]
 
   ;; chunk operations
-  #:with *-chunk?                (mk-op "*-chunk?")
-  #:with *-chunk-limit           (mk-op "*-chunk-limit")
-  #:with *-chunk-empty           (mk-op "*-chunk-empty")
-  #:with *-chunk-length          (mk-op "*-chunk-length")
-  #:with *-chunk-width           (mk-op "*-chunk-width")
-  #:with *-chunk-ref             (mk-op "*-chunk-ref")
-  #:with *-chunk-slice           (mk-op "*-chunk-slice")
-  #:with *-chunk-append          (mk-op "*-chunk-append")
-  ;; #:with *-chunk=?               (mk-op "*-chunk=?")
-  ;; #:with *-chunk-compare         (mk-op "*-chunk-compare")
-  ;; #:with *-chunk-overlap=?       (mk-op "*-chunk-overlap=?")
-  ;; #:with *-chunk-compare-overlap (mk-op "*-chunk-compare-overlap")
+  #:with *-chunk?         (mk-op "*-chunk?")
+  #:with *-chunk-limit    (mk-op "*-chunk-limit")
+  #:with *-chunk-empty    (mk-op "*-chunk-empty")
+  #:with *-chunk-length   (mk-op "*-chunk-length")
+  #:with *-chunk-width    (mk-op "*-chunk-width")
+  #:with *-chunk-ref      (mk-op "*-chunk-ref")
+  #:with *-chunk-slice    (mk-op "*-chunk-slice")
+  #:with *-chunk-append   (mk-op "*-chunk-append")
 
   ;; element operations
-  #:with *-elem-width            (mk-op "*-elem-width")
-  ;; #:with *-elem-hash             (mk-op "*-elem-hash")
-  ;; #:with *-elem<?                (mk-op "*-elem<?")
-  ;; #:with *-elem>?                (mk-op "*-elem>?")
+  #:with *-elem-width     (mk-op "*-elem-width")
 
   ;; smart constructors
   #:with *-make-leaf      (mk-op "*-make-leaf")
   #:with *-make-node      (mk-op "*-make-node")
 
   ;; internal hashing / equality
-  #:with *-chunk-hash            (mk-op "*-chunk-hash")
-  #:with *-node-hash             (mk-op "*-node-hash")
-  ;; #:with *-rope-hashing          (mk-op "*-rope-hashing")
-  #:with *-rope-content=?        (mk-op "*-rope-content=?")
+  #:with *-chunk-hash     (mk-op "*-chunk-hash")
+  #:with *-node-hash      (mk-op "*-node-hash")
+  #:with *-rope-content=? (mk-op "*-rope-content=?")
 
   ;; Passing arbitrary user-supplied arguments directly to the inner macro
   ;; definition is not safe because syntax/parse binds _ as the no-bind
@@ -90,31 +82,26 @@
                                     this-syntax #'inner-τ)))]
 
     ;; chunk operations
-    #:with *-chunk?                 (rope-type-descriptor-chunk?                 desc)
-    #:with *-chunk-limit            (rope-type-descriptor-chunk-limit            desc)
-    #:with *-chunk-empty            (rope-type-descriptor-chunk-empty            desc)
-    #:with *-chunk-length           (rope-type-descriptor-chunk-length           desc)
-    #:with *-chunk-width            (rope-type-descriptor-chunk-width            desc)
-    #:with *-chunk-ref              (rope-type-descriptor-chunk-ref              desc)
-    #:with *-chunk-slice            (rope-type-descriptor-chunk-slice            desc)
-    #:with *-chunk-append           (rope-type-descriptor-chunk-append           desc)
-    ;; #:with chunk-compare          (rope-type-descriptor-chunk-compare          desc)
-    ;; #:with chunk-overlap=?        (rope-type-descriptor-chunk-overlap=?        desc)
-    ;; #:with chunk-compare-overlap  (rope-type-descriptor-chunk-compare-overlap  desc)
+    #:with *-chunk?         (rope-type-descriptor-chunk?         desc)
+    #:with *-chunk-limit    (rope-type-descriptor-chunk-limit    desc)
+    #:with *-chunk-empty    (rope-type-descriptor-chunk-empty    desc)
+    #:with *-chunk-length   (rope-type-descriptor-chunk-length   desc)
+    #:with *-chunk-width    (rope-type-descriptor-chunk-width    desc)
+    #:with *-chunk-ref      (rope-type-descriptor-chunk-ref      desc)
+    #:with *-chunk-slice    (rope-type-descriptor-chunk-slice    desc)
+    #:with *-chunk-append   (rope-type-descriptor-chunk-append   desc)
 
     ;; element operations
-    #:with *-elem-width             (rope-type-descriptor-elem-width             desc)
-    ;; #:with elem<?                 (rope-type-descriptor-elem<?                 desc)
-    ;; #:with elem>?                 (rope-type-descriptor-elem>?                 desc)
+    #:with *-elem-width     (rope-type-descriptor-elem-width     desc)
 
     ;; smart constructors
-    #:with *-make-leaf       (rope-type-descriptor-make-leaf       desc)
-    #:with *-make-node       (rope-type-descriptor-make-node       desc)
+    #:with *-make-leaf      (rope-type-descriptor-make-leaf      desc)
+    #:with *-make-node      (rope-type-descriptor-make-node      desc)
 
     ;; hashing / equality
-    #:with *-chunk-hash             (rope-type-descriptor-chunk-hash        desc)
-    #:with *-node-hash              (rope-type-descriptor-node-hash         desc)
-    #:with *-rope-content=?         (rope-type-descriptor-rope-content=?    desc)
+    #:with *-chunk-hash     (rope-type-descriptor-chunk-hash     desc)
+    #:with *-node-hash      (rope-type-descriptor-node-hash      desc)
+    #:with *-rope-content=? (rope-type-descriptor-rope-content=? desc)
 
     ;; Rebind the temporary identifiers to the corresponding originals.
     #:with τ                   #'inner-τ
