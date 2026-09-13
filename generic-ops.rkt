@@ -54,22 +54,22 @@
 ;; smart constructors
 ;; -----------------------------------------------------------------------------
 
-(define-rope-operation (make-rope-leaf ρ c0)
-  (let ([c c0])
-    (let-values ([(h p) (rope-chunk-hash ρ c)])
-      (leaf-constructor (chunk-length c) (chunk-width c) h p content=? c))))
+;; (define-rope-operation (make-rope-leaf ρ c0)
+;;   (let ([c c0])
+;;     (let-values ([(h p) (rope-chunk-hash ρ c)])
+;;       (leaf-constructor (chunk-length c) (chunk-width c) h p content=? c))))
 
-(define-rope-operation (make-rope-node ρ l0 r0)
-  (let ([l l0] [r r0])
-    (let-values ([(h p) (rope-node-hash ρ l r)])
-      (node-constructor (+ (rope-length l) (rope-length r))
-                        (+ (rope-width l) (rope-width r))
-                        h p
-                        content=?
-                        (add1 (max (rope-depth l) (rope-depth r)))
-                        l r))))
+;; (define-rope-operation (make-rope-node ρ l0 r0)
+;;   (let ([l l0] [r r0])
+;;     (let-values ([(h p) (rope-node-hash ρ l r)])
+;;       (node-constructor (+ (rope-length l) (rope-length r))
+;;                         (+ (rope-width l) (rope-width r))
+;;                         h p
+;;                         content=?
+;;                         (add1 (max (rope-depth l) (rope-depth r)))
+;;                         l r))))
 
-(define-rope-operation (make-empty-rope ρ) (make-rope-leaf ρ (chunk-empty)))
+;; (define-rope-operation (make-empty-rope ρ) (make-rope-leaf ρ (chunk-empty)))
 
 ;; ;; -----------------------------------------------------------------------------
 ;; ;; conversions
