@@ -62,6 +62,11 @@
   #:with *-rope-node?   (mk* "~a-rope-node?")
   #:with *-rope?        (mk* "~a-rope?")
 
+  ;; internal hashing / equality
+  #:with *-chunk-hash     (mk* "~a-chunk-hash")
+  #:with *-node-hash      (mk* "~a-node-hash")
+  #:with *-rope-content=? (mk* "~a-rope-content=?")
+
   (begin
 
     ;; -------------------------------------------------------------------------
