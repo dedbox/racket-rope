@@ -18,12 +18,9 @@
   #:elem-width   1)
 
 (define-rope-Eq-instance string
-  #:chunk=?         string=?
-  ;; #:chunk-overlap=? (λ (ca cb ia ib k)
-  ;;                     (for/and ([i (in-range k)])
-  ;;                       (char=? (string-ref ca (+ ia i)) (string-ref cb (+ ib i)))))
-  #:elem=?          char=?
-  #:elem-hash       char->integer)
+  #:chunk=?   string=?
+  #:elem=?    char=?
+  #:elem-hash char->integer)
 
 
 

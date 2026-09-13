@@ -131,8 +131,17 @@
 ;; We do this at the end of the module expansion so that an Eq class can be
 ;; declared before these definitions are pinned down.
 ;;
-;; CAVEAT: A consequence of this design is that custom Eq classes must be
-;; defined in the same module as their type definition.
+;; CAVEATS:
+;;
+;; - Custom Eq classes must be defined in the same module as their type
+;;   definition.
+;; - Calling define-rope-Eq-instance from another module will generate the
+;;   external bindings, but the type's definitions will silently continue to
+;;   use the defaults internally.
+;; - Although the bindings generated for the Eq class are visible immediately
+;;   after define-rope-Eq-class is called, the non-primitive bindings
+;;   generated for the underlying type are not visible to user-supplied code
+;;   anywhere within the enclosing module.
 
 (define-syntax-parse-rule (finish-rope-type type-id:id)
   #:do [(define (mk* fmt) (format-id (attribute type-id) fmt (syntax-e #'type-id)))

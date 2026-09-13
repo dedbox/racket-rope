@@ -55,12 +55,6 @@
   #:with *-elem=?          (mk* "~a-elem=?")
   #:with *-elem-hash       (mk* "~a-elem-hash")
 
-  ;; ;; hashing / equality
-  ;; #:with *-chunk-hash      (mk* "~a-chunk-hash")
-  ;; #:with *-node-hash       (mk* "~a-node-hash")
-  ;; #:with *-rope-hash       (mk* "~a-rope-hash")
-  ;; #:with *-rope-content=?  (mk* "~a-rope-content=?")
-
   (begin
 
     ;; -------------------------------------------------------------------------
