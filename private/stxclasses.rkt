@@ -1,6 +1,6 @@
 #lang racket/base
 
-;; rope/private/type/stxclasses.rkt
+;; rope/private/stxclasses.rkt
 
 (require syntax/parse
          (for-template racket/base))
