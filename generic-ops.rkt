@@ -1,7 +1,5 @@
 #lang racket/base
 
-;; rope/generic-ops.rkt
-
 ;; (require (for-syntax racket/base
 ;;                      racket/syntax
 ;;                      rope2/private/type/descriptor

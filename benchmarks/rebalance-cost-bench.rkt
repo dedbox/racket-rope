@@ -1,7 +1,5 @@
 #lang racket
 
-;; rope/benchmarks/rebalance-cost-bench.rkt
-;;
 ;; Classifies each append as trivial or real-rebalance using the same
 ;; O(1) predicate the library already exposes, and reports GC time
 ;; separately from compute time for each bucket. This tells you whether

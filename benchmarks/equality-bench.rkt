@@ -1,7 +1,5 @@
 #lang racket
 
-;; rope/benchmarks/equality-bench.rkt
-;;
 ;; Isolates equal? cost by rope size and by *why* two ropes would or
 ;; wouldn't compare equal. equal? on a rope checks eq?, then hash1/hash2,
 ;; then (only if those all agree) walks overlapping chunks via

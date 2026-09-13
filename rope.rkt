@@ -1,7 +1,5 @@
 #lang racket/base
 
-;; rope/rope.rkt
-;;
 ;; The core rope data structure, the tree balancing algorithm, and all rope
 ;; operations that do not require a rope type descriptor.
 

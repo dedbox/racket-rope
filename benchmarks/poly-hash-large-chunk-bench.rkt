@@ -1,7 +1,5 @@
 #lang racket
 
-;; rope/benchmarks/poly-hash-large-chunk-bench.rkt
-;;
 ;; Isolates hashing cost by rope size and cache state. Also directly
 ;; measures whether the modulus is staying in fixnum range: fixnum
 ;; arithmetic and bignum arithmetic are dispatched differently in Racket

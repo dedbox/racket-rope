@@ -1,7 +1,5 @@
 #lang racket/base
 
-;; rope/type/string.rkt
-
 (require rope2/class
          rope2/type)
 

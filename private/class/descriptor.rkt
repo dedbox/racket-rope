@@ -1,7 +1,5 @@
 #lang racket/base
 
-;; rope/private/class/descriptor.rkt
-
 (provide (all-defined-out))
 
 (struct rope-class-descriptor (primitives) #:transparent)

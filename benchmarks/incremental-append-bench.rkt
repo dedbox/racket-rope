@@ -1,7 +1,5 @@
 #lang racket
 
-;; rope/benchmarks/incremental-append-bench.rkt
-;;
 ;; Simulates sustained typing: SESSION-LENGTH single-character appends to a
 ;; growing rope, one at a time. Reports mean/median per-append cost AND the
 ;; single worst append within each session — the number that predicts

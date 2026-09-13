@@ -1,7 +1,5 @@
 #lang racket/base
 
-;; rope/cursor.rkt
-
 (require rope2/rope)
 
 (provide (all-defined-out))

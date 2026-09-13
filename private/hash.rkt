@@ -1,7 +1,5 @@
 #lang racket/base
 
-;; rope/private/hash.rkt
-;;
 ;; A High-Performance Associative Polynomial Rolling Hash
 
 (require (for-syntax racket/base

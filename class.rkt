@@ -1,7 +1,5 @@
 #lang racket/base
 
-;; rope/class.rkt
-
 (require (for-syntax racket/base
                      racket/syntax
                      syntax/parse

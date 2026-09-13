@@ -1,7 +1,5 @@
 #lang racket/base
 
-;; rope/type/string3.rkt
-
 (require rope2/type)
 
 (provide (all-defined-out))
