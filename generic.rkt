@@ -70,7 +70,7 @@
                 (define r (loop (+ i mid) (- k mid)))
                 (rope-concat τ l r)))))))
 
-(define-type-op (rope->chunk _ a) (*-chunk-append (rope-chunks a)))
+(define-type-op (rope->chunk _ a) (apply *-chunk-append (rope-chunks a)))
 
 ;; -----------------------------------------------------------------------------
 ;; Basic Operations
