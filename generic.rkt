@@ -98,7 +98,7 @@
 ;; Tree Balancing
 ;; -----------------------------------------------------------------------------
 
-;; (define-rope-operation (rope-defrag τ a) (chunk->rope τ (rope->chunk τ a)))
+(define-type-op (rope-defrag τ a) (chunk->rope τ (rope->chunk τ a)))
 
 (define-type-op (rope-ensure-balance τ a)
   (if (rope-mostly-balanced? a) a (rope-rebalance τ a)))
