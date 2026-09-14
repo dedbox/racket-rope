@@ -3,6 +3,7 @@
 (require (for-syntax racket/base
                      racket/syntax
                      syntax/parse
+                     "../private/instance.rkt"
                      "../private/type.rkt")
          syntax/parse/define)
 
@@ -75,33 +76,43 @@
   #:with inner-τ (generate-temporary #'type-id)
 
   (define-syntax-parse-rule (op-id inner-τ args.inner-pattern ...)
-    #:do [(define desc-id (format-id #'inner-τ "rope:~a" #'inner-τ))
-          (define desc
-            (or (syntax-local-value desc-id (λ () #f))
+    #:do [(define type-desc-id (format-id #'inner-τ "rope:~a" #'inner-τ))
+          (define type-desc
+            (or (syntax-local-value type-desc-id (λ () #f))
                 (raise-syntax-error 'op-id "expected a rope type descriptor"
-                                    this-syntax #'inner-τ)))]
+                                    this-syntax #'inner-τ)))
+          (define Eq-desc-id (format-id #'inner-τ "rope:~a:Eq" #'inner-τ))
+          (define Eq-desc
+            (or (syntax-local-value Eq-desc-id (λ () #f))
+                (raise-syntax-error 'op-id "expected an Eq instance")))
+          (define (lookup-Eq-member x)
+            (cdr (assoc x (rope-instance-descriptor-members Eq-desc))))]
 
     ;; chunk operations
-    #:with *-chunk?         (rope-type-descriptor-chunk?         desc)
-    #:with *-chunk-limit    (rope-type-descriptor-chunk-limit    desc)
-    #:with *-chunk-empty    (rope-type-descriptor-chunk-empty    desc)
-    #:with *-chunk-length   (rope-type-descriptor-chunk-length   desc)
-    #:with *-chunk-width    (rope-type-descriptor-chunk-width    desc)
-    #:with *-chunk-ref      (rope-type-descriptor-chunk-ref      desc)
-    #:with *-chunk-slice    (rope-type-descriptor-chunk-slice    desc)
-    #:with *-chunk-append   (rope-type-descriptor-chunk-append   desc)
+    #:with *-chunk?          (rope-type-descriptor-chunk?         type-desc)
+    #:with *-chunk-limit     (rope-type-descriptor-chunk-limit    type-desc)
+    #:with *-chunk-empty     (rope-type-descriptor-chunk-empty    type-desc)
+    #:with *-chunk-length    (rope-type-descriptor-chunk-length   type-desc)
+    #:with *-chunk-width     (rope-type-descriptor-chunk-width    type-desc)
+    #:with *-chunk-ref       (rope-type-descriptor-chunk-ref      type-desc)
+    #:with *-chunk-slice     (rope-type-descriptor-chunk-slice    type-desc)
+    #:with *-chunk-append    (rope-type-descriptor-chunk-append   type-desc)
 
     ;; element operations
-    #:with *-elem-width     (rope-type-descriptor-elem-width     desc)
+    #:with *-elem-width      (rope-type-descriptor-elem-width     type-desc)
 
     ;; smart constructors
-    #:with *-make-leaf      (rope-type-descriptor-make-leaf      desc)
-    #:with *-make-node      (rope-type-descriptor-make-node      desc)
+    #:with *-make-leaf       (rope-type-descriptor-make-leaf      type-desc)
+    #:with *-make-node       (rope-type-descriptor-make-node      type-desc)
 
     ;; hashing / equality
-    #:with *-chunk-hash     (rope-type-descriptor-chunk-hash     desc)
-    #:with *-node-hash      (rope-type-descriptor-node-hash      desc)
-    #:with *-rope-content=? (rope-type-descriptor-rope-content=? desc)
+    #:with *-chunk=?         (lookup-Eq-member 'chunk=?)
+    #:with *-chunk-overlap=? (lookup-Eq-member 'chunk-overlap=?)
+    #:with *-elem=?          (lookup-Eq-member 'elem=?)
+    #:with *-elem-hash       (lookup-Eq-member 'elem-hash)
+    #:with *-chunk-hash      (lookup-Eq-member 'chunk-hash)
+    #:with *-node-hash       (lookup-Eq-member 'node-hash)
+    #:with *-rope-content=?  (lookup-Eq-member 'rope-content=?)
 
     ;; Rebind the temporary identifiers to the corresponding originals.
     #:with τ                   #'inner-τ

@@ -16,11 +16,7 @@
    elem-width
    ;; smart constructors
    make-leaf
-   make-node
-   ;; internal hashing / equality
-   chunk-hash
-   node-hash
-   rope-content=?)
+   make-node)
   #:transparent)
 
 ;; (struct rope-type-descriptor
