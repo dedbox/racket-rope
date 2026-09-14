@@ -1,7 +1,6 @@
 #lang racket/base
 
-(require rope2/class
-         rope2/type)
+(require rope2/type)
 
 (provide (all-defined-out))
 
@@ -13,12 +12,11 @@
   #:chunk-ref    string-ref
   #:chunk-slice  (λ (c i k) (substring c i (+ i k)))
   #:chunk-append (λ (cs) (apply string-append cs))
-  #:elem-width   1)
-
-(define-rope-Eq-instance string
-  #:chunk=?   string=?
-  #:elem=?    char=?
-  #:elem-hash char->integer)
+  #:elem-width   1
+  ;; Eq class members
+  #:chunk=?      string=?
+  #:elem=?       char=?
+  #:elem-hash    char->integer)
 
 
 

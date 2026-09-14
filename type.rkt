@@ -4,6 +4,7 @@
                      racket/syntax
                      syntax/parse
                      "./private/class.rkt"
+                     "./private/instance.rkt"
                      "./private/stxclasses.rkt"
                      "./private/type.rkt")
          ;; racket/sequence
@@ -21,7 +22,6 @@
 
 (define-syntax-parse-rule (define-rope-type type-id:id
                             (~alt
-                             ;; chunk primitives
                              (~once (~seq #:chunk?       chunk?:id+fun1))
                              (~once (~seq #:chunk-limit  chunk-limit:nat+id+fun0))
                              (~once (~seq #:chunk-empty  chunk-empty:lit+id+fun0))
@@ -29,41 +29,67 @@
                              (~once (~seq #:chunk-ref    chunk-ref:id+fun2))
                              (~once (~seq #:chunk-slice  chunk-slice:id+fun3))
                              (~once (~seq #:chunk-append chunk-append:id+fun1))
-                             ;; element primitives
-                             (~once (~seq #:elem-width   elem-width:nat+id+fun2)))
+                             (~once (~seq #:elem-width   elem-width:nat+id+fun2))
+                             ;; Eq instance members
+                             (~optional (~seq #:chunk=?         chunk=?:id+fun2))
+                             (~optional (~seq #:chunk-overlap=? chunk-overlap=?:id+fun5))
+                             (~optional (~seq #:elem=?          elem=?:id+fun2))
+                             (~optional (~seq #:elem-hash       elem-hash:id+fun1)))
                             ...)
-  #:do [(define (mk* fmt) (format-id (attribute type-id) fmt (syntax-e #'type-id)))
-        (syntax-local-lift-module-end-declaration #`(finish-rope-type #,(attribute type-id)))]
+  #:do [(define (mk* fmt) (format-id (attribute type-id) fmt (syntax-e #'type-id)))]
 
-  ;; rope type descriptor
-  #:with (~var rope:*)  (mk* "rope:~a")
+  ;; descriptor
+  #:with (~var rope:*)       (mk* "rope:~a")
+  #:with (~var rope:*:Eq)    (mk* "rope:~a:Eq")
 
-  ;; chunk primitives
-  #:with *-chunk?       (mk* "~a-chunk?")
-  #:with *-chunk-limit  (mk* "~a-chunk-limit")
-  #:with *-chunk-empty  (mk* "~a-chunk-empty")
-  #:with *-chunk-length (mk* "~a-chunk-length")
-  #:with *-chunk-ref    (mk* "~a-chunk-ref")
-  #:with *-chunk-slice  (mk* "~a-chunk-slice")
-  #:with *-chunk-append (mk* "~a-chunk-append")
-
-  ;; derived chunk operations
-  #:with *-chunk-width  (mk* "~a-chunk-width")
-
-  ;; element primitives
-  #:with *-elem-width   (mk* "~a-elem-width")
+  ;; type primitives
+  #:with *-chunk?            (mk* "~a-chunk?")
+  #:with *-chunk-limit       (mk* "~a-chunk-limit")
+  #:with *-chunk-empty       (mk* "~a-chunk-empty")
+  #:with *-chunk-length      (mk* "~a-chunk-length")
+  #:with *-chunk-width       (mk* "~a-chunk-width")
+  #:with *-chunk-ref         (mk* "~a-chunk-ref")
+  #:with *-chunk-slice       (mk* "~a-chunk-slice")
+  #:with *-chunk-append      (mk* "~a-chunk-append")
+  #:with *-elem-width        (mk* "~a-elem-width")
 
   ;; tree construction
-  #:with *-rope-leaf    (mk* "~a-rope-leaf")
-  #:with *-rope-node    (mk* "~a-rope-node")
-  #:with *-rope-leaf?   (mk* "~a-rope-leaf?")
-  #:with *-rope-node?   (mk* "~a-rope-node?")
-  #:with *-rope?        (mk* "~a-rope?")
+  #:with *-rope-leaf         (mk* "~a-rope-leaf")
+  #:with *-rope-node         (mk* "~a-rope-node")
+  #:with *-rope-leaf?        (mk* "~a-rope-leaf?")
+  #:with *-rope-node?        (mk* "~a-rope-node?")
+  #:with *-rope?             (mk* "~a-rope?")
+
+  ;; smart constructors
+  #:with make-*-rope-leaf    (mk* "make-~a-rope-leaf")
+  #:with make-*-rope-node    (mk* "make-~a-rope-node")
+  #:with make-empty-*-rope   (mk* "make-empty-~a-rope")
+
+  ;; Eq members
+  #:with *-chunk=?           (mk* "~a-chunk=?")
+  #:with *-elem=?            (mk* "~a-elem=?")
+  #:with *-elem-hash         (mk* "~a-elem-hash")
+  #:with *-chunk-overlap=?   (mk* "~a-chunk-overlap=?")
 
   ;; internal hashing / equality
-  #:with *-chunk-hash     (mk* "~a-chunk-hash")
-  #:with *-node-hash      (mk* "~a-node-hash")
-  #:with *-rope-content=? (mk* "~a-rope-content=?")
+  #:with *-chunk-hash        (mk* "~a-chunk-hash")
+  #:with *-node-hash         (mk* "~a-node-hash")
+  #:with *-rope-content=?    (mk* "~a-rope-content=?")
+
+  ;; conversions
+  #:with *->rope             (mk* "~a->rope")
+  #:with rope->*             (mk* "rope->~a")
+
+  ;; basic operations
+  #:with *-rope-concat       (mk* "~a-rope-concat")
+  #:with *-rope-append2      (mk* "~a-rope-append2")
+  #:with *-rope-append       (mk* "~a-rope-append")
+  #:with *-rope-split        (mk* "~a-rope-split")
+  #:with *-rope-ref          (mk* "~a-rope-ref")
+  #:with *-rope-offset-index (mk* "~a-rope-offset-index")
+  #:with *-rope-cut          (mk* "~a-rope-cut")
+  #:with *-rope-slice        (mk* "~a-rope-slice")
+  #:with *-rope-splice       (mk* "~a-rope-splice")
 
   (begin
 
@@ -90,6 +116,30 @@
                            #'*-chunk-hash
                            #'*-node-hash
                            #'*-rope-content=?))
+
+    ;; -------------------------------------------------------------------------
+    ;; Eq Instance Descriptor
+    ;; -------------------------------------------------------------------------
+o
+    (define-syntax rope:*:Eq (rope-instance-descriptor
+                              (list (cons '*-chunk=?         #'*-chunk=?)
+                                    (cons '*-chunk-overlap=? #'*-chunk-overlap=?)
+                                    (cons '*-elem=?          #'*-elem=?)
+                                    (cons '*-elem-hash       #'*-elem-hash))))
+
+    ;; -------------------------------------------------------------------------
+    ;; Eq Instance Members
+    ;; -------------------------------------------------------------------------
+
+    (define (*-chunk=? c d) ((~? chunk=? equal?) c d))
+    (define (*-elem=? x y) ((~? elem=? equal?) x y))
+    (define (*-elem-hash x) ((~? elem-hash equal-hash-code) x))
+
+    (define (*-chunk-overlap=? c d ic id k)
+      (~? (chunk-overlap=? c d ic id k)
+          (for/and ([i (in-range k)])
+            (*-elem=? (*-chunk-ref c (+ ic i))
+                      (*-chunk-ref d (+ id i))))))
 
     ;; -------------------------------------------------------------------------
     ;; Chunk Operations
@@ -121,82 +171,7 @@
     (struct *-rope-leaf rope-leaf () #:transparent)
     (struct *-rope-node rope-node () #:transparent)
 
-    (define (*-rope? x) (or (*-rope-leaf? x) (*-rope-node? x)))))
-
-;; =============================================================================
-;; Core rope type functionality that depends on hashing / equality internally.
-;;
-;; We do this at the end of the module expansion so that an Eq class can be
-;; declared before these definitions are pinned down.
-;;
-;; CAVEATS:
-;;
-;; - Custom Eq classes must be defined in the same module as their type
-;;   definition.
-;; - Calling define-rope-Eq-instance from another module will generate the
-;;   external bindings, but the type's definitions will silently continue to
-;;   use the defaults internally.
-;; - Although the bindings generated for the Eq class are visible immediately
-;;   after define-rope-Eq-class is called, the non-primitive bindings
-;;   generated for the underlying type are not visible to user-supplied code
-;;   anywhere within the enclosing module.
-
-(define-syntax-parse-rule (finish-rope-type type-id:id)
-  #:do [(define (mk* fmt) (format-id (attribute type-id) fmt (syntax-e #'type-id)))
-        (define desc-id (format-id (attribute type-id) "rope:~a:Eq" (syntax-e #'type-id)))
-        (define desc (syntax-local-value desc-id (λ () #f)))
-        (define (Eq-prim x) (and desc (cdr (assoc x (rope-class-descriptor-primitives desc)))))]
-
-  ;; core operations
-  #:with *-chunk?       (mk* "~a-chunk?")
-  #:with *-chunk-limit  (mk* "~a-chunk-limit")
-  #:with *-chunk-empty  (mk* "~a-chunk-empty")
-  #:with *-chunk-length (mk* "~a-chunk-length")
-  #:with *-chunk-width  (mk* "~a-chunk-width")
-  #:with *-chunk-ref    (mk* "~a-chunk-ref")
-  #:with *-chunk-slice  (mk* "~a-chunk-slice")
-  #:with *-chunk-append (mk* "~a-chunk-append")
-  #:with *-elem-width   (mk* "~a-elem-width")
-
-  ;; tree construction
-  #:with *-rope-leaf    (mk* "~a-rope-leaf")
-  #:with *-rope-node    (mk* "~a-rope-node")
-  #:with *-rope-leaf?   (mk* "~a-rope-leaf?")
-  #:with *-rope-node?   (mk* "~a-rope-node?")
-  #:with *-rope?        (mk* "~a-rope?")
-
-  ;; smart constructors
-  #:with make-*-rope-leaf  (mk* "make-~a-rope-leaf")
-  #:with make-*-rope-node  (mk* "make-~a-rope-node")
-  #:with make-empty-*-rope (mk* "make-empty-~a-rope")
-
-  ;; Eq members
-  #:with *-chunk=?   (or (Eq-prim 'x-chunk=?)   #'equal?)
-  #:with *-elem=?    (or (Eq-prim 'x-elem=?)    #'equal?)
-  #:with *-elem-hash (or (Eq-prim 'x-elem-hash) #'equal-hash-code)
-  #:with ((~optional *-chunk-overlap=?)) (if desc (list (Eq-prim 'x-chunk-overlap=?)) null)
-
-  ;; internal hashing / equality
-  #:with *-chunk-hash     (mk* "~a-chunk-hash")
-  #:with *-node-hash      (mk* "~a-node-hash")
-  #:with *-rope-content=? (mk* "~a-rope-content=?")
-
-  ;; conversions
-  #:with *->rope (mk* "~a->rope")
-  #:with rope->* (mk* "rope->~a")
-
-  ;; basic operations
-  #:with *-rope-concat       (mk* "~a-rope-concat")
-  #:with *-rope-append2      (mk* "~a-rope-append2")
-  #:with *-rope-append       (mk* "~a-rope-append")
-  #:with *-rope-split        (mk* "~a-rope-split")
-  #:with *-rope-ref          (mk* "~a-rope-ref")
-  #:with *-rope-offset-index (mk* "~a-rope-offset-index")
-  #:with *-rope-cut          (mk* "~a-rope-cut")
-  #:with *-rope-slice        (mk* "~a-rope-slice")
-  #:with *-rope-splice       (mk* "~a-rope-splice")
-
-  (begin
+    (define (*-rope? x) (or (*-rope-leaf? x) (*-rope-node? x)))
 
     ;; -------------------------------------------------------------------------
     ;; Smart Constructors
