@@ -3,7 +3,7 @@
 (require (for-syntax racket/base
                      racket/syntax
                      syntax/parse
-                     "../private/type/descriptor.rkt")
+                     "../private/type.rkt")
          syntax/parse/define)
 
 (provide (all-defined-out))

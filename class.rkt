@@ -3,9 +3,9 @@
 (require (for-syntax racket/base
                      racket/syntax
                      syntax/parse
-                     "./private/class/descriptor.rkt"
+                     "./private/class.rkt"
                      "./private/stxclasses.rkt"
-                     "./private/type/descriptor.rkt")
+                     "./private/type.rkt")
          syntax/parse/define
          "./private/hash.rkt")
 
