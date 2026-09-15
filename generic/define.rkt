@@ -4,28 +4,11 @@
                      racket/syntax
                      syntax/parse
                      "../private/instance.rkt"
+                     "../private/stxclasses.rkt"
                      "../private/type.rkt")
          syntax/parse/define)
 
 (provide (all-defined-out))
-
-(begin-for-syntax
-  (define-splicing-syntax-class op-args
-    #:description "operation arguments"
-    ;; Arguments ending with ...
-    (pattern (~seq arg:id ... last-arg:id (~datum ...))
-             #:with (inner-arg ...) (generate-temporaries #'(arg ...))
-             #:with inner-last      (generate-temporary #'last-arg)
-             #:with (inner-pattern ...) #'(inner-arg ... inner-last (... ...))
-             ;; The left and right sides of the inner #:with clause
-             #:with rebind-pattern  #'(arg ... last-arg (... ...))
-             #:with rebind-value    #'(inner-arg ... inner-last (... ...)))
-    ;; Fixed arity arguments
-    (pattern (~seq arg:id ...)
-             #:with (inner-arg ...)     (generate-temporaries #'(arg ...))
-             #:with (inner-pattern ...) #'(inner-arg ...)
-             #:with rebind-pattern      #'(arg ...)
-             #:with rebind-value        #'(inner-arg ...))))
 
 (define-syntax-parse-rule (define-type-op (op-id:id type-id:id args:op-args) template:expr)
   ;; The first argument of the outer macro (type-id) binds a rope type name at

@@ -1,9 +1,14 @@
 #lang racket/base
 
-(require syntax/parse
+(require racket/syntax
+         syntax/parse
          (for-template racket/base))
 
 (provide (all-defined-out))
+
+;; -----------------------------------------------------------------------------
+;; Type / Class Primitives
+;; -----------------------------------------------------------------------------
 
 (define-syntax-class (fun arity)
   #:description "a zero-argument function"
@@ -97,3 +102,24 @@
   (pattern l:lit
            #:attr callable #'(λ () l))
   (pattern (~and callable (~or :id (~var _ (fun 0))))))
+
+;; -----------------------------------------------------------------------------
+;; Operation Arguments
+;; -----------------------------------------------------------------------------
+
+(define-splicing-syntax-class op-args
+  #:description "operation arguments"
+  ;; Arguments ending with ...
+  (pattern (~seq arg:id ... last-arg:id (~datum ...))
+           #:with (inner-arg ...) (generate-temporaries #'(arg ...))
+           #:with inner-last      (generate-temporary #'last-arg)
+           #:with (inner-pattern ...) #'(inner-arg ... inner-last (... ...))
+           ;; The left and right sides of the inner #:with clause
+           #:with rebind-pattern  #'(arg ... last-arg (... ...))
+           #:with rebind-value    #'(inner-arg ... inner-last (... ...)))
+  ;; Fixed arity arguments
+  (pattern (~seq arg:id ...)
+           #:with (inner-arg ...)     (generate-temporaries #'(arg ...))
+           #:with (inner-pattern ...) #'(inner-arg ...)
+           #:with rebind-pattern      #'(arg ...)
+           #:with rebind-value        #'(inner-arg ...)))
