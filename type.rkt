@@ -2,10 +2,10 @@
 
 (require (for-syntax racket/base
                      racket/syntax
+                     rope2/stxclasses
                      syntax/parse
                      "./private/class.rkt"
                      "./private/instance.rkt"
-                     "./private/stxclasses.rkt"
                      "./private/type.rkt")
          ;; racket/sequence
          ;; rope2/cursor
