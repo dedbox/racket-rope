@@ -2,11 +2,9 @@
 
 (require (for-syntax racket/base
                      racket/syntax
+                     rope2/descriptors
                      rope2/stxclasses
-                     syntax/parse
-                     "./private/class.rkt"
-                     "./private/instance.rkt"
-                     "./private/type.rkt")
+                     syntax/parse)
          ;; racket/sequence
          ;; rope2/cursor
          rope2/generic

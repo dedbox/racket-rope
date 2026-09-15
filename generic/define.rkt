@@ -2,10 +2,9 @@
 
 (require (for-syntax racket/base
                      racket/syntax
+                     rope2/descriptors
                      rope2/stxclasses
-                     syntax/parse
-                     "../private/instance.rkt"
-                     "../private/type.rkt")
+                     syntax/parse)
          syntax/parse/define)
 
 (provide (all-defined-out))
