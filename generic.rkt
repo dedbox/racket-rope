@@ -36,14 +36,14 @@
 (define-type-op (make-rope-leaf _ c₀)
   (let ([c c₀])
     (define-values (h p) (*-chunk-hash c))
-    (*-make-leaf (*-chunk-length c) (*-chunk-width c) h p *-rope-content=? c)))
+    (*-make-leaf (*-chunk-length c) (*-chunk-width c) h p *-rope=? c)))
 
 (define-type-op (make-rope-node _ l₀ r₀)
   (let ([l l₀] [r r₀])
     (define-values (h p) (*-node-hash l r))
     (*-make-node (+ (rope-length l) (rope-length r))
                  (+ (rope-width l) (rope-width r))
-                 h p *-rope-content=?
+                 h p *-rope=?
                  (add1 (max (rope-depth l) (rope-depth r)))
                  l r)))
 
@@ -69,7 +69,7 @@
 (define-type-op (rope-chunk=? _ c d) (*-chunk=? c d))
 (define-type-op (rope-chunk-overlap=? _ c d ic id k) (*-chunk-overlap=? c d ic id k))
 (define-type-op (rope-elem=? _ x y) (*-elem=? x y))
-(define-type-op (rope-content=? _ c d) (*-rope-content=? c d))
+(define-type-op (rope=? _ c d) (*-rope=? c d))
 
 ;; -----------------------------------------------------------------------------
 ;; Conversions

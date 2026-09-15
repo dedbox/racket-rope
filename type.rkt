@@ -74,7 +74,7 @@
   ;; internal hashing / equality
   #:with *-chunk-hash           (mk* "~a-chunk-hash")
   #:with *-node-hash            (mk* "~a-node-hash")
-  #:with *-rope-content=?       (mk* "~a-rope-content=?")
+  #:with *-rope=?               (mk* "~a-rope=?")
 
   ;; conversions
   #:with *->rope                (mk* "~a->rope")
@@ -141,7 +141,7 @@
                                     (cons 'elem-hash       #'*-elem-hash)
                                     (cons 'chunk-hash      #'*-chunk-hash)
                                     (cons 'node-hash       #'*-node-hash)
-                                    (cons 'rope-content=?  #'*-rope-content=?))))
+                                    (cons 'rope=?          #'*-rope=?))))
 
     ;; -------------------------------------------------------------------------
     ;; Chunk Operations
@@ -240,7 +240,7 @@
             (*-elem=? (*-chunk-ref c (+ ic i))
                       (*-chunk-ref d (+ id i))))))
 
-    (define (*-rope-content=? a b)
+    (define (*-rope=? a b)
       (define overlap=?
         (~? *-chunk-overlap=?
             (λ (c d ic id k)

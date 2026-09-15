@@ -65,7 +65,7 @@
   ;; internal hashing / equality
   #:with *-chunk-hash     (mk-op "*-chunk-hash")
   #:with *-node-hash      (mk-op "*-node-hash")
-  #:with *-rope-content=? (mk-op "*-rope-content=?")
+  #:with *-rope=?         (mk-op "*-rope=?")
 
   ;; Passing arbitrary user-supplied arguments directly to the inner macro
   ;; definition is not safe because syntax/parse binds _ as the no-bind
@@ -112,7 +112,7 @@
     #:with *-elem-hash       (lookup-Eq-member 'elem-hash)
     #:with *-chunk-hash      (lookup-Eq-member 'chunk-hash)
     #:with *-node-hash       (lookup-Eq-member 'node-hash)
-    #:with *-rope-content=?  (lookup-Eq-member 'rope-content=?)
+    #:with *-rope=?          (lookup-Eq-member 'rope=?)
 
     ;; Rebind the temporary identifiers to the corresponding originals.
     #:with τ                   #'inner-τ

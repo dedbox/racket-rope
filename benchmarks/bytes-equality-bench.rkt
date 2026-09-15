@@ -1,10 +1,9 @@
 #lang racket
 
-;; Isolates equal? cost by rope size and by *why* two ropes would or
-;; wouldn't compare equal. equal? on a rope checks eq?, then hash1/hash2,
-;; then (only if those all agree) walks overlapping chunks via
-;; *-rope-content=?. The scenarios below are chosen to separate those
-;; three tiers:
+;; Isolates equal? cost by rope size and by *why* two ropes would or wouldn't
+;; compare equal. equal? on a rope checks eq?, then hash1/hash2, then (only if
+;; those all agree) walks overlapping chunks via *-rope=?. The scenarios below
+;; are chosen to separate those three tiers:
 ;;
 ;;   - identical object   : eq? fires immediately
 ;;   - same content,
