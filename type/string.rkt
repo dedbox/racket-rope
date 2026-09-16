@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require rope2/class/total-order
+(require rope2/class
+         rope2/class/total-order
          rope2/type)
 
 (provide (all-defined-out))

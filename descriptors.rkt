@@ -2,7 +2,7 @@
 
 (provide (all-defined-out))
 
-(struct rope-class-descriptor (primitives) #:transparent)
+(struct rope-class-descriptor (primitives body) #:transparent)
 
 (struct rope-instance-descriptor (members) #:transparent)
 

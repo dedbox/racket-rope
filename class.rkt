@@ -9,12 +9,42 @@
 
 (provide (all-defined-out))
 
+;; -----------------------------------------------------------------------------
+;; Class
+;; -----------------------------------------------------------------------------
+
 (define-syntax-parse-rule (define-rope-class class-id:id
                             ([member:id stxclass:id (~optional #:optional)] ...)
                             body ...)
   #:with (~var rope:%) (format-id #'class-id "rope:~a" (syntax-e #'class-id))
   (define-syntax rope:%
     (rope-class-descriptor (list (cons #'member #'stxclass) ...) #'(body ...))))
+
+;; -----------------------------------------------------------------------------
+;; Instance
+;; -----------------------------------------------------------------------------
+
+(begin-for-syntax
+  (define type-id-placeholder-rx #px"\\*(?=-(rope|chunk|elem)\\b)")
+
+  (define (subst-placeholders stx type-id)
+    (define type-str (symbol->string (syntax-e type-id)))
+
+    (let loop ([stx stx])
+      (cond
+        [(identifier? stx)
+         (define old-name (symbol->string (syntax-e stx)))
+         (define new-name (regexp-replace* type-id-placeholder-rx old-name type-str))
+         (if (string=? new-name old-name)
+             stx
+             (datum->syntax stx (string->symbol new-name) stx stx))]
+        [(syntax? stx)
+         (datum->syntax stx (loop (syntax-e stx)) stx stx)]
+        [(pair? stx)
+         (cons (loop (car stx)) (loop (cdr stx)))]
+        [(vector? stx)
+         (list->vector (map loop (vector->list stx)))]
+        [else stx]))))
 
 (define-syntax-parse-rule (define-rope-class-instance type-id:id class-id:id
                             (~seq kw:keyword kw-val:expr) ...)
@@ -29,7 +59,7 @@
           (or (syntax-local-value equality-desc-id (λ () #f))
               (raise-syntax-error 'define-rope-class-instance "expected an equality instance"
                                   this-syntax #'type-id)))
-        (define class-desc-id (format-id #'class-id "~a:~a" type-desc-id (syntax-e #'class-id)))
+        (define class-desc-id (format-id #'class-id "rope:~a" (syntax-e #'class-id)))
         (define class-desc
           (or (syntax-local-value class-desc-id (λ () #f))
               (raise-syntax-error 'define-rope-class-instance "expected a rope class descriptor")))
@@ -71,6 +101,8 @@
   #:with *-node-hash       (lookup-equality-member 'node-hash)
   #:with *-rope=?          (lookup-equality-member 'rope=?)
 
+  #:with (body* ...) (subst-placeholders (rope-class-descriptor-body class-desc) #'type-id)
+
   ;; How to bind the current class' primitives in the body?
   ;;
   ;; For example, the total-order class should declare these bindings:
@@ -81,7 +113,7 @@
   ;; (let ([member (lookup-instance-member 'chunk-compare-overlap)])
   ;;   (if member (list member) null))
 
-  (begin
+  (begin body* ...
     ;; Class body goes here. For example, the total-order class should look
     ;; like this (where type-id and class-id are the ones given above in the
     ;; instance definition header):
