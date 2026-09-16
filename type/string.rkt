@@ -13,7 +13,7 @@
   #:chunk-slice  (λ (c i k) (substring c i (+ i k)))
   #:chunk-append (λ (cs) (apply string-append cs))
   #:elem-width   1
-  ;; Eq class members
+  ;; equality class members
   #:chunk=?      string=?
   #:elem=?       char=?
   #:elem-hash    char->integer)

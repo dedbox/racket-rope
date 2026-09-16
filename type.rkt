@@ -28,7 +28,7 @@
                              (~once (~seq #:chunk-slice  chunk-slice:id+fun3))
                              (~once (~seq #:chunk-append chunk-append:id+fun1))
                              (~once (~seq #:elem-width   elem-width:nat+id+fun2))
-                             ;; Eq instance members
+                             ;; equality instance members
                              (~optional (~seq #:chunk=?         chunk=?-arg:id+fun2))
                              (~optional (~seq #:chunk-overlap=? chunk-overlap=?-arg:id+fun5))
                              (~optional (~seq #:elem=?          elem=?-arg:id+fun2))
@@ -38,7 +38,7 @@
 
   ;; descriptor
   #:with (~var rope:*)          (mk* "rope:~a")
-  #:with (~var rope:*:Eq)       (mk* "rope:~a:Eq")
+  #:with (~var rope:*:equality) (mk* "rope:~a:equality")
 
   ;; type primitives
   #:with *-chunk?               (mk* "~a-chunk?")
@@ -63,7 +63,7 @@
   #:with make-*-rope-node       (mk* "make-~a-rope-node")
   #:with make-empty-*-rope      (mk* "make-empty-~a-rope")
 
-  ;; Eq members
+  ;; equality instance members
   #:with *-chunk=?              (mk* "~a-chunk=?")
   #:with *-elem=?               (mk* "~a-elem=?")
   #:with *-elem-hash            (mk* "~a-elem-hash")
@@ -129,17 +129,18 @@
                            #'*-rope-node))
 
     ;; -------------------------------------------------------------------------
-    ;; Eq Instance Descriptor
+    ;; Equality Instance Descriptor
     ;; -------------------------------------------------------------------------
 
-    (define-syntax rope:*:Eq (rope-instance-descriptor
-                              (list (cons 'chunk=?         #'*-chunk=?)
-                                    (cons 'chunk-overlap=? #'*-chunk-overlap=?)
-                                    (cons 'elem=?          #'*-elem=?)
-                                    (cons 'elem-hash       #'*-elem-hash)
-                                    (cons 'chunk-hash      #'*-chunk-hash)
-                                    (cons 'node-hash       #'*-node-hash)
-                                    (cons 'rope=?          #'*-rope=?))))
+    (define-syntax rope:*:equality
+      (rope-instance-descriptor
+       (list (cons 'chunk=?         #'*-chunk=?)
+             (cons 'chunk-overlap=? #'*-chunk-overlap=?)
+             (cons 'elem=?          #'*-elem=?)
+             (cons 'elem-hash       #'*-elem-hash)
+             (cons 'chunk-hash      #'*-chunk-hash)
+             (cons 'node-hash       #'*-node-hash)
+             (cons 'rope=?          #'*-rope=?))))
 
     ;; -------------------------------------------------------------------------
     ;; Chunk Operations

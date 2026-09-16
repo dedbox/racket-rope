@@ -63,12 +63,12 @@
             (or (syntax-local-value type-desc-id (λ () #f))
                 (raise-syntax-error 'op-id "expected a rope type descriptor"
                                     this-syntax #'inner-τ)))
-          (define Eq-desc-id (format-id #'inner-τ "rope:~a:Eq" #'inner-τ))
-          (define Eq-desc
-            (or (syntax-local-value Eq-desc-id (λ () #f))
-                (raise-syntax-error 'op-id "expected an Eq instance")))
-          (define (lookup-Eq-member x)
-            (cdr (assoc x (rope-instance-descriptor-members Eq-desc))))]
+          (define equality-desc-id (format-id #'inner-τ "rope:~a:equality" #'inner-τ))
+          (define equality-desc
+            (or (syntax-local-value equality-desc-id (λ () #f))
+                (raise-syntax-error 'op-id "expected an equality instance")))
+          (define (lookup-equality-member x)
+            (cdr (assoc x (rope-instance-descriptor-members equality-desc))))]
 
     ;; chunk operations
     #:with *-chunk?          (rope-type-descriptor-chunk?         type-desc)
@@ -88,13 +88,13 @@
     #:with *-make-node       (rope-type-descriptor-make-node      type-desc)
 
     ;; hashing / equality
-    #:with *-chunk=?         (lookup-Eq-member 'chunk=?)
-    #:with *-chunk-overlap=? (lookup-Eq-member 'chunk-overlap=?)
-    #:with *-elem=?          (lookup-Eq-member 'elem=?)
-    #:with *-elem-hash       (lookup-Eq-member 'elem-hash)
-    #:with *-chunk-hash      (lookup-Eq-member 'chunk-hash)
-    #:with *-node-hash       (lookup-Eq-member 'node-hash)
-    #:with *-rope=?          (lookup-Eq-member 'rope=?)
+    #:with *-chunk=?         (lookup-equality-member 'chunk=?)
+    #:with *-chunk-overlap=? (lookup-equality-member 'chunk-overlap=?)
+    #:with *-elem=?          (lookup-equality-member 'elem=?)
+    #:with *-elem-hash       (lookup-equality-member 'elem-hash)
+    #:with *-chunk-hash      (lookup-equality-member 'chunk-hash)
+    #:with *-node-hash       (lookup-equality-member 'node-hash)
+    #:with *-rope=?          (lookup-equality-member 'rope=?)
 
     ;; Rebind the temporary identifiers to the corresponding originals.
     #:with τ                   #'inner-τ

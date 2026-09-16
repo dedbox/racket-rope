@@ -14,4 +14,4 @@
   #:chunk-append (λ (cs) (apply string-append cs))
   #:elem-width   1)
 
-;; (define-rope-Eq-instance string3)
+;; (define-rope-equality-instance string3)

@@ -13,7 +13,7 @@
   #:chunk-slice  (λ (c i k) (subbytes c i (+ i k)))
   #:chunk-append (λ (cs) (apply bytes-append cs))
   #:elem-width   1
-  ;; Eq class members
+  ;; equality class members
   #:chunk=?      bytes=?
   #:elem=?       =
   #:elem-hash    values)
