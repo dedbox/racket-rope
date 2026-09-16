@@ -1,75 +1,131 @@
 #lang racket/base
 
-;; (require (for-syntax racket/base
-;;                      racket/syntax
-;;                      syntax/parse
-;;                      "./private/class.rkt"
-;;                      "./private/stxclasses.rkt"
-;;                      "./private/type.rkt")
-;;          syntax/parse/define
-;;          "./private/hash.rkt")
+(require (for-syntax racket/base
+                     racket/syntax
+                     rope2/descriptors
+                     rope2/stxclasses
+                     syntax/parse)
+         syntax/parse/define)
 
-;; (provide (all-defined-out))
+(provide (all-defined-out))
 
-;; (define-syntax-parse-rule (define-rope-Eq-instance type-id:id
-;;                             (~alt (~optional (~seq #:chunk=? chunk=?:id+fun2))
-;;                                   (~optional (~seq #:chunk-overlap=? chunk-overlap=?:id+fun5))
-;;                                   (~optional (~seq #:elem=? elem=?:id+fun2))
-;;                                   (~optional (~seq #:elem-hash elem-hash:id+fun1)))
-;;                             ...)
-;;   #:do [(define (mk* fmt) (format-id (attribute type-id) fmt (syntax-e #'type-id)))
+(define-syntax-parse-rule (define-rope-class class-id:id
+                            ([member:id stxclass:id (~optional #:optional)] ...)
+                            body ...)
+  #:with (~var rope:%) (format-id #'class-id "rope:~a" (syntax-e #'class-id))
+  (define-syntax rope:%
+    (rope-class-descriptor (list (cons #'member #'stxclass) ...) #'(body ...))))
 
-;;         (define desc-id (format-id (attribute type-id) "rope:~a" (syntax-e #'type-id)))
-;;         (define desc
-;;           (or (syntax-local-value desc-id (λ () #f))
-;;               (raise-syntax-error 'define-rope-Eq-instance "expected a rope type descriptor"
-;;                                   this-syntax #'type-id)))]
+(define-syntax-parse-rule (define-rope-class-instance type-id:id class-id:id
+                            (~seq kw:keyword kw-val:expr) ...)
+  #:do [(define type-desc-id (format-id #'type-id "rope:~a" (syntax-e #'type-id)))
+        (define type-desc
+          (or (syntax-local-value type-desc-id (λ () #f))
+              (raise-syntax-error 'define-rope-class-instance "expected a rope type descriptor"
+                                  this-syntax #'type-id)))
 
-;;   ;; rope class descriptor
-;;   #:with (~var rope:*:%)   (mk* "rope:~a:Eq")
+        (define equality-desc-id (format-id #'type-id "~a:equality" type-desc-id))
+        (define equality-desc
+          (or (syntax-local-value equality-desc-id (λ () #f))
+              (raise-syntax-error 'define-rope-class-instance "expected an equality instance"
+                                  this-syntax #'type-id)))
+        (define class-desc-id (format-id #'class-id "~a:~a" type-desc-id (syntax-e #'class-id)))
+        (define class-desc
+          (or (syntax-local-value class-desc-id (λ () #f))
+              (raise-syntax-error 'define-rope-class-instance "expected a rope class descriptor")))
 
-;;   ;; type primitives
-;;   #:with *-chunk?       (rope-type-descriptor-chunk?       desc)
-;;   #:with *-chunk-limit  (rope-type-descriptor-chunk-limit  desc)
-;;   #:with *-chunk-empty  (rope-type-descriptor-chunk-empty  desc)
-;;   #:with *-chunk-length (rope-type-descriptor-chunk-length desc)
-;;   #:with *-chunk-width  (rope-type-descriptor-chunk-width  desc)
-;;   #:with *-chunk-ref    (rope-type-descriptor-chunk-ref    desc)
-;;   #:with *-chunk-slice  (rope-type-descriptor-chunk-slice  desc)
-;;   #:with *-chunk-append (rope-type-descriptor-chunk-append desc)
-;;   #:with *-elem-width   (rope-type-descriptor-elem-width   desc)
-;;   #:with *-make-leaf    (rope-type-descriptor-make-leaf    desc)
-;;   #:with *-make-node    (rope-type-descriptor-make-node    desc)
+        (define (lookup-equality-member x)
+          (cdr (assoc x (rope-instance-descriptor-members equality-desc))))
 
-;;   ;; hashing / equality
-;;   #:with *-chunk-hash             (rope-type-descriptor-chunk-hash        desc)
-;;   #:with *-node-hash              (rope-type-descriptor-node-hash         desc)
-;;   #:with *-rope-content=?         (rope-type-descriptor-rope-content=?    desc)
+        (define (keyword-syntax->symbol kw-stx)
+          (string->symbol (keyword->string (syntax-e kw-stx))))
 
-;;   ;; class primitives
-;;   #:with *-chunk=?         (mk* "~a-chunk=?")
-;;   #:with *-chunk-overlap=? (mk* "~a-chunk-overlap=?")
-;;   #:with *-elem=?          (mk* "~a-elem=?")
-;;   #:with *-elem-hash       (mk* "~a-elem-hash")
+        ;; class-supplied primitive declarations
+        (define (lookup-class-primitive x)
+          (cdr (assoc x (rope-class-descriptor-primitives class-desc))))
 
-;;   (begin
+        ;; instance-supplied primitive bindings
+        (define instance-members
+          (map cons (map keyword-syntax->symbol (attribute kw)) (attribute kw-val)))
 
-;;     ;; -------------------------------------------------------------------------
-;;     ;; Rope Class Descriptor
-;;     ;; -------------------------------------------------------------------------
+        (define (lookup-instance-member x)
+          (cdr (assoc x instance-members)))]
 
-;;     (define-syntax rope:*:% (rope-class-descriptor
-;;                              (list (cons 'x-chunk=?         #'*-chunk=?)
-;;                                    (cons 'x-chunk-overlap=? #'*-chunk-overlap=?)
-;;                                    (cons 'x-elem=?          #'*-elem=?)
-;;                                    (cons 'x-elem-hash       #'*-elem-hash))))
+  ;; type members
+  #:with *-chunk?          (rope-type-descriptor-chunk?         type-desc)
+  #:with *-chunk-limit     (rope-type-descriptor-chunk-limit    type-desc)
+  #:with *-chunk-empty     (rope-type-descriptor-chunk-empty    type-desc)
+  #:with *-chunk-length    (rope-type-descriptor-chunk-length   type-desc)
+  #:with *-chunk-width     (rope-type-descriptor-chunk-width    type-desc)
+  #:with *-chunk-ref       (rope-type-descriptor-chunk-ref      type-desc)
+  #:with *-chunk-slice     (rope-type-descriptor-chunk-slice    type-desc)
+  #:with *-chunk-append    (rope-type-descriptor-chunk-append   type-desc)
+  #:with *-elem-width      (rope-type-descriptor-elem-width     type-desc)
+  #:with *-make-leaf       (rope-type-descriptor-make-leaf      type-desc)
+  #:with *-make-node       (rope-type-descriptor-make-node      type-desc)
+  #:with *-chunk=?         (lookup-equality-member 'chunk=?)
+  #:with *-chunk-overlap=? (lookup-equality-member 'chunk-overlap=?)
+  #:with *-elem=?          (lookup-equality-member 'elem=?)
+  #:with *-elem-hash       (lookup-equality-member 'elem-hash)
+  #:with *-chunk-hash      (lookup-equality-member 'chunk-hash)
+  #:with *-node-hash       (lookup-equality-member 'node-hash)
+  #:with *-rope=?          (lookup-equality-member 'rope=?)
 
-;;     (define (*-chunk=? c d) ((~? chunk=? equal?) c d))
-;;     (define (*-elem=? x y) ((~? elem=? equal?) x y))
-;;     (define (*-elem-hash x) ((~? elem-hash equal-hash-code) x))
+  ;; How to bind the current class' primitives in the body?
+  ;;
+  ;; For example, the total-order class should declare these bindings:
+  ;;
+  ;; #:with (~var elem<? id+fun2) (lookup-instance-member 'elem<?)
+  ;; #:with (~var elem>? id+fun2) (lookup-instance-member 'elem>?)
+  ;; #:with ((~optional (~var chunk-compare-overlap id+fun5)))
+  ;; (let ([member (lookup-instance-member 'chunk-compare-overlap)])
+  ;;   (if member (list member) null))
 
-;;     (define (*-chunk-overlap=? c d ic id k)
-;;       (~? (chunk-overlap=? c d ic id k)
-;;           (for/and ([i (in-range k)])
-;;             (*-elem=? (*-chunk-ref c (+ ic i))
-;;                       (*-chunk-ref d (+ id i))))))))
+  (begin
+    ;; Class body goes here. For example, the total-order class should look
+    ;; like this (where type-id and class-id are the ones given above in the
+    ;; instance definition header):
+    ;;
+    ;; (define (*-elem<? x y) (elem<? x y))
+    ;; (define (*-elem>? x y) (elem>? x y))
+
+    ;; (define *-chunk-compare-overlap
+    ;;   (~? chunk-compare-overlap
+    ;;       (λ (c d ic id k)
+    ;;         (let loop ([i 0])
+    ;;           (cond [(= i k) '=]
+    ;;                 [(*-elem<? (*-chunk-ref c (+ ic i) (*-chunk-ref d (+id i)))) '<]
+    ;;                 [(*-elem>? (*-chunk-ref c (+ ic i) (*-chunk-ref d (+id i)))) '>]
+    ;;                 [else (loop (add1 i))])))))
+
+    ;; (define-class-op (rope-compare-with _ _ f:id+fun5 a b)
+    ;;   (let loop ([cur-a (rope->mutable-cursor a)]
+    ;;              [cur-b (rope->mutable-cursor b)])
+    ;;     (cond
+    ;;       [(and (not cur-a) (not cur-b)) '=]
+    ;;       [(not cur-a) '<]
+    ;;       [(not cur-b) '>]
+    ;;       [else
+    ;;        (define la (mutable-cursor-leaf cur-a))
+    ;;        (define lb (mutable-cursor-leaf cur-b))
+    ;;        (define pa (mutable-cursor-rel-idx cur-a))
+    ;;        (define pb (mutable-cursor-rel-idx cur-b))
+    ;;        (define k (min (- (rope-length la) pa) (- (rope-length lb) pb)))
+    ;;        (define result (*-chunk-compare-overlap (rope-leaf-chunk la) (rope-leaf-chunk lb) pa pb k))
+    ;;        (if (not (eq? result '=))
+    ;;            result
+    ;;            (loop (cursor-advance! cur-a k) (cursor-advance! cur-b k)))])))
+
+    ;; (define-class-op (rope-compare τ κ a b) (rope-compare-with τ κ chunk-compare-overlap a b))
+    ;; (define-class-op (rope<? τ κ a b) (eq? (rope-compare τ κ a b) '<))
+    ;; (define-class-op (rope>? τ κ a b) (eq? (rope-compare τ κ a b) '>))
+    ;; (define-class-op (rope<=? τ κ a b) (or (rope=? τ a b) (rope<? τ κ a b)))
+    ;; (define-class-op (rope>=? τ κ a b) (or (rope=? τ a b) (rope>? τ κ a b)))
+
+    ;; (define (*-rope-compare-with f a b) (rope-compare-with type-id class-id f a b))
+    ;; (define (*-rope-compare a b) (rope-compare type-id class-id a b))
+    ;; (define (*-rope<? a b) (rope<? type-id class-id a b))
+    ;; (define (*-rope>? a b) (rope>? type-id class-id a b))
+    ;; (define (*-rope<=? a b) (rope<=? type-id class-id a b))
+    ;; (define (*-rope>=? a b) (rope>=? type-id class-id a b))
+    ))
