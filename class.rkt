@@ -9,16 +9,38 @@
 
 (provide (all-defined-out))
 
+(begin-for-syntax
+  (define-syntax-class field-spec
+    #:attributes (name stxclass default has-default? optional?)
+    (pattern (name:id stxclass:id
+                      (~optional (~and #:optional opt-kw))
+                      (~optional (~seq #:default default-expr:expr)))
+             #:attr has-default? (if (attribute default-expr) #t #f)
+             #:attr default      (or (attribute default-expr) #'#f)
+             #:attr optional?    (if (attribute opt-kw) #t #f)))
+
+  (define (field-spec->kw-clause name stxclass has-default? default optional?)
+    (define kw (datum->syntax name (string->keyword (symbol->string (syntax-e name)))))
+    (define pat #`(~var #,name #,stxclass))
+    (cond
+      [has-default? #`(~optional (~seq #,kw #,pat) #:default ([#,name #,default]))]
+      [optional?    #`(~optional (~seq #,kw #,pat))]
+      [else         #`(#,kw #,pat)])))
+
 ;; -----------------------------------------------------------------------------
 ;; Class
 ;; -----------------------------------------------------------------------------
 
-(define-syntax-parse-rule (define-rope-class class-id:id
-                            ([member:id stxclass:id (~optional #:optional)] ...)
-                            body ...)
+(define-syntax-parse-rule (define-rope-class class-id:id (field:field-spec ...) body ...)
   #:with (~var rope:%) (format-id #'class-id "rope:~a" (syntax-e #'class-id))
+  #:with (kw-clause ...) (for/list ([name         (in-list (attribute field.name))]
+                                    [stxclass     (in-list (attribute field.stxclass))]
+                                    [has-default? (in-list (attribute field.has-default?))]
+                                    [default      (in-list (attribute field.default))]
+                                    [optional?    (in-list (attribute field.optional?))])
+                           (field-spec->kw-clause name stxclass has-default? default optional?))
   (define-syntax rope:%
-    (rope-class-descriptor (list (cons #'member #'stxclass) ...) #'(body ...))))
+    (rope-class-descriptor (list (list #'member #'stxclass field.optional?) ...) #'(body ...))))
 
 ;; -----------------------------------------------------------------------------
 ;; Instance
@@ -71,15 +93,34 @@
           (string->symbol (keyword->string (syntax-e kw-stx))))
 
         ;; class-supplied primitive declarations
+        (define members (rope-class-descriptor-primitives class-desc))
+
         (define (lookup-class-primitive x)
-          (cdr (assoc x (rope-class-descriptor-primitives class-desc))))
+          (cdr (assoc x members)))
 
         ;; instance-supplied primitive bindings
         (define instance-members
           (map cons (map keyword-syntax->symbol (attribute kw)) (attribute kw-val)))
 
         (define (lookup-instance-member x)
-          (cdr (assoc x instance-members)))]
+          (define m (assoc x instance-members))
+          (and m (cdr m)))
+
+        (for ([m (in-list members)])
+          (define name (car m))
+          (define opt? (caddr m))
+          (unless (or opt? (lookup-instance-member (syntax-e name)))
+            (raise-syntax-error 'define-rope-class-instance
+                                (format "missing required member ~a for class ~a"
+                                        (syntax-e name) (syntax-e #'class-id)))))
+
+        (define with-clauses
+          (for/list ([m (in-list members)]
+                     #:do [(define val (lookup-instance-member (syntax-e (car m))))]
+                     #:when val)
+            #`((~@ #:with (~var #,(car m) #,(cadr m)) #,val))))]
+
+  #:with (member-clause ...) with-clauses
 
   ;; type members
   #:with *-chunk?          (rope-type-descriptor-chunk?         type-desc)
@@ -100,6 +141,8 @@
   #:with *-chunk-hash      (lookup-equality-member 'chunk-hash)
   #:with *-node-hash       (lookup-equality-member 'node-hash)
   #:with *-rope=?          (lookup-equality-member 'rope=?)
+
+  ;; member-clause ...
 
   #:with (body* ...) (subst-placeholders (rope-class-descriptor-body class-desc) #'type-id)
 
