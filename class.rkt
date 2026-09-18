@@ -17,15 +17,7 @@
                       (~optional (~seq #:default default-expr:expr)))
              #:attr has-default? (if (attribute default-expr) #t #f)
              #:attr default      (or (attribute default-expr) #'#f)
-             #:attr optional?    (if (attribute opt-kw) #t #f)))
-
-  (define (field-spec->kw-clause name stxclass has-default? default optional?)
-    (define kw (datum->syntax name (string->keyword (symbol->string (syntax-e name)))))
-    (define pat #`(~var #,name #,stxclass))
-    (cond
-      [has-default? #`(~optional (~seq #,kw #,pat) #:default ([#,name #,default]))]
-      [optional?    #`(~optional (~seq #,kw #,pat))]
-      [else         #`(#,kw #,pat)])))
+             #:attr optional?    (if (attribute opt-kw) #'#t #'#f))))
 
 ;; -----------------------------------------------------------------------------
 ;; Class
@@ -33,14 +25,9 @@
 
 (define-syntax-parse-rule (define-rope-class class-id:id (field:field-spec ...) body ...)
   #:with (~var rope:%) (format-id #'class-id "rope:~a" (syntax-e #'class-id))
-  #:with (kw-clause ...) (for/list ([name         (in-list (attribute field.name))]
-                                    [stxclass     (in-list (attribute field.stxclass))]
-                                    [has-default? (in-list (attribute field.has-default?))]
-                                    [default      (in-list (attribute field.default))]
-                                    [optional?    (in-list (attribute field.optional?))])
-                           (field-spec->kw-clause name stxclass has-default? default optional?))
   (define-syntax rope:%
-    (rope-class-descriptor (list (list #'member #'stxclass field.optional?) ...) #'(body ...))))
+    (rope-class-descriptor (list (list #'field.name #'field.stxclass field.optional?) ...)
+                           #'(body ...))))
 
 ;; -----------------------------------------------------------------------------
 ;; Instance
@@ -60,12 +47,9 @@
          (if (string=? new-name old-name)
              stx
              (datum->syntax stx (string->symbol new-name) stx stx))]
-        [(syntax? stx)
-         (datum->syntax stx (loop (syntax-e stx)) stx stx)]
-        [(pair? stx)
-         (cons (loop (car stx)) (loop (cdr stx)))]
-        [(vector? stx)
-         (list->vector (map loop (vector->list stx)))]
+        [(syntax? stx) (datum->syntax stx (loop (syntax-e stx)) stx stx)]
+        [(pair?   stx) (cons (loop (car stx)) (loop (cdr stx)))]
+        [(vector? stx) (list->vector (map loop (vector->list stx)))]
         [else stx]))))
 
 (define-syntax-parse-rule (define-rope-class-instance type-id:id class-id:id
@@ -81,126 +65,58 @@
           (or (syntax-local-value equality-desc-id (λ () #f))
               (raise-syntax-error 'define-rope-class-instance "expected an equality instance"
                                   this-syntax #'type-id)))
+
         (define class-desc-id (format-id #'class-id "rope:~a" (syntax-e #'class-id)))
         (define class-desc
           (or (syntax-local-value class-desc-id (λ () #f))
-              (raise-syntax-error 'define-rope-class-instance "expected a rope class descriptor")))
-
-        (define (lookup-equality-member x)
-          (cdr (assoc x (rope-instance-descriptor-members equality-desc))))
+              (raise-syntax-error 'define-rope-class-instance "expected a rope class descriptor"
+                                  this-syntax #'class-id)))
 
         (define (keyword-syntax->symbol kw-stx)
           (string->symbol (keyword->string (syntax-e kw-stx))))
 
-        ;; class-supplied primitive declarations
-        (define members (rope-class-descriptor-primitives class-desc))
-
-        (define (lookup-class-primitive x)
-          (cdr (assoc x members)))
+        (define (symbol->keyword-syntax ctx x)
+          (datum->syntax ctx (string->keyword (symbol->string x)) ctx ctx))
 
         ;; instance-supplied primitive bindings
         (define instance-members
           (map cons (map keyword-syntax->symbol (attribute kw)) (attribute kw-val)))
 
-        (define (lookup-instance-member x)
-          (define m (assoc x instance-members))
-          (and m (cdr m)))
-
-        (for ([m (in-list members)])
-          (define name (car m))
-          (define opt? (caddr m))
-          (unless (or opt? (lookup-instance-member (syntax-e name)))
+        (for ([prim (in-list (rope-class-descriptor-primitives class-desc))])
+          (define name      (car prim))
+          (define required? (not (caddr prim)))
+          (when (and required? (not (assoc (syntax-e name) instance-members)))
             (raise-syntax-error 'define-rope-class-instance
                                 (format "missing required member ~a for class ~a"
-                                        (syntax-e name) (syntax-e #'class-id)))))
+                                        (syntax-e name) (syntax-e #'class-id))
+                                this-syntax)))
 
-        (define with-clauses
-          (for/list ([m (in-list members)]
-                     #:do [(define val (lookup-instance-member (syntax-e (car m))))]
-                     #:when val)
-            #`((~@ #:with (~var #,(car m) #,(cadr m)) #,val))))]
+        (define formals
+          (for/list ([prim (in-list (rope-class-descriptor-primitives class-desc))])
+            (define name (car prim))
+            (define stxclass (cadr prim))
+            (define optional? (caddr prim))
+            (define kw (symbol->keyword-syntax name (syntax-e name)))
+            (quasisyntax/loc name
+              (#,(if optional? #'~optional #'~once) (~seq #,kw (~var #,name #,stxclass))))))
 
-  #:with (member-clause ...) with-clauses
+        (define supplied
+          (for/list ([prim (in-list (rope-class-descriptor-primitives class-desc))]
+                     #:when (assoc (syntax-e (car prim)) instance-members))
+            prim))
 
-  ;; type members
-  #:with *-chunk?          (rope-type-descriptor-chunk?         type-desc)
-  #:with *-chunk-limit     (rope-type-descriptor-chunk-limit    type-desc)
-  #:with *-chunk-empty     (rope-type-descriptor-chunk-empty    type-desc)
-  #:with *-chunk-length    (rope-type-descriptor-chunk-length   type-desc)
-  #:with *-chunk-width     (rope-type-descriptor-chunk-width    type-desc)
-  #:with *-chunk-ref       (rope-type-descriptor-chunk-ref      type-desc)
-  #:with *-chunk-slice     (rope-type-descriptor-chunk-slice    type-desc)
-  #:with *-chunk-append    (rope-type-descriptor-chunk-append   type-desc)
-  #:with *-elem-width      (rope-type-descriptor-elem-width     type-desc)
-  #:with *-make-leaf       (rope-type-descriptor-make-leaf      type-desc)
-  #:with *-make-node       (rope-type-descriptor-make-node      type-desc)
-  #:with *-chunk=?         (lookup-equality-member 'chunk=?)
-  #:with *-chunk-overlap=? (lookup-equality-member 'chunk-overlap=?)
-  #:with *-elem=?          (lookup-equality-member 'elem=?)
-  #:with *-elem-hash       (lookup-equality-member 'elem-hash)
-  #:with *-chunk-hash      (lookup-equality-member 'chunk-hash)
-  #:with *-node-hash       (lookup-equality-member 'node-hash)
-  #:with *-rope=?          (lookup-equality-member 'rope=?)
+        (define actuals
+          (for/list ([prim (in-list supplied)])
+            (define name (car prim))
+            (define kw (symbol->keyword-syntax name (syntax-e name)))
+            (define val (cdr (assoc (syntax-e name) instance-members)))
+            (cons kw val)))]
 
-  ;; member-clause ...
-
+  #:with (formal ...) formals
+  #:with ((actual-kw . actual-val) ...) actuals
   #:with (body* ...) (subst-placeholders (rope-class-descriptor-body class-desc) #'type-id)
+  #:with inst-id (generate-temporary 'instantiate)
 
-  ;; How to bind the current class' primitives in the body?
-  ;;
-  ;; For example, the total-order class should declare these bindings:
-  ;;
-  ;; #:with (~var elem<? id+fun2) (lookup-instance-member 'elem<?)
-  ;; #:with (~var elem>? id+fun2) (lookup-instance-member 'elem>?)
-  ;; #:with ((~optional (~var chunk-compare-overlap id+fun5)))
-  ;; (let ([member (lookup-instance-member 'chunk-compare-overlap)])
-  ;;   (if member (list member) null))
-
-  (begin body* ...
-    ;; Class body goes here. For example, the total-order class should look
-    ;; like this (where type-id and class-id are the ones given above in the
-    ;; instance definition header):
-    ;;
-    ;; (define (*-elem<? x y) (elem<? x y))
-    ;; (define (*-elem>? x y) (elem>? x y))
-
-    ;; (define *-chunk-compare-overlap
-    ;;   (~? chunk-compare-overlap
-    ;;       (λ (c d ic id k)
-    ;;         (let loop ([i 0])
-    ;;           (cond [(= i k) '=]
-    ;;                 [(*-elem<? (*-chunk-ref c (+ ic i) (*-chunk-ref d (+id i)))) '<]
-    ;;                 [(*-elem>? (*-chunk-ref c (+ ic i) (*-chunk-ref d (+id i)))) '>]
-    ;;                 [else (loop (add1 i))])))))
-
-    ;; (define-class-op (rope-compare-with _ _ f:id+fun5 a b)
-    ;;   (let loop ([cur-a (rope->mutable-cursor a)]
-    ;;              [cur-b (rope->mutable-cursor b)])
-    ;;     (cond
-    ;;       [(and (not cur-a) (not cur-b)) '=]
-    ;;       [(not cur-a) '<]
-    ;;       [(not cur-b) '>]
-    ;;       [else
-    ;;        (define la (mutable-cursor-leaf cur-a))
-    ;;        (define lb (mutable-cursor-leaf cur-b))
-    ;;        (define pa (mutable-cursor-rel-idx cur-a))
-    ;;        (define pb (mutable-cursor-rel-idx cur-b))
-    ;;        (define k (min (- (rope-length la) pa) (- (rope-length lb) pb)))
-    ;;        (define result (*-chunk-compare-overlap (rope-leaf-chunk la) (rope-leaf-chunk lb) pa pb k))
-    ;;        (if (not (eq? result '=))
-    ;;            result
-    ;;            (loop (cursor-advance! cur-a k) (cursor-advance! cur-b k)))])))
-
-    ;; (define-class-op (rope-compare τ κ a b) (rope-compare-with τ κ chunk-compare-overlap a b))
-    ;; (define-class-op (rope<? τ κ a b) (eq? (rope-compare τ κ a b) '<))
-    ;; (define-class-op (rope>? τ κ a b) (eq? (rope-compare τ κ a b) '>))
-    ;; (define-class-op (rope<=? τ κ a b) (or (rope=? τ a b) (rope<? τ κ a b)))
-    ;; (define-class-op (rope>=? τ κ a b) (or (rope=? τ a b) (rope>? τ κ a b)))
-
-    ;; (define (*-rope-compare-with f a b) (rope-compare-with type-id class-id f a b))
-    ;; (define (*-rope-compare a b) (rope-compare type-id class-id a b))
-    ;; (define (*-rope<? a b) (rope<? type-id class-id a b))
-    ;; (define (*-rope>? a b) (rope>? type-id class-id a b))
-    ;; (define (*-rope<=? a b) (rope<=? type-id class-id a b))
-    ;; (define (*-rope>=? a b) (rope>=? type-id class-id a b))
-    ))
+  (begin
+    (define-syntax-parse-rule (inst-id (~alt formal ...) (... ...)) (begin body* ...))
+    (inst-id (~@ actual-kw actual-val) ...)))
