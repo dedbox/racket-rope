@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require racket/syntax
+(require racket/list
+         racket/syntax
          syntax/parse
          (for-template racket/base))
 
@@ -103,23 +104,82 @@
            #:attr callable #'(λ () l))
   (pattern (~and callable (~or :id (~var _ (fun 0))))))
 
-;; -----------------------------------------------------------------------------
-;; Operation Arguments
-;; -----------------------------------------------------------------------------
+;; ;; -----------------------------------------------------------------------------
+;; ;; Operation Name
+;; ;; -----------------------------------------------------------------------------
 
-(define-splicing-syntax-class op-args
-  #:description "operation arguments"
-  ;; Arguments ending with ...
-  (pattern (~seq arg:id ... last-arg:id (~datum ...))
-           #:with (inner-arg ...) (generate-temporaries #'(arg ...))
-           #:with inner-last      (generate-temporary #'last-arg)
-           #:with (inner-pattern ...) #'(inner-arg ... inner-last (... ...))
-           ;; The left and right sides of the inner #:with clause
-           #:with rebind-pattern  #'(arg ... last-arg (... ...))
-           #:with rebind-value    #'(inner-arg ... inner-last (... ...)))
-  ;; Fixed arity arguments
-  (pattern (~seq arg:id ...)
-           #:with (inner-arg ...)     (generate-temporaries #'(arg ...))
-           #:with (inner-pattern ...) #'(inner-arg ...)
-           #:with rebind-pattern      #'(arg ...)
-           #:with rebind-value        #'(inner-arg ...)))
+;; (define-syntax-class op*
+;;   #:attributes (sym stx id)
+;;   (pattern (x:id . id:id)
+;;            #:with sym (syntax/loc (attribute id) 'x)
+;;            #:with stx (syntax/loc (attribute id) #'id)))
+
+;; ;; -----------------------------------------------------------------------------
+;; ;; Operation Arguments
+;; ;; -----------------------------------------------------------------------------
+
+;; ;; Splits an argument token that may use syntax-parse's "name:class" colon
+;; ;; shorthand. Returns (values name-stx class-stx-or-#f). The class part
+;; ;; stays a syntax object (never reduced to a bare symbol): its scope is
+;; ;; what makes it resolve to the real syntax-class binding (e.g. id+fun5)
+;; ;; wherever the result is later spliced, and that scope traces back to
+;; ;; whatever module the argument was originally written in (e.g.
+;; ;; total-order.rkt, which requires rope2/stxclasses) -- not to whatever
+;; ;; module happens to expand op-args itself.
+;; (define (split-op-arg-id id)
+;;   (define str (symbol->string (syntax-e id)))
+;;   (define idx (for/first ([i (in-range (string-length str))]
+;;                           #:when (char=? (string-ref str i) #\:))
+;;                 i))
+;;   (if idx
+;;       (values (datum->syntax id (string->symbol (substring str 0 idx)) id id)
+;;               (datum->syntax id (string->symbol (substring str (add1 idx))) id id))
+;;       (values id #f)))
+
+;; ;; A single identifier can only carry one scope, so a freshly generated
+;; ;; name (needed to avoid colliding with op-args' own pattern variable)
+;; ;; and the original class name's scope (needed for it to resolve) can't
+;; ;; be remerged into one "name:class" token the way the input was
+;; ;; written. Explicit ~var takes them as two separate syntax objects
+;; ;; instead -- the same technique class.rkt's own member-binding
+;; ;; construction uses for exactly this reason.
+;; (define (op-arg-inner-pattern inner-name cls)
+;;   (if cls
+;;       #`(~var #,inner-name #,cls)
+;;       inner-name))
+
+;; (define-splicing-syntax-class op-args
+;;   #:description "operation arguments"
+;;   ;; Arguments ending with ...
+;;   (pattern (~seq arg:id ... last-arg:id (~datum ...))
+;;            #:do [(define-values (names classes)
+;;                    (for/lists (ns cs) ([a (in-list (append (attribute arg)
+;;                                                            (list (attribute last-arg))))])
+;;                      (split-op-arg-id a)))]
+;;            #:with (name ...) (reverse (cdr (reverse names)))
+;;            #:with last-name  (last names)
+;;            #:with (inner-name ...) (generate-temporaries (reverse (cdr (reverse names))))
+;;            #:with inner-last-name  (generate-temporary (last names))
+;;            #:with (inner-pattern ...)
+;;              (append
+;;               (for/list ([in-name (in-list (syntax->list #'(inner-name ...)))]
+;;                          [cls (in-list (reverse (cdr (reverse classes))))])
+;;                 (op-arg-inner-pattern in-name cls))
+;;               (list (op-arg-inner-pattern #'inner-last-name (last classes)))
+;;               (list #'(... ...)))
+;;            ;; The left and right sides of the inner #:with clause
+;;            #:with rebind-pattern  #'(name ... last-name (... ...))
+;;            #:with rebind-value    #'(inner-name ... inner-last-name (... ...)))
+;;   ;; Fixed arity arguments
+;;   (pattern (~seq arg:id ...)
+;;            #:do [(define-values (names classes)
+;;                    (for/lists (ns cs) ([a (in-list (attribute arg))])
+;;                      (split-op-arg-id a)))]
+;;            #:with (name ...)       names
+;;            #:with (inner-name ...) (generate-temporaries names)
+;;            #:with (inner-pattern ...)
+;;              (for/list ([in-name (in-list (syntax->list #'(inner-name ...)))]
+;;                         [cls (in-list classes)])
+;;                (op-arg-inner-pattern in-name cls))
+;;            #:with rebind-pattern      #'(name ...)
+;;            #:with rebind-value        #'(inner-name ...)))
