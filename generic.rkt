@@ -1,5 +1,15 @@
 #lang racket/base
 
+(require rope2/generic/define)
+
+(provide (all-defined-out))
+
+(define-type-op (rope-chunk? _ x) (*-chunk? x))
+(define-type-op (make-rope-node τ c) (rope-chunk? τ c))
+
+
+
+
 ;; (require (for-syntax racket/base
 ;;                      syntax/parse)
 ;;          racket/sequence

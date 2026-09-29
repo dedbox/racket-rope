@@ -1,5 +1,60 @@
 #lang racket/base
 
+(require (for-syntax racket/base
+                     racket/syntax
+                     rope2/stxclasses
+                     syntax/parse
+                     "./private/type.rkt"
+                     "./private/star.rkt")
+         rope2/generic
+         rope2/rope
+         syntax/parse/define)
+
+(provide (for-syntax (all-defined-out))
+         (all-defined-out))
+
+(begin-for-syntax
+  (define current-τ (make-parameter #f))
+
+  (define-syntax-class type-op
+    #:attributes (sym id)
+    (pattern x:id
+             #:with sym (syntax/loc this-syntax 'x)
+             #:with id (star-expand (current-τ) (syntax-e (current-τ)) #'x))))
+
+(define-syntax-parse-rule (define-rope-type τ:id chunk?:id+fun1)
+  #:do [(define τ-stx (attribute τ))
+
+        (define ops (box null))
+        (define (add-op str)
+          (define id (datum->syntax τ-stx (string->symbol str) τ-stx τ-stx))
+          (set-box! ops (cons id (unbox ops)))
+          id)
+
+        (current-τ τ-stx)]
+
+  #:with (~var rope:*) (format-id τ-stx "rope:~a" (syntax-e #'τ))
+  #:with *-chunk?:type-op (add-op "*-chunk?")
+  #:with *-rope-node:type-op (add-op "*-rope-node")
+  #:with make-*-rope-node:type-op (add-op "make-*-rope-node")
+  #:with (op:type-op ...) (unbox ops)
+
+  #:do [(current-τ #f)]
+
+  (begin
+    (define-syntax rope:*
+      (rope-type (list (cons op.sym #'op.id) ...)))
+    ;; a primitive operation
+    (define (*-chunk?.id x) (chunk? x))
+    ;; a type binding defined here
+    (struct *-rope-node.id rope-leaf () #:transparent)
+    ;; a wrapper around a generic binding
+    (define (make-*-rope-node.id c) (make-rope-node τ c))))
+
+
+
+
+
 ;; (require (for-syntax racket/base
 ;;                      racket/syntax
 ;;                      rope2/descriptors
