@@ -42,6 +42,8 @@
   #:attributes (name stxclass default)
   (pattern [name:id stxclass:id]
            #:attr default #'#f)
+  (pattern [name:id stxclass:id #:optional]
+           #:attr default #'(#f))
   (pattern [name:id stxclass:id #:default dfl:expr]
            #:do [(assert-syntax-class-match!
                   this-syntax (attribute stxclass) (attribute dfl))]
