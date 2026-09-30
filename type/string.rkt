@@ -21,6 +21,6 @@
   #:elem=?       char=?
   #:elem-hash    char->integer)
 
-;; ;; (define-rope-class-instance string total-order
-;; ;;   #:elem<? char<?
-;; ;;   #:elem>? char>?)
+(define-rope-instance total-order string
+  ([elem<? char<?]
+   [elem>? char>?]))
