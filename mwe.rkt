@@ -9,7 +9,20 @@
 
 (provide (all-defined-out))
 
-(define-rope-type s1 string?)
+(define-rope-type s1
+  #:chunk?       string?
+  #:chunk-limit  3
+  #:chunk-empty  ""
+  #:chunk-length string-length
+  #:chunk-ref    string-ref
+  #:chunk-slice  (λ (c i k) (substring c i (+ i k)))
+  #:chunk-append (λ (cs) (apply string-append cs))
+  #:elem-width   1
+  ;; content-based equality primitives
+  #:chunk=?   string=?
+  #:elem=?    char=?
+  #:elem-hash char->integer)
+
 ;; (define-rope-type s2 string?)
 
 ;; (define-rope-class foo
