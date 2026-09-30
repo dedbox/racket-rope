@@ -44,7 +44,7 @@
             (cond
               [(assoc name stxclasses) => cdr]
               [else
-               (with-sub-expr (combine-source-locations k val-stx)
+               (with-sub-expr k
                  (rope-error "unknown member ~a of ~a" name (syntax-e #'κ)))]))
           (assert-syntax-class-match! this-syntax stxclass val-stx))
 

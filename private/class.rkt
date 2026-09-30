@@ -10,7 +10,8 @@
 (struct rope-class (params reqs body) #:transparent)
 
 (define (describe-class κ-stx)
-  (define desc-id (format-id κ-stx "rope:~a" (syntax-e κ-stx)))
+  (define desc-id
+    (format-id κ-stx "rope:~a" (syntax-e κ-stx) #:source κ-stx #:props κ-stx))
   (or (syntax-local-value desc-id (λ () #f))
       (rope-error "expected a rope class name")))
 

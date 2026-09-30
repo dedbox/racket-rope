@@ -22,7 +22,7 @@
           (define params (rope-class-params class-desc))
           (for ([param-id (in-list (append except-ids rename-ids))])
             (or (assoc (syntax-e param-id) params)
-                (with-expr param-id
+                (with-sub-expr param-id
                   (rope-error "expected a parameter of ~a" (syntax-e req-κ))))))]
 
   #:with (~var rope:%) (format-id #'κ "rope:~a" (syntax-e #'κ))
@@ -35,8 +35,8 @@
       (list (cons 'field.name (class-param #'field.stxclass #'field.default)) ...))
      (~? (reverse
           (list (require-spec #'req.id
-                              (list 'req.excepts ...)
-                              (list (cons 'req.rename-from 'req.rename-to) ...))
+                              (list #'req.excepts ...)
+                              (list (cons #'req.rename-from 'req.rename-to) ...))
                 ...))
          null)
      (quote-syntax body))))

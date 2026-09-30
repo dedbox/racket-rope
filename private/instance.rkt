@@ -68,19 +68,3 @@
       [(alist-rename-or-fail name (cdr ren) bindings) => values]
       [else
        (with-sub-expr name (rope-error "class parameter is not in scope"))])))
-
-;; assumes stx₁ comes before stx₂
-(define (combine-source-locations stx₁ stx₂)
-  (define loc₁ (syntax-srcloc stx₁))
-  (define loc₂ (syntax-srcloc stx₂))
-  (cond
-    [(not loc₁) (datum->syntax #f (list stx₁ stx₂) loc₂)]
-    [(not loc₂) (datum->syntax #f (list stx₁ stx₂) loc₁)]
-    [else
-     (define-values (src line col pos1 span1)
-       (values (srcloc-source loc₁) (srcloc-line loc₁) (srcloc-column loc₁)
-               (srcloc-position loc₁) (srcloc-span loc₁)))
-     (define-values (pos2 span2) (values (srcloc-position loc₂) (srcloc-span loc₂)))
-     (define combined-span (- (+ pos2 span2) pos1))
-     (define combined-loc (srcloc src line col pos1 combined-span))
-     (datum->syntax #f (list stx₁ stx₂) combined-loc)]))

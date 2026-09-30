@@ -67,31 +67,42 @@
   #:require (class1)
   (displayln '(CLASS2 w x y z a)))
 
-(define-rope-class class3 ([w nat] [x nat] [y nat] [z nat] [a nat])
-  #:require (class1)
-  (displayln '(CLASS3 w x y z a)))
+;; (define-rope-class class3 ([w nat] [x nat] [y nat] [z nat] [a nat])
+;;   #:require (class1)
+;;   (displayln '(CLASS3 w x y z a)))
 
-(define-rope-class class4 ([w nat])
-  #:require ([class2 #:except (a) #:rename ([x x2])]
-             [class3 #:rename ([y y3]) #:except (z)])
-  (displayln '(CLASS4 w x x2 y y3 z a)))
+;; (define-rope-class class4 ([w nat])
+;;   #:require ([class2 #:except (a) #:rename ([x x2])]
+;;              [class3 #:rename ([y y3]) #:except (z)])
+;;   (displayln '(CLASS4 w x x2 y y3 z a)))
 
 (define-rope-instance class1 s1)
 
-(define-rope-instance class2 s1
-  ([w 0] [x 1] [y 2] [z 3] [a 4]))
+;; (define-rope-instance class2 s1
+;;   ([w 0] [x 1] [y 2] [z 3] [a 4]))
 
-(define-rope-instance class3 s1
-  ([w 5] [x 6] [y 7] [z 8] [a 9]))
+;; (define-rope-instance class3 s1
+;;   ([w 5] [x 6] [y 7] [z 8] [a 9]))
 
-(define-rope-instance class4 s1
-  ([w 8]))
+;; (define-rope-instance class4 s1
+;;   ([w 8]))
 
-(define-class-op class4 (op-class4 _)
-    (displayln '(OP-CLASS4 w x x2 y y3 z a)))
+;; (define-class-op class4 (op-class4 _)
+;;     (displayln '(OP-CLASS4 w x x2 y y3 z a)))
 
-(op-class4 s1)
+;; (op-class4 s1)
 
 ;; TO-DO
-;; - add source locations to inheritance errors
 ;; - add #:only class import mask
+
+
+
+
+
+;; (define-rope-class classX1 ()
+;;   #:require ([class1 #:except (k)]))
+
+;; (define-rope-class classX2 ()
+;;   #:require ([class2 #:rename ([h c])]))
+
+;; (define-rope-instance class2 s1 ([w 0] [x 1] [y 2] [X 999] [z 3] [a 4]))
