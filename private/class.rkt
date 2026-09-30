@@ -48,16 +48,19 @@
            #:attr default #'(dfl)))
 
 (define-syntax-class required-class
-  #:attributes (id [excepts 1] [rename-from 1] [rename-to 1])
+  #:attributes (id [onlys 1] [excepts 1] [rename-from 1] [rename-to 1])
   (pattern id:id
+           #:attr [onlys 1] null
            #:attr [excepts 1] null
            #:attr [rename-from 1] null
            #:attr [rename-to 1] null)
-  (pattern [id:id ~! (~alt (~optional (~seq #:except ~! (excepts:id ...))
+  (pattern [id:id ~! (~alt (~optional (~seq #:only ~! (onlys:id ...))
+                                      #:defaults ([(onlys 1) null]))
+                           (~optional (~seq #:except ~! (excepts:id ...))
                                       #:defaults ([(excepts 1) null]))
                            (~optional (~seq #:rename ~! ([rename-from:id rename-to:id] ...))
                                       #:defaults ([(rename-from 1) null]
                                                   [(rename-to 1) null])))
                   ...]))
 
-(struct require-spec (class excepts renames) #:transparent)
+(struct require-spec (class onlys excepts renames) #:transparent)

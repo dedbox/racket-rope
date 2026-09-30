@@ -76,26 +76,22 @@
 ;;              [class3 #:rename ([y y3]) #:except (z)])
 ;;   (displayln '(CLASS4 w x x2 y y3 z a)))
 
+(define-rope-class class5 ([w nat])
+  #:require ([class2 #:only (x y z) #:rename ([z P])])
+  (displayln '(CLASS5 w x y P)))
+
 (define-rope-instance class1 s1)
 
-;; (define-rope-instance class2 s1
-;;   ([w 0] [x 1] [y 2] [z 3] [a 4]))
-
-;; (define-rope-instance class3 s1
-;;   ([w 5] [x 6] [y 7] [z 8] [a 9]))
-
-;; (define-rope-instance class4 s1
-;;   ([w 8]))
+(define-rope-instance class2 s1 ([w 0] [x 1] [y 2] [z 3] [a 4]))
+;; (define-rope-instance class3 s1 ([w 5] [x 6] [y 7] [z 8] [a 9]))
+;; (define-rope-instance class4 s1 ([w 8]))
 
 ;; (define-class-op class4 (op-class4 _)
-;;     (displayln '(OP-CLASS4 w x x2 y y3 z a)))
+;;   (displayln '(OP-CLASS4 w x x2 y y3 z a)))
 
 ;; (op-class4 s1)
 
-;; TO-DO
-;; - add #:only class import mask
-
-
+(define-rope-instance class5 s1 ([w 9]))
 
 
 

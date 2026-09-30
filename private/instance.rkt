@@ -1,14 +1,12 @@
 #lang racket/base
 
-(require
- ;; (for-template racket/base)
- racket/syntax
- racket/syntax-srcloc
- ;; syntax/parse
- "./class.rkt"
- "./error.rkt"
- "./type.rkt"
- )
+(require racket/set
+         racket/syntax
+         racket/syntax-srcloc
+         syntax/id-set
+         "./class.rkt"
+         "./error.rkt"
+         "./type.rkt")
 
 (provide (all-defined-out))
 
@@ -50,8 +48,20 @@
          (for/list ([req (in-list reqs)])
            (define κ-stx (require-spec-class req))
            (define desc (with-sub-expr τ-stx (describe-instance κ-stx τ-stx)))
-           (define bindings (rope-instance-bindings desc))
-           (rename-bindings req (except-bindings req bindings)))))
+           (let* ([bindings (only-bindings req (rope-instance-bindings desc))]
+                  [bindings (except-bindings req bindings)])
+             (rename-bindings req bindings)))))
+
+(define (only-bindings req all-bindings)
+  (define onlys (apply seteq (map syntax-e (require-spec-onlys req))))
+  (for/fold ([bindings null]) ([id (in-list (require-spec-onlys req))])
+    (define name (syntax-e id))
+    (if (set-member? onlys name)
+        (let ([elem (assoc name all-bindings)])
+          (unless elem
+            (with-sub-expr id (rope-error "class parameter is not in scope")))
+          (cons elem bindings))
+        bindings)))
 
 (define (except-bindings req bindings)
   (for/fold ([bindings bindings]) ([name (in-list (require-spec-excepts req))])
@@ -59,12 +69,14 @@
         (with-sub-expr name (rope-error "class parameter is not in scope")))))
 
 (define (rename-bindings req bindings)
+  (define onlys (map syntax-e (require-spec-onlys req)))
   (define excepts (require-spec-excepts req))
   (for/fold ([bindings bindings]) ([ren (in-list (require-spec-renames req))])
-    (define name (car ren))
-    (cond
-      [(memq name excepts)
-       (with-sub-expr name (rope-error "duplicate import mask"))]
-      [(alist-rename-or-fail name (cdr ren) bindings) => values]
-      [else
-       (with-sub-expr name (rope-error "class parameter is not in scope"))])))
+    (define id (car ren))
+    (define name (syntax-e id))
+    (cond [(memq name excepts)
+           (with-sub-expr id (rope-error "duplicate import mask"))]
+          [(alist-rename-or-fail name (cdr ren) bindings) => values]
+          [(memq name onlys) => values]
+          [else
+           (with-sub-expr id (rope-error "class parameter is not in scope"))])))
