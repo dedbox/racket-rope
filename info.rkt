@@ -1,9 +1,9 @@
 #lang info
 
 (define collection "rope2")
-(define version "0.1")
+(define version "1.1")
 (define pkg-authors '("Eric Griffis <dedbox@gmail.com>"))
-(define pkg-desc "An alternative to strings.")
+(define pkg-desc "A high-performance generic rope library for real-time text processing.")
 (define license '(MIT OR Apache-2.0))
 
 (define deps

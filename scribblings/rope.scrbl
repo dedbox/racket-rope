@@ -9,7 +9,7 @@
 @(define rope-eval (make-base-eval))
 @(rope-eval '(require rope2))
 
-@title{Ropes: An Alternative to Strings}
+@title{Ropes: A High-Performance Alternative to Strings}
 @author{@author+email["Eric Griffis" "dedbox@gmail.com"]}
 
 @defmodule[rope2]
@@ -21,7 +21,7 @@ Based on the paper by
 
 @; -----------------------------------------------------------------------------
 
-@section{Introduction}
+@section{Miscellaneous Notes}
 
 A rope is a balanced binary tree where each leaf contains a raw chunk of individual elements.
 A chunk can be any sequential data structure, such as a string or a vector.
@@ -51,8 +51,7 @@ Dev Documentation To-Do
   on strings or collections of Racket-level (i.e., boxed) values,
   but can be astonishingly slower (e.g., than slicing) for special types
   (e.g., bytes - contiguous, unboxed C arrays).}
- @item{there will be no generic function API,
-  since falling back to run-time dispatch defies the spirit of the library.
-  We will need good docs on how to use the macros instead.}
+ @item{there will be no "gen:" generics API because run-time dispatch is too slow.
+  We will need good docs on how to use the included macro-based generic APIs instead.}
  ]
 @(close-eval rope-eval)
