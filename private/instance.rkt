@@ -19,7 +19,7 @@
   (define τ-name (syntax-e τ-stx))
   (define desc-id (format-id τ-stx "rope:~a:~a" κ-name τ-name))
   (or (syntax-local-value desc-id (λ () #f))
-      (rope-error "no instance of ~a for ~a" τ-name κ-name)))
+      (rope-error "no instance of ~a for ~a" κ-name τ-name)))
 
 (define (alist-remq-or-fail v lst)
   (unless (list? lst)
