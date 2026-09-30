@@ -7,9 +7,9 @@
 ;; whether the tail is GC or algorithm — the two things last session's
 ;; benchmark couldn't distinguish.
 
-(require rope2/generic
-         rope2/rope
-         rope2/type/string)
+(require rope/generic
+         rope/rope
+         rope/type/string)
 
 (define SESSION-LENGTH 20000)
 

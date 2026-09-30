@@ -4,15 +4,15 @@
           racket/sandbox
           @for-label[racket/base
                      racket/contract
-                     rope2])
+                     rope])
 
 @(define rope-eval (make-base-eval))
-@(rope-eval '(require rope2))
+@(rope-eval '(require rope))
 
 @title{Ropes: A High-Performance Alternative to Strings}
 @author{@author+email["Eric Griffis" "dedbox@gmail.com"]}
 
-@defmodule[rope2]
+@defmodule[rope]
 
 Based on the paper by
 @hyperlink["https://doi.org/10.1002/spe.4380251203"]{Boehm, Atkinson, and Plass}.

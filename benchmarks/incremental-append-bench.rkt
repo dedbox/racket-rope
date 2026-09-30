@@ -6,8 +6,8 @@
 ;; whether an editor built on this ever visibly stutters.
 
 (require racket/format
-         rope2/generic
-         rope2/type/string)
+         rope/generic
+         rope/type/string)
 
 (define SESSION-LENGTH 20000)
 (define TRIALS         5)

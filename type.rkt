@@ -2,12 +2,12 @@
 
 (require (for-syntax racket/base
                      racket/syntax
-                     rope2/stxclasses
+                     rope/stxclasses
                      syntax/parse
                      "./private/type.rkt"
                      "./private/star.rkt")
-         rope2/generic
-         rope2/rope
+         rope/generic
+         rope/rope
          syntax/parse/define
          "./private/hash.rkt")
 

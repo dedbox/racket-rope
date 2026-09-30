@@ -15,8 +15,8 @@
 ;; crossing, to see the effect directly.
 
 (require racket/format
-         rope2/cursor
-         rope2/type/string)
+         rope/cursor
+         rope/type/string)
 
 (define SIZES  '(1000 10000 100000 1000000 10000000 100000000))
 (define TRIALS 10)

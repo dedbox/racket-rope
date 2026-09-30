@@ -1,6 +1,6 @@
 #lang racket/base
 
-(require rope2/type)
+(require rope/type)
 
 (provide (all-defined-out))
 

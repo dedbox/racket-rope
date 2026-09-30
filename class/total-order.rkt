@@ -1,11 +1,11 @@
 #lang racket/base
 
-(require (for-syntax rope2/stxclasses)
-         rope2/class
-         rope2/cursor
-         rope2/generic
-         rope2/generic/define
-         rope2/rope)
+(require (for-syntax rope/stxclasses)
+         rope/class
+         rope/cursor
+         rope/generic
+         rope/generic/define
+         rope/rope)
 
 (provide (all-defined-out))
 

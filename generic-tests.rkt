@@ -8,13 +8,11 @@
            racket/vector
            rackunit
            rackunit/text-ui
-           rope2/cursor
-           rope2/generic
-           rope2/rope
-           rope2/type
-           rope2/type/string
-           ;; syntax/parse/define
-           )
+           rope/cursor
+           rope/generic
+           rope/rope
+           rope/type
+           rope/type/string)
 
   (define (run-suite! suite)
     (define failed (run-tests suite 'verbose))

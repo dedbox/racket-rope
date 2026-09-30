@@ -3,9 +3,9 @@
 (require (for-syntax racket/base
                      syntax/parse)
          racket/sequence
-         rope2/cursor
-         rope2/generic/define
-         rope2/rope
+         rope/cursor
+         rope/generic/define
+         rope/rope
          syntax/parse/define)
 
 (provide (all-defined-out))
