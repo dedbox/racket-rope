@@ -13,8 +13,8 @@
 (struct rope-instance (bindings) #:transparent)
 
 (define (describe-instance κ-stx τ-stx)
-  (with-sub-expr κ-stx (describe-class κ-stx))
-  (with-sub-expr τ-stx (describe-type τ-stx))
+  (with-caller-sub κ-stx (describe-class κ-stx))
+  (with-caller-sub τ-stx (describe-type τ-stx))
   (define κ-name (syntax-e κ-stx))
   (define τ-name (syntax-e τ-stx))
   (define desc-id (format-id τ-stx "rope:~a:~a" κ-name τ-name))
@@ -47,7 +47,7 @@
   (apply append
          (for/list ([req (in-list reqs)])
            (define κ-stx (require-spec-class req))
-           (define desc (with-sub-expr τ-stx (describe-instance κ-stx τ-stx)))
+           (define desc (with-caller-sub τ-stx (describe-instance κ-stx τ-stx)))
            (let* ([bindings (only-bindings req (rope-instance-bindings desc))]
                   [bindings (except-bindings req bindings)])
              (rename-bindings req bindings)))))
@@ -59,14 +59,14 @@
     (if (set-member? onlys name)
         (let ([elem (assoc name all-bindings)])
           (unless elem
-            (with-sub-expr id (rope-error "class parameter is not in scope")))
+            (with-caller-sub id (rope-error "class parameter is not in scope")))
           (cons elem bindings))
         bindings)))
 
 (define (except-bindings req bindings)
   (for/fold ([bindings bindings]) ([name (in-list (require-spec-excepts req))])
     (or (alist-remq-or-fail name bindings)
-        (with-sub-expr name (rope-error "class parameter is not in scope")))))
+        (with-caller-sub name (rope-error "class parameter is not in scope")))))
 
 (define (rename-bindings req bindings)
   (define onlys (map syntax-e (require-spec-onlys req)))
@@ -75,8 +75,8 @@
     (define id (car ren))
     (define name (syntax-e id))
     (cond [(memq name excepts)
-           (with-sub-expr id (rope-error "duplicate import mask"))]
+           (with-caller-sub id (rope-error "duplicate import mask"))]
           [(alist-rename-or-fail name (cdr ren) bindings) => values]
           [(memq name onlys) => values]
-          [else
-           (with-sub-expr id (rope-error "class parameter is not in scope"))])))
+          [else (with-caller-sub id
+                  (rope-error "class parameter is not in scope"))])))

@@ -128,13 +128,13 @@
     ;; Primitives
     ;; -------------------------------------------------------------------------
 
-    (define (*-chunk?.id x) (chunk? x))
-    (define (*-chunk-limit.id) (chunk-limit.callable))
-    (define (*-chunk-empty.id) (chunk-empty.callable))
-    (define (*-chunk-length.id c) (chunk-length c))
-    (define (*-chunk-ref.id c i) (chunk-ref c i))
-    (define (*-chunk-slice.id c i k) (chunk-slice c i k))
-    (define (*-chunk-append.id . cs) (chunk-append cs))
+    (define (*-chunk?.id         x)     (chunk?       x))
+    (define (*-chunk-limit.id)          (chunk-limit.callable))
+    (define (*-chunk-empty.id)          (chunk-empty.callable))
+    (define (*-chunk-length.id   c)     (chunk-length c))
+    (define (*-chunk-ref.id      c i)   (chunk-ref    c i))
+    (define (*-chunk-slice.id    c i k) (chunk-slice  c i k))
+    (define (*-chunk-append.id . cs)    (chunk-append cs))
 
     (define *-chunk-width.id
       (if (number? elem-width)
@@ -157,9 +157,9 @@
     ;; Smart Constructors
     ;; -------------------------------------------------------------------------
 
-    (define (make-*-rope-leaf.id c) (make-rope-leaf τ c))
-    (define (make-*-rope-node.id l r) (make-rope-node τ l r))
-    (define (make-empty-*-rope.id) (make-empty-rope τ))
+    (define (make-*-rope-leaf.id c)   (make-rope-leaf  τ c))
+    (define (make-*-rope-node.id l r) (make-rope-node  τ l r))
+    (define (make-empty-*-rope.id)    (make-empty-rope τ))
 
     ;; -------------------------------------------------------------------------
     ;; Hashing
@@ -247,7 +247,8 @@
           (and (= (rope-length a) (rope-length b))
                (equal? (rope-hash-h a) (rope-hash-h b))
                (equal? (rope-hash-p a) (rope-hash-p b))
-               (let walk ([ca #f] [ia 0] [stack-a (list a)] [cb #f] [ib 0] [stack-b (list b)])
+               (let walk ([ca #f] [ia 0] [stack-a (list a)] [cb #f]
+                                  [ib 0] [stack-b (list b)])
                  (define-values (ca* ia* stack-a* cb* ib* stack-b*)
                    (skip-shared ca ia stack-a cb ib stack-b))
                  (define-values (ca** ia** stack-a**) (advance ca* ia* stack-a*))
@@ -275,22 +276,22 @@
     ;; Basic Operations
     ;; -------------------------------------------------------------------------
 
-    (define (*-rope-concat.id a b) (rope-concat τ a b))
-    (define (*-rope-append2.id a b) (rope-append2 τ a b))
-    (define (*-rope-append.id as) (rope-append τ as))
-    (define (*-rope-split.id a i) (rope-split τ a i))
-    (define (*-rope-ref.id a i) (rope-ref τ a i))
-    (define (*-rope-offset-index.id a p) (rope-offset-index τ a p))
-    (define (*-rope-cut.id a i k) (rope-cut τ a i k))
-    (define (*-rope-slice.id a i k) (rope-slice τ a i k))
-    (define (*-rope-splice.id a i k b) (rope-splice τ a i k b))
+    (define (*-rope-concat.id       a b)     (rope-concat       τ a b))
+    (define (*-rope-append2.id      a b)     (rope-append2      τ a b))
+    (define (*-rope-append.id       as)      (rope-append       τ as))
+    (define (*-rope-split.id        a i)     (rope-split        τ a i))
+    (define (*-rope-ref.id          a i)     (rope-ref          τ a i))
+    (define (*-rope-offset-index.id a p)     (rope-offset-index τ a p))
+    (define (*-rope-cut.id          a i k)   (rope-cut          τ a i k))
+    (define (*-rope-slice.id        a i k)   (rope-slice        τ a i k))
+    (define (*-rope-splice.id       a i k b) (rope-splice       τ a i k b))
 
     ;; -------------------------------------------------------------------------
     ;; Immutable Cursors
     ;; -------------------------------------------------------------------------
 
     (define (cursor->*-rope.id cur) (cursor->rope τ cur))
-    (define (*-cursor-peek.id cur) (cursor-peek τ cur))
+    (define (*-cursor-peek.id  cur) (cursor-peek  τ cur))
     (define (*-cursor-split.id cur) (cursor-split τ cur))
 
     ;; -------------------------------------------------------------------------
@@ -298,7 +299,7 @@
     ;; -------------------------------------------------------------------------
 
     (define (mutable-*-cursor->rope.id cur) (mutable-cursor->rope τ cur))
-    (define (mutable-*-cursor-peek.id cur) (mutable-cursor-peek τ cur))
+    (define (mutable-*-cursor-peek.id  cur) (mutable-cursor-peek τ  cur))
 
     ;; -------------------------------------------------------------------------
     ;; Folds
