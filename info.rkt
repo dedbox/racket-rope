@@ -10,7 +10,8 @@
   '("base"))
 
 (define build-deps
-  '("racket-doc"
+  '("sandbox-lib"
+    "racket-doc"
     "rackunit-lib"
     "scribble-lib"))
 
