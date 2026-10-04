@@ -4,6 +4,7 @@
          racket/syntax
          racket/syntax-srcloc
          syntax/id-set
+         syntax/parse
          "./class.rkt"
          "./error.rkt"
          "./type.rkt")
@@ -20,6 +21,14 @@
   (define desc-id (format-id τ-stx "rope:~a:~a" κ-name τ-name))
   (or (syntax-local-value desc-id (λ () #f))
       (rope-error "no instance of ~a for ~a" κ-name τ-name)))
+
+(define-splicing-syntax-class instance-args
+  #:description "instance arguments"
+  #:attributes ([key 1] [val 1])
+  (pattern (~seq)
+           #:attr (key 1) null
+           #:attr (val 1) null)
+  (pattern (~seq ([key:id val:expr] ...))))
 
 (define (alist-remq-or-fail v lst)
   (unless (list? lst)
@@ -43,40 +52,45 @@
          (define lst* (alist-rename-or-fail v-old v-new (cdr lst)))
          (and lst* (cons (car lst) lst*))]))
 
-(define (resolve-imports τ-stx reqs)
+(define (resolve-imports τ-stx masks)
   (apply append
-         (for/list ([req (in-list reqs)])
-           (define κ-stx (require-spec-class req))
+         (for/list ([mask (in-list masks)])
+           (define κ-stx (mask-spec-class mask))
            (define desc (with-caller-sub τ-stx (describe-instance κ-stx τ-stx)))
-           (let* ([bindings (only-bindings req (rope-instance-bindings desc))]
-                  [bindings (except-bindings req bindings)])
-             (rename-bindings req bindings)))))
+           (define all-bindings (rope-instance-bindings desc))
+           (define-values (includes excludes renames)
+             (validate-mask! (mask-spec-has-include? mask)
+                             (mask-spec-includes mask)
+                             (mask-spec-excludes mask)
+                             (mask-spec-renames mask)))
+           (for/fold ([bindings null] #:result (reverse bindings))
+                     ([binding (in-list all-bindings)])
+             (define name (car binding))
+             (cond [(or (and includes (not (hash-has-key? includes name)))
+                        (hash-has-key? excludes name))
+                    bindings]
+                   [(hash-ref renames name (λ () #f))
+                    => (λ (renaming)
+                         (define new-name (syntax-e (cdr renaming)))
+                         (cons new-name (cdr binding)))]
+                   [else (cons binding bindings)])))))
 
-(define (only-bindings req all-bindings)
-  (define onlys (apply seteq (map syntax-e (require-spec-onlys req))))
-  (for/fold ([bindings null]) ([id (in-list (require-spec-onlys req))])
-    (define name (syntax-e id))
-    (if (set-member? onlys name)
-        (let ([elem (assoc name all-bindings)])
-          (unless elem
-            (with-caller-sub id (rope-error "class parameter is not in scope")))
-          (cons elem bindings))
-        bindings)))
-
-(define (except-bindings req bindings)
-  (for/fold ([bindings bindings]) ([name (in-list (require-spec-excepts req))])
-    (or (alist-remq-or-fail name bindings)
-        (with-caller-sub name (rope-error "class parameter is not in scope")))))
-
-(define (rename-bindings req bindings)
-  (define onlys (map syntax-e (require-spec-onlys req)))
-  (define excepts (require-spec-excepts req))
-  (for/fold ([bindings bindings]) ([ren (in-list (require-spec-renames req))])
-    (define id (car ren))
-    (define name (syntax-e id))
-    (cond [(memq name excepts)
-           (with-caller-sub id (rope-error "duplicate import mask"))]
-          [(alist-rename-or-fail name (cdr ren) bindings) => values]
-          [(memq name onlys) => values]
-          [else (with-caller-sub id
-                  (rope-error "class parameter is not in scope"))])))
+(define (validate-mask! has-include? include-ids exclude-ids rename-pairs)
+  (define include-names (map syntax-e include-ids))
+  (define exclude-names (map syntax-e exclude-ids))
+  (define from-ids (map car rename-pairs))
+  (define from-names (map syntax-e from-ids))
+  (define to-names (map syntax-e (map cdr rename-pairs)))
+  (define includes
+    (and has-include? (make-hasheq (map cons include-names include-ids))))
+  (define excludes (make-hasheq (map cons exclude-names exclude-ids)))
+  (define renames (make-hasheq (map cons from-names from-ids)))
+  (for ([(name id) (in-hash excludes)])
+    (when (and includes (hash-has-key? includes name))
+      (with-caller-sub id (rope-error "cannot exclude included parameter"))))
+  (for ([(name id) (in-hash renames)])
+    (when (and includes (hash-has-key? includes name))
+      (with-caller-sub id (rope-error "cannot rename included parameter")))
+    (when (hash-has-key? excludes name)
+      (with-caller-sub id (rope-error "cannot rename excluded parameter"))))
+  (values includes excludes (make-hasheq (map cons from-names to-names))))

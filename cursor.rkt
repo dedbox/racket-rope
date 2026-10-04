@@ -39,12 +39,13 @@
 
 (define (climb-right cur k k0 path)
   (define a0 (cursor-source cur))
-  (cond [(null? path) #f]
-        [(eq? (crumb-side (car path)) 'right) (climb-right cur k k0 (cdr path))]
-        [else
-         (define old-cb (car path))
-         (define new-cb (crumb 'right (crumb-left old-cb) (crumb-right old-cb)))
-         (descend-forward cur (crumb-right old-cb) k k0 (cons new-cb (cdr path)))]))
+  (cond
+    [(null? path) #f]
+    [(eq? (crumb-side (car path)) 'right) (climb-right cur k k0 (cdr path))]
+    [else
+     (define old-cb (car path))
+     (define new-cb (crumb 'right (crumb-left old-cb) (crumb-right old-cb)))
+     (descend-forward cur (crumb-right old-cb) k k0 (cons new-cb (cdr path)))]))
 
 (define (descend-forward cur a k k0 path)
   (define n (rope-length a))
@@ -61,12 +62,13 @@
 
 (define (climb-left cur k k0 path)
   (define a0 (cursor-source cur))
-  (cond [(null? path) #f]
-        [(eq? (crumb-side (car path)) 'left) (climb-left cur k k0 (cdr path))]
-        [else
-         (define old-cb (car path))
-         (define new-cb (crumb 'left (crumb-left old-cb) (crumb-right old-cb)))
-         (descend-backward cur (crumb-left old-cb) k k0 (cons new-cb (cdr path)))]))
+  (cond
+    [(null? path) #f]
+    [(eq? (crumb-side (car path)) 'left) (climb-left cur k k0 (cdr path))]
+    [else
+     (define old-cb (car path))
+     (define new-cb (crumb 'left (crumb-left old-cb) (crumb-right old-cb)))
+     (descend-backward cur (crumb-left old-cb) k k0 (cons new-cb (cdr path)))]))
 
 (define (descend-backward cur a k k0 path)
   (define n (rope-length a))
@@ -137,23 +139,25 @@
         [else     (climb-left!  cur (- j)   k path)]))
 
 (define (climb-right! cur k k0 path)
-  (cond [(null? path) #f]
-        [(eq? (crumb-side (car path)) 'right) (climb-right! cur k k0 (cdr path))]
-        [else
-         (define old-cb (car path))
-         (define new-cb (crumb 'right (crumb-left old-cb) (crumb-right old-cb)))
-         (descend-forward! cur (crumb-right old-cb) k k0 (cons new-cb (cdr path)))]))
+  (cond
+    [(null? path) #f]
+    [(eq? (crumb-side (car path)) 'right) (climb-right! cur k k0 (cdr path))]
+    [else
+     (define old-cb (car path))
+     (define new-cb (crumb 'right (crumb-left old-cb) (crumb-right old-cb)))
+     (descend-forward! cur (crumb-right old-cb) k k0 (cons new-cb (cdr path)))]))
 
 (define (descend-forward! cur a k k0 path)
   (define n (rope-length a))
   (if (rope-leaf? a)
-      (if (< k n)
-          (begin (set-mutable-cursor-leaf! cur a)
-                 (set-mutable-cursor-abs-idx! cur (+ (mutable-cursor-abs-idx cur) k0))
-                 (set-mutable-cursor-rel-idx! cur k)
-                 (set-mutable-cursor-path! cur path)
-                 cur)
-          (climb-right! cur (- k n) k0 path))
+      (cond
+        [(< k n)
+         (set-mutable-cursor-leaf! cur a)
+         (set-mutable-cursor-abs-idx! cur (+ (mutable-cursor-abs-idx cur) k0))
+         (set-mutable-cursor-rel-idx! cur k)
+         (set-mutable-cursor-path! cur path)
+         cur]
+        [else (climb-right! cur (- k n) k0 path)])
       (let* ([l (rope-node-left a)]
              [r (rope-node-right a)]
              [m (rope-length l)])
@@ -172,13 +176,14 @@
 (define (descend-backward! cur a k k0 path)
   (define n (rope-length a))
   (if (rope-leaf? a)
-      (if (<= k n)
-          (begin (set-mutable-cursor-leaf! cur a)
-                 (set-mutable-cursor-abs-idx! cur (+ (mutable-cursor-abs-idx cur) k0))
-                 (set-mutable-cursor-rel-idx! cur (- n k))
-                 (set-mutable-cursor-path! cur path)
-                 cur)
-          (climb-left! cur (- k n) k0 path))
+      (cond
+        [(<= k n)
+         (set-mutable-cursor-leaf! cur a)
+         (set-mutable-cursor-abs-idx! cur (+ (mutable-cursor-abs-idx cur) k0))
+         (set-mutable-cursor-rel-idx! cur (- n k))
+         (set-mutable-cursor-path! cur path)
+         cur]
+        [else (climb-left! cur (- k n) k0 path)])
       (let* ([l (rope-node-left a)]
              [r (rope-node-right a)]
              [m (rope-length r)])

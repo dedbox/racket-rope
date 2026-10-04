@@ -1,7 +1,6 @@
 #lang racket/base
 
-(require rope/class
-         rope/class/total-order
+(require rope/class/total-order
          rope/instance
          rope/type)
 
@@ -16,11 +15,14 @@
   #:chunk-slice  (λ (c i k) (substring c i (+ i k)))
   #:chunk-append (λ (cs) (apply string-append cs))
   #:elem-width   1
-  ;; equality class members
+  ;; content-based equality
   #:chunk=?      string=?
   #:elem=?       char=?
   #:elem-hash    char->integer)
 
-(define-rope-instance total-order string
-  ([elem<? char<?]
-   [elem>? char>?]))
+(define empty-string-rope (make-empty-string-rope))
+
+(define (string->rope str) (source->string-rope str))
+(define (rope->string r) (string-rope->source r))
+
+(define-rope-instance total-order string ([elem<? char<?] [elem>? char>?]))

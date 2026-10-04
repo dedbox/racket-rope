@@ -1,6 +1,8 @@
 #lang racket/base
 
-(require rope/type)
+(require rope/class/total-order
+         rope/instance
+         rope/type)
 
 (provide (all-defined-out))
 
@@ -17,3 +19,10 @@
   #:chunk=?      bytes=?
   #:elem=?       =
   #:elem-hash    values)
+
+(define empty-bytes-rope (make-empty-bytes-rope))
+
+(define (bytes->rope str) (source->bytes-rope str))
+(define (rope->bytes r) (bytes-rope->source r))
+
+(define-rope-instance total-order bytes ([elem<? <] [elem>? >]))

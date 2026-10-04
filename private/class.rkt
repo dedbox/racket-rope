@@ -22,7 +22,12 @@
     (cond [(assoc name bindings) => values]
           [(not dfl) (rope-error "expected ~a argument ~a" κ-name name)]
           [(and (pair? dfl) (null? (cdr dfl))) (cons name (car dfl))]
-          [else (rope-error "internal error: ~a / ~a" name κ-name)])))
+          [else
+           ;; This branch should never fire on user input. We only ever reach
+           ;; here if the internal representation of a parameter's
+           ;; default-value declaration is mal-formed, i.e., it is not #f or a
+           ;; singleton list.
+           (rope-error "internal error: ~a / ~a" name κ-name)])))
 
 (define (assert-syntax-class-match! ctx class-stx expr-stx)
   (define validate (generate-temporary 'validate))
@@ -49,20 +54,39 @@
                   this-syntax (attribute stxclass) (attribute dfl))]
            #:attr default #'(dfl)))
 
-(define-syntax-class required-class
-  #:attributes (id [onlys 1] [excepts 1] [rename-from 1] [rename-to 1])
-  (pattern id:id
-           #:attr [onlys 1] null
-           #:attr [excepts 1] null
-           #:attr [rename-from 1] null
-           #:attr [rename-to 1] null)
-  (pattern [id:id ~! (~alt (~optional (~seq #:only ~! (onlys:id ...))
-                                      #:defaults ([(onlys 1) null]))
-                           (~optional (~seq #:except ~! (excepts:id ...))
-                                      #:defaults ([(excepts 1) null]))
-                           (~optional (~seq #:rename ~! ([rename-from:id rename-to:id] ...))
-                                      #:defaults ([(rename-from 1) null]
-                                                  [(rename-to 1) null])))
-                  ...]))
+;; A dependency mask entry may contain only one of:
+;;
+;; - An inclusion mask: only these params are imported.
+;; - An exclusion mask: all params excep these are imported.
+;;
+;; It may also contain:
+;;
+;; - A renaming mask: every param must be in scope and is bound to a new name
+;;   when imported.
+;;
+;; It is not possible to rename included or excluded params.
 
-(struct require-spec (class onlys excepts renames) #:transparent)
+(struct mask-spec (class has-include? includes excludes renames) #:transparent)
+
+(define-syntax-class depmask
+  #:attributes (class has-include? [include 1] [exclude 1] [from 1] [to 1])
+  (pattern class:id
+           #:attr has-include? #'#f
+           #:attr [include 1] null
+           #:attr [exclude 1] null
+           #:attr [from 1] null
+           #:attr [to 1] null)
+  (pattern [class:id #:rename ~! ([from:id to:id] ...)]
+           #:attr has-include? #'#f
+           #:attr [include 1] null
+           #:attr [exclude 1] null)
+  (pattern [class:id #:include ~! (include:id ...)
+                     (~optional (~seq #:rename ~! ([from:id to:id] ...))
+                                #:defaults ([(from 1) null] [(to 1) null]))]
+           #:attr has-include? #'#t
+           #:attr [exclude 1] null)
+  (pattern [class:id #:exclude ~! (exclude:id ...)
+                     (~optional (~seq #:rename ~! ([from:id to:id] ...))
+                                #:defaults ([(from 1) null] [(to 1) null]))]
+           #:attr has-include? #'#f
+           #:attr [include 1] null))

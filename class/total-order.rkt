@@ -34,22 +34,24 @@
   (define (*-rope>=? a b) (rope>=? τ a b)))
 
 (define-class-op total-order (rope-compare-with _ f:id+fun5 a b)
-    (let loop ([cur-a (rope->mutable-cursor a)]
-               [cur-b (rope->mutable-cursor b)])
-      (cond
-        [(and (not cur-a) (not cur-b)) '=]
-        [(not cur-a) '<]
-        [(not cur-b) '>]
-        [else
-         (define la (mutable-cursor-leaf cur-a))
-         (define lb (mutable-cursor-leaf cur-b))
-         (define pa (mutable-cursor-rel-idx cur-a))
-         (define pb (mutable-cursor-rel-idx cur-b))
-         (define k (min (- (rope-length la) pa) (- (rope-length lb) pb)))
-         (define result (*-chunk-compare-overlap (rope-leaf-chunk la) (rope-leaf-chunk lb) pa pb k))
-         (if (not (eq? result '=))
-             result
-             (loop (cursor-advance! cur-a k) (cursor-advance! cur-b k)))])))
+  (let loop ([cur-a (rope->mutable-cursor a)]
+             [cur-b (rope->mutable-cursor b)])
+    (cond
+      [(and (not cur-a) (not cur-b)) '=]
+      [(not cur-a) '<]
+      [(not cur-b) '>]
+      [else
+       (define la (mutable-cursor-leaf cur-a))
+       (define lb (mutable-cursor-leaf cur-b))
+       (define pa (mutable-cursor-rel-idx cur-a))
+       (define pb (mutable-cursor-rel-idx cur-b))
+       (define k (min (- (rope-length la) pa) (- (rope-length lb) pb)))
+       (define result (let ([ca (rope-leaf-chunk la)]
+                            [cb (rope-leaf-chunk lb)])
+                        (*-chunk-compare-overlap ca cb pa pb k)))
+       (if (not (eq? result '=))
+           result
+           (loop (cursor-advance! cur-a k) (cursor-advance! cur-b k)))])))
 
 (define-class-op total-order (rope-compare τ a b) (rope-compare-with τ *-chunk-compare-overlap a b))
 (define-class-op total-order (rope<? τ a b) (eq? (rope-compare τ a b) '<))

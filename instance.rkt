@@ -12,42 +12,42 @@
 
 (provide (all-defined-out))
 
-(define-syntax-parse-rule (define-rope-instance κ:id τ:id
-                            (~optional ([key:id val:expr] ...)
-                                       #:defaults ([(key 1) null] [(val 1) null])))
-  #:with (~var rope:%:*) (format-id #'τ "rope:~a:~a" (syntax-e #'κ) (syntax-e #'τ))
+(define-syntax-parse-rule (define-rope-instance κ:id τ:id args:instance-args)
+  #:do [(define κ-name (syntax-e #'κ)) (define τ-name (syntax-e #'τ))]
+  #:with (~var rope:%:*) (format-id #'τ "rope:~a:~a" κ-name τ-name)
   #:with (([k . v] ...) body*)
   (with-caller ('define-rope-instance this-syntax #f)
     (define type-desc (with-caller-sub #'τ (describe-type #'τ)))
     (define class-desc (with-caller-sub #'κ (describe-class #'κ)))
 
+    (define params (rope-class-params class-desc))
     (define reqs (rope-class-reqs class-desc))
+    (define class-body (rope-class-body class-desc))
+
     (define imports (resolve-imports #'τ reqs))
 
-    (define instance-bindings (for/list ([k (in-list (attribute key))]
-                                         [v (in-list (attribute val))])
+    (define instance-bindings (for/list ([k (in-list (attribute args.key))]
+                                         [v (in-list (attribute args.val))])
                                 (cons (syntax-e k) v)))
 
-    (define params (rope-class-params class-desc))
     (define class-bindings
-      (build-class-args (syntax-e #'κ) params instance-bindings))
+      (build-class-args κ-name params instance-bindings))
 
     (define stxclasses
-      (for/list ([param (in-list (rope-class-params class-desc))])
+      (for/list ([param (in-list params)])
         (cons (car param) (class-param-stxclass (cdr param)))))
 
     (for ([instance-entry (in-list instance-bindings)]
-          [k (in-list (attribute key))])
+          [k (in-list (attribute args.key))])
       (define name (car instance-entry))
       (define val-stx (cdr instance-entry))
       (define stxclass
         (cond
           [(assoc name stxclasses) => cdr]
           [else (with-caller-sub k
-                  (rope-error "unknown member ~a of ~a" name (syntax-e #'κ)))]))
+                  (rope-error "unknown member ~a of ~a" name κ-name))]))
       (assert-syntax-class-match! this-syntax stxclass val-stx))
 
-    (define class-body (rope-class-body class-desc))
     (define type-bindings (rope-type-bindings type-desc))
     (define all-bindings
       (list* (cons 'κ #'κ)
@@ -56,9 +56,10 @@
     (define k-v-pairs
       (for/list ([entry (in-list class-bindings)])
         (cons (datum->syntax #f (car entry))
-              (star-expand #'τ (syntax-e #'τ) (cdr entry)))))
-    (list k-v-pairs
-          (star-expand #'τ (syntax-e #'τ) (star-substitute all-bindings class-body))))
+              (star-expand #'τ τ-name (cdr entry)))))
+    (let* ([body* (star-substitute all-bindings class-body)]
+           [body* (star-expand #'τ τ-name body*)])
+      (list k-v-pairs body*)))
 
   (begin
     (define-syntax rope:%:* (rope-instance (list (cons 'k #'v) ...)))
