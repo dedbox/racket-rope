@@ -18,7 +18,7 @@
   (define-test-rope-type dty-no-instance #:chunk-limit 4) ; deliberately never instantiated
 
   (define-type-op (dty-is-vec τ x) (*-chunk? x))
-  (define-type-op (dty-sum-all τ . xs) (apply + xs))
+  (define-type-op (dty-sum-all τ . xs) (+ . xs))
 
   (define-rope-class op-test-class ([k id+fun1]))
   (define-rope-instance op-test-class dty ([k (lambda (x) (* x 2))]))
@@ -26,7 +26,7 @@
   (define-class-op op-test-class (dty-apply-k τ x) (k x))
   (define-class-op op-test-class (dty-class-name-of τ) 'κ)
   (define-class-op op-test-class (dty-type-name-of τ) 'τ)
-  (define-class-op op-test-class (dty-chain-sum τ . xs) (apply + xs))
+  (define-class-op op-test-class (dty-chain-sum τ . xs) (+ . xs))
 
   (define type-op-suite
     (test-suite "define-type-op"

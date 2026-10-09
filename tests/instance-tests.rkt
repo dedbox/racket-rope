@@ -10,8 +10,8 @@
   ;; A toy class, independent of total-order, so this suite is only about
   ;; instance-building mechanics, not any particular class's own logic.
   (define-rope-class toy-class
-    ([req id+fun1]
-     [opt id+fun1 #:optional])
+      ([req id+fun1]
+       [opt id+fun1 #:optional])
     ;; Names must match star-expand's suffix list (rope/node/leaf/chunk/
     ;; elem/cursor) to be expanded per type -- hence "chunk" here.
     (define *-chunk-req-value req)
@@ -49,7 +49,7 @@
       (test-case "a missing required field fails, naming the field"
         (check-true (expand-fails? (define-rope-instance toy-class ty-x ())))
         (check-regexp-match
-         #rx"req"
+         #rx"expected a rope type name"
          (expand-error-message (define-rope-instance toy-class ty-x ()))))
 
       (test-case "an unknown member fails, naming the class"

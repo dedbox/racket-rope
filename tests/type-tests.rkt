@@ -43,7 +43,7 @@
     #:elem=?       (λ (x y) (= (modulo x 10) (modulo y 10)))
     #:elem-hash    (λ (x) (modulo x 10))
     #:chunk-overlap=? (λ (c d ic id k) #t)) ; also deliberately permissive
-
+1
   (define primitives-suite
     (test-suite "primitives"
       (test-case "chunk primitives agree with the functions they wrap"
@@ -92,12 +92,21 @@
         (define b (source->ty2-rope (vector 13 2 3)))
         (check-true (ty2-rope=? a b)))
 
-      (test-case "custom #:chunk=? is consulted for whole-chunk comparisons"
-        ;; ty2's chunk=? always says yes; two otherwise-unequal single-chunk
-        ;; ropes of the same length must therefore compare equal.
-        (define a (source->ty2-rope (vector 1 2)))
-        (define b (source->ty2-rope (vector 99 98)))
-        (check-true (ty2-rope=? a b)))))
+      ;; NOTE: The following test case is wrong - if a and b are not eq?, *-rope=?
+      ;; requires that their respective hash-h and hash-p fields are equal? before
+      ;; checking if any content is *-chunk=?.
+      ;;
+      ;; Leaving this test here until I decide what to do about it.
+
+      ;; (test-case "custom #:chunk=? is consulted for whole-chunk comparisons"
+      ;;   ;; ty2's chunk=? always says yes; two otherwise-unequal single-chunk
+      ;;   ;; ropes of the same length must therefore compare equal.
+      ;;   (define a (source->ty2-rope (vector 1 2)))
+      ;;   (define b (source->ty2-rope (vector 99 98)))
+      ;;   (println `([A ,a] [B ,b]))
+      ;;   (check-true (ty2-rope=? a b)))
+
+      ))
 
   (define conversion-suite
     (test-suite "conversions"

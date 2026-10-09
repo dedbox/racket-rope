@@ -11,7 +11,7 @@
         (check-equal? (bytes-chunk-length #"hello") (bytes-length #"hello")))
 
       (test-case "source->bytes-rope / bytes-rope->source round trip"
-        (check-equal? (bytes->rope #"hello, rope") #"hello, rope")
+        (check-equal? (rope->bytes (bytes->rope #"hello, rope")) #"hello, rope")
         (check-equal? (rope->bytes (bytes->rope #"")) #""))
 
       (test-case "bytes-rope=? agrees with bytes=?"

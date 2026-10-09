@@ -16,7 +16,7 @@
         (check-equal? (string-chunk-length "hello") (string-length "hello")))
 
       (test-case "source->string-rope / string-rope->source round trip"
-        (check-equal? (string->rope "hello, rope") "hello, rope")
+        (check-equal? (rope->string (string->rope "hello, rope")) "hello, rope")
         (check-equal? (rope->string (string->rope "")) ""))
 
       (test-case "string-rope=? agrees with string=?"
