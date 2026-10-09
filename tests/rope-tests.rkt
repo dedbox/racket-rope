@@ -4,9 +4,6 @@
   (require rope/rope
            "../private/testing.rkt")
 
-  ;; Deliberately distinct equal-funs, so a test can tell whether equal?
-  ;; really delegates to the rope's own equal-fun rather than comparing
-  ;; structurally.
   (define (same-length? a b) (= (rope-length a) (rope-length b)))
   (define (never-equal a b) #f)
 

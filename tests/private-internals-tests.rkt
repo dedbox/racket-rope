@@ -131,16 +131,6 @@
       (check-eq? (nearest-name 'pp (seteq 'p 'q) (list "p" "q")) 'p))
 
     (test-case "nearest-name: no candidate within range should report no suggestion"
-      ;; KNOWN ISSUE, found via this test: when nothing in other-name-list
-      ;; is within MAX-K of `name`, the loop's base case still runs
-      ;; (string->symbol best-name-str) with best-name-str still #f,
-      ;; raising a contract violation instead of returning #f. A user
-      ;; whose typo doesn't resemble any valid name would see
-      ;; "string->symbol: contract violation" instead of the error
-      ;; rope-error was actually trying to report. This check states the
-      ;; behavior nearest-name's own contract should have (matching how
-      ;; rope-error, its only caller, already handles a #f result); it is
-      ;; expected to fail against the current implementation.
       (check-false (nearest-name 'zzzzzzzzzzzzzzzzzzzz (seteq 'p 'q) (list "p" "q"))))))
 
 ;; -----------------------------------------------------------------------------
@@ -185,7 +175,7 @@
     (test-case "star-substitute replaces by table lookup, independent of the *-prefix convention"
       (define table (list (cons 'elem<? #'char<?)))
       (define result (star-substitute table #'(list elem<? other-name)))
-      (define lst (syntax-e result))
+      (define lst (syntax->list result))
       (check-eq? (syntax-e (car lst)) 'list)
       (check-eq? (syntax-e (cadr lst)) 'char<?)
       (check-eq? (syntax-e (caddr lst)) 'other-name))))
