@@ -7,7 +7,8 @@
 ;; a type name while preserving lexical context, source location, and syntax
 ;; properties.
 
-(require racket/syntax
+(require racket/struct
+         racket/syntax
          syntax/parse)
 
 (provide (all-defined-out))
@@ -21,19 +22,20 @@
 
 (define (update-identifiers stx proc)
   (let loop ([stx stx])
-    (syntax-parse stx
-      [:id (proc stx)]
-      [(head . tail) (resyntax stx (cons (loop #'head) (loop #'tail)))]
-      [#(v ...) (resyntax stx (apply vector (map loop (attribute v))))]
-      [#&v (resyntax stx (box (loop #'v)))]
-      [#s(key v ...)
-       (define vs (map loop (attribute v)))
-       (resyntax stx (make-prefab-struct (syntax-e #'key) vs))]
-      [_
-       (define v (syntax-e stx))
-       (if (and (hash? v) (immutable? v))
-           (resyntax stx (for/hash ([(hk hv) (in-hash v)])
-                           (values hk (loop hv))))
+    (define data (syntax-e stx))
+    (cond
+      [(symbol? data) (proc stx)]
+      [(pair? data)
+       (syntax-parse stx
+         [(_ . tail) (resyntax stx (cons (loop (car data)) (loop (attribute tail))))])]
+      [(vector? data) (resyntax stx (apply vector (map loop (vector->list data))))]
+      [(box? data) (resyntax stx (box (loop (unbox data))))]
+      [(struct? data)
+       (define vs (map loop (struct->list data)))
+       (resyntax stx (apply make-prefab-struct (prefab-struct-key data) vs))]
+      [else
+       (if (and (hash? data) (immutable? data))
+           (resyntax stx (for/hash ([(k v) (in-hash data)]) (values k (loop v))))
            stx)])))
 
 (define (star-expand-string type-name str)
