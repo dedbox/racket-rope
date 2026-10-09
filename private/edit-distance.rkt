@@ -44,7 +44,7 @@
                 [best-name-str #f]
                 [best-distance +inf.0])
        (cond
-         [(null? other-names) (string->symbol best-name-str)]
+         [(null? other-names) (and best-name-str (string->symbol best-name-str))]
          [else
           (define other-name-str (car other-names))
           (define distance (bounded-levenshtein name-str other-name-str MAX-K))
