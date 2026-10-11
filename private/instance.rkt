@@ -72,7 +72,7 @@
                    [(hash-ref renames name (λ () #f))
                     => (λ (renaming)
                          (define new-name (syntax-e renaming))
-                         (cons new-name (cdr binding)))]
+                         (cons (cons new-name (cdr binding)) bindings))]
                    [else (cons binding bindings)])))))
 
 (define (validate-mask! has-include? include-ids exclude-ids rename-pairs)

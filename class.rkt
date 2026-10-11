@@ -46,7 +46,7 @@
                                 [froms (in-syntax #'((mask.from ...) ...))]
                                 [tos (in-syntax #'((mask.to ...) ...))])
                        (mask-spec id
-                                  has-include?
+                                  (syntax-e has-include?)
                                   (syntax->list includes)
                                   (syntax->list excludes)
                                   (map cons (syntax->list froms) (syntax->list tos))))
