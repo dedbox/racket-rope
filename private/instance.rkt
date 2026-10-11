@@ -71,7 +71,7 @@
                     bindings]
                    [(hash-ref renames name (λ () #f))
                     => (λ (renaming)
-                         (define new-name (syntax-e (cdr renaming)))
+                         (define new-name (syntax-e renaming))
                          (cons new-name (cdr binding)))]
                    [else (cons binding bindings)])))))
 
@@ -84,7 +84,7 @@
   (define includes
     (and has-include? (make-hasheq (map cons include-names include-ids))))
   (define excludes (make-hasheq (map cons exclude-names exclude-ids)))
-  (define renames (make-hasheq (map cons from-names from-ids)))
+  (define renames (make-hasheq (map cons from-names (map cdr rename-pairs))))
   (for ([(name id) (in-hash excludes)])
     (when (and includes (hash-has-key? includes name))
       (with-caller-sub id (rope-error "cannot exclude included parameter"))))
@@ -93,4 +93,4 @@
       (with-caller-sub id (rope-error "cannot rename included parameter")))
     (when (hash-has-key? excludes name)
       (with-caller-sub id (rope-error "cannot rename excluded parameter"))))
-  (values includes excludes (make-hasheq (map cons from-names to-names))))
+  (values includes excludes renames))
