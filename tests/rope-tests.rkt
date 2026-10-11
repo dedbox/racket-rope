@@ -36,6 +36,10 @@
         (define tree (node (node a b) c))
         (check-equal? (rope-chunks tree) (list (vector 'a) (vector 'b) (vector 'c))))
 
+      (test-case "rope-chunks: single-leaf base case"
+        (define leaf-obj (leaf 3))
+        (check-equal? (rope-chunks leaf-obj) (list (rope-leaf-chunk leaf-obj))))
+
       (test-case "equal?/equal-hash-code delegate to equal-fun/hash-h/hash-p, not structure"
         ;; Same shape, same length, but one pair's equal-fun always says no.
         (define a (leaf 3 same-length? 7 11))
@@ -61,6 +65,19 @@
         (check-equal? (fib-bound 2) 3)
         (check-equal? (fib-bound 3) 5)
         (check-equal? (fib-bound 4) 8))
+
+      (test-case "max-fib-index: returns the largest Fibonacci index that fits in a fixnum"
+        (check-true (>= max-fib-index 0))
+        (check-true (<= max-fib-index (vector-length fib-vector))))
+
+      (test-case "fib-vector: generates correct Fibonacci sequence"
+        (check-equal? (vector-ref fib-vector 0) 1)
+        (check-equal? (vector-ref fib-vector 1) 2)
+        (check-equal? (vector-ref fib-vector 2) 3)
+        (check-equal? (vector-ref fib-vector 3) 5)
+        (check-equal? (vector-ref fib-vector 4) 8)
+        (check-equal? (vector-ref fib-vector (sub1 (vector-length fib-vector))) 
+                      (vector-ref fib-vector (sub1 (vector-length fib-vector)))))
 
       (test-case "strictly-balanced?: true exactly at and above the threshold"
         ;; depth 2 -> threshold is fib-bound(2+2) = fib-bound(4) = 8

@@ -19,6 +19,11 @@
         (check-equal? (rope->string (string->rope "hello, rope")) "hello, rope")
         (check-equal? (rope->string (string->rope "")) ""))
 
+      (test-case "string-rope-ref indexes characters"
+        (define r (string->rope "hello"))
+        (check-equal? (string-rope-ref r 0) #\h)
+        (check-equal? (string-rope-ref r 4) #\o))
+
       (test-case "string-rope=? agrees with string=?"
         (check-true  (string-rope=? (string->rope "same") (string->rope "same")))
         (check-false (string-rope=? (string->rope "same") (string->rope "diff"))))

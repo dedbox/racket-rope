@@ -122,6 +122,11 @@
         (check-equal? (ty1-rope->source (ty1-rope-append2 a b))
                       (ty1-rope->source (rope-append2 ty1 a b))))
 
+      (test-case "ty1-rope-ref agrees with the generic rope-ref at every index"
+        (define a (source->ty1-rope (vector 10 20 30 40 50)))
+        (for/and ([i (in-range (rope-length a))])
+          (check-equal? (ty1-rope-ref a i) (rope-ref ty1 a i))))
+
       (test-case "ty1-rope-foldl (single-rope form) agrees with a plain vector fold"
         (define a (source->ty1-rope (vector 1 2 3 4 5)))
         (check-equal? (ty1-rope-foldl (λ (acc x) (+ acc x)) 0 a) 15))

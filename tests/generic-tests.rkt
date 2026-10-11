@@ -82,6 +82,36 @@
         (check-equal? (rope-width  n) 15)
         (check-equal? (rope->source weighted n) (vector 1 2 3 4 5)))))
 
+  (define ref-suite
+    (test-suite "ref"
+      (test-property "rope-ref matches a vector oracle at every index"
+          #:trials 300
+          ([chunk (random-weighted-chunk (add1 (random 100)))])
+        (define a (source->rope weighted chunk))
+        (for/and ([i (in-range (vector-length chunk))])
+          (equal? (rope-ref weighted a i) (vector-ref chunk i))))
+
+      (test-case "rope-ref on a single leaf indexes the chunk directly"
+        (define chunk (vector 10 20 30 40))
+        (define a (make-rope-leaf weighted chunk))
+        (check-equal? (rope-ref weighted a 0) 10)
+        (check-equal? (rope-ref weighted a 3) 40))
+
+      (test-case "rope-ref descends both left and right of a multi-level tree"
+        ;; Leaves of 3, 2 and 4 elements; search crosses boundaries at 3 and 5.
+        (define a (rope-append weighted
+                               (list (make-rope-leaf weighted (vector 0 1 2))
+                                     (make-rope-leaf weighted (vector 3 4))
+                                     (make-rope-leaf weighted (vector 5 6 7 8)))))
+        (for/and ([i (in-range 9)])
+          (check-equal? (rope-ref weighted a i) i)))
+
+      (test-case "rope-ref at the last index does not read past the end"
+        (define chunk (random-weighted-chunk 20))
+        (define a (source->rope weighted chunk))
+        (check-equal? (rope-ref weighted a (sub1 (vector-length chunk)))
+                      (vector-ref chunk (sub1 (vector-length chunk)))))))
+
   (define append-suite
     (test-suite "append"
       (test-property "rope-append agrees with vector-append and stays mostly balanced"
@@ -473,6 +503,7 @@
   (run-suite! (test-suite "generic.rkt"
                 generic-ops-suite
                 core-ops-suite
+                ref-suite
                 append-suite
                 split-suite
                 splice/slice-suite

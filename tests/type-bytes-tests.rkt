@@ -14,6 +14,11 @@
         (check-equal? (rope->bytes (bytes->rope #"hello, rope")) #"hello, rope")
         (check-equal? (rope->bytes (bytes->rope #"")) #""))
 
+      (test-case "bytes-rope-ref indexes bytes"
+        (define r (bytes->rope #"hello"))
+        (check-equal? (bytes-rope-ref r 0) 104)
+        (check-equal? (bytes-rope-ref r 4) 111))
+
       (test-case "bytes-rope=? agrees with bytes=?"
         (check-true  (bytes-rope=? (bytes->rope #"same") (bytes->rope #"same")))
         (check-false (bytes-rope=? (bytes->rope #"same") (bytes->rope #"diff"))))
