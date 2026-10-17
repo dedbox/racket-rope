@@ -14,75 +14,75 @@
 ;; Primitives
 ;; -----------------------------------------------------------------------------
 
-(define-type-op (rope-chunk? _ x) (*-chunk? x))
-(define-type-op (rope-chunk-limit _) (*-chunk-limit))
-(define-type-op (rope-chunk-empty _) (*-chunk-empty))
-(define-type-op (rope-chunk-length _ c) (*-chunk-length c))
-(define-type-op (rope-chunk-width _ c) (*-chunk-width c))
-(define-type-op (rope-chunk-ref _ c i) (*-chunk-ref c i))
-(define-type-op (rope-chunk-slice _ c i k) (*-chunk-slice c i k))
-(define-type-op (rope-chunk-append _ cs) (apply *-chunk-append cs))
-(define-type-op (rope-elem-width _ c i) (*-elem-width c i))
+(define-type-op (rope-chunk? τ x) (τ.chunk? x))
+(define-type-op (rope-chunk-limit τ) (τ.chunk-limit))
+(define-type-op (rope-chunk-empty τ) (τ.chunk-empty))
+(define-type-op (rope-chunk-length τ c) (τ.chunk-length c))
+(define-type-op (rope-chunk-width τ c) (τ.chunk-width c))
+(define-type-op (rope-chunk-ref τ c i) (τ.chunk-ref c i))
+(define-type-op (rope-chunk-slice τ c i k) (τ.chunk-slice c i k))
+(define-type-op (rope-chunk-append τ cs) (apply τ.chunk-append cs))
+(define-type-op (rope-elem-width τ c i) (τ.elem-width c i))
 
 ;; -----------------------------------------------------------------------------
 ;; Tree Construction
 ;; -----------------------------------------------------------------------------
 
-(define-type-op (make-rope-leaf _ c₀)
+(define-type-op (make-rope-leaf τ c₀)
   (let ([c c₀])
-    (define-values (h p) (*-chunk-hash c))
-    (*-rope-leaf (*-chunk-length c) (*-chunk-width c) h p *-rope=? c)))
+    (define-values (h p) (τ.chunk-hash c))
+    (τ.rope-leaf (τ.chunk-length c) (τ.chunk-width c) h p τ.rope=? c)))
 
-(define-type-op (make-rope-node _ l₀ r₀)
+(define-type-op (make-rope-node τ l₀ r₀)
   (let ([l l₀] [r r₀])
-    (define-values (h p) (*-node-hash l r))
-    (*-rope-node (+ (rope-length l) (rope-length r))
+    (define-values (h p) (τ.node-hash l r))
+    (τ.rope-node (+ (rope-length l) (rope-length r))
                  (+ (rope-width l) (rope-width r))
-                 h p *-rope=?
+                 h p τ.rope=?
                  (add1 (max (rope-depth l) (rope-depth r)))
                  l r)))
 
-(define-type-op (make-empty-rope τ) (make-rope-leaf τ (*-chunk-empty)))
+(define-type-op (make-empty-rope τ) (make-rope-leaf τ (τ.chunk-empty)))
 
 ;; -----------------------------------------------------------------------------
 ;; Hashing
 ;; -----------------------------------------------------------------------------
 
-(define-type-op (rope-elem-hash _ x) (*-elem-hash x))
-(define-type-op (rope-chunk-hash _ c) (*-chunk-hash c))
-(define-type-op (rope-node-hash _ l r) (*-node-hash l r))
-(define-type-op (rope-hash _ a₀)
+(define-type-op (rope-elem-hash τ x) (τ.elem-hash x))
+(define-type-op (rope-chunk-hash τ c) (τ.chunk-hash c))
+(define-type-op (rope-node-hash τ l r) (τ.node-hash l r))
+(define-type-op (rope-hash τ a₀)
   (let ([a a₀])
     (if (rope-leaf? a)
-        (*-chunk-hash (rope-leaf-chunk a))
-        (*-node-hash (rope-node-left a) (rope-node-right a)))))
+        (τ.chunk-hash (rope-leaf-chunk a))
+        (τ.node-hash (rope-node-left a) (rope-node-right a)))))
 
 ;; -----------------------------------------------------------------------------
 ;; Equality
 ;; -----------------------------------------------------------------------------
 
-(define-type-op (rope-chunk=? _ c d) (*-chunk=? c d))
-(define-type-op (rope-chunk-overlap=? _ c d ic id k) (*-chunk-overlap=? c d ic id k))
-(define-type-op (rope-elem=? _ x y) (*-elem=? x y))
-(define-type-op (rope=? _ c d) (*-rope=? c d))
+(define-type-op (rope-chunk=? τ c d) (τ.chunk=? c d))
+(define-type-op (rope-chunk-overlap=? τ c d ic id k) (τ.chunk-overlap=? c d ic id k))
+(define-type-op (rope-elem=? τ x y) (τ.elem=? x y))
+(define-type-op (rope=? τ c d) (τ.rope=? c d))
 
 ;; -----------------------------------------------------------------------------
 ;; Conversions
 ;; -----------------------------------------------------------------------------
 
 (define-type-op (source->rope τ c₀)
-  (let* ([c c₀] [total (*-chunk-length c)])
-    (if (<= total (*-chunk-limit))
+  (let* ([c c₀] [total (τ.chunk-length c)])
+    (if (<= total (τ.chunk-limit))
         (make-rope-leaf τ c)
         (let loop ([i 0] [k total])
-          (if (<= k (*-chunk-limit))
-              (make-rope-leaf τ (*-chunk-slice c i k))
+          (if (<= k (τ.chunk-limit))
+              (make-rope-leaf τ (τ.chunk-slice c i k))
               (let ([mid (quotient k 2)])
                 (define l (loop i mid))
                 (define r (loop (+ i mid) (- k mid)))
                 (rope-concat τ l r)))))))
 
-(define-type-op (rope->source _ a) (apply *-chunk-append (rope-chunks a)))
+(define-type-op (rope->source τ a) (apply τ.chunk-append (rope-chunks a)))
 
 ;; -----------------------------------------------------------------------------
 ;; Basic Operations
@@ -117,8 +117,8 @@
                [(= i (rope-length a)) (values a (make-empty-rope τ))]
                [else
                 (define j (- (rope-length a) i))
-                (values (make-rope-leaf τ (*-chunk-slice chunk 0 i))
-                        (make-rope-leaf τ (*-chunk-slice chunk i j)))])]
+                (values (make-rope-leaf τ (τ.chunk-slice chunk 0 i))
+                        (make-rope-leaf τ (τ.chunk-slice chunk i j)))])]
             [else
              (define l (rope-node-left a))
              (define r (rope-node-right a))
@@ -133,9 +133,9 @@
             (rope-ensure-balance τ r))))
 
 ;; O(log n)
-(define-type-op (rope-ref _ a₀ i₀)
+(define-type-op (rope-ref τ a₀ i₀)
   (let loop ([a a₀] [i i₀])
-    (cond [(rope-leaf? a) (*-chunk-ref (rope-leaf-chunk a) i)]
+    (cond [(rope-leaf? a) (τ.chunk-ref (rope-leaf-chunk a) i)]
           [else
            (define n (rope-length (rope-node-left a)))
            (if (< i n)
@@ -146,14 +146,14 @@
 ;; of the rope. O(1) if elem-width is a numeric literal, otherwise O(log n)
 (define-type-op (rope-offset-index τ a₀ p₀)
   (let* ([a a₀] [p p₀] [n (rope-length a)])
-    (if (number? *-elem-width)
-        (min (quotient p *-elem-width) (sub1 n))
+    (if (number? τ.elem-width)
+        (min (quotient p τ.elem-width) (sub1 n))
         (let loop ([a a] [p p])
           (cond [(rope-leaf? a)
                  (let chunk-loop ([i 0] [q p])
                    (cond [(= i n) (sub1 n)]
                          [else
-                          (define k (*-elem-width (rope-leaf-chunk a) i))
+                          (define k (τ.elem-width (rope-leaf-chunk a) i))
                           (if (< q k) i (chunk-loop (add1 i) (- q k)))]))]
                 [else
                  (define l (rope-node-left a))
@@ -179,8 +179,8 @@
                           (values a (make-empty-rope τ))]
                          [else
                           (define h (- (rope-length a) j))
-                          (values (make-rope-leaf τ (*-chunk-slice chunk 0 i))
-                                  (make-rope-leaf τ (*-chunk-slice chunk j h)))])]
+                          (values (make-rope-leaf τ (τ.chunk-slice chunk 0 i))
+                                  (make-rope-leaf τ (τ.chunk-slice chunk j h)))])]
                   [else
                    (define l (rope-node-left a))
                    (define r (rope-node-right a))
@@ -209,7 +209,7 @@
     (let* ([i₀ i₀′] [k₀ k₀′] [j₀ (+ i₀ k₀)])
       (let loop ([a a₀] [i (min i₀ j₀)] [j (max i₀ j₀)])
         (cond [(rope-leaf? a)
-               (make-rope-leaf τ (*-chunk-slice (rope-leaf-chunk a) i (- j i)))]
+               (make-rope-leaf τ (τ.chunk-slice (rope-leaf-chunk a) i (- j i)))]
               [else
                (define l (rope-node-left a))
                (define r (rope-node-right a))
@@ -294,9 +294,9 @@
 (define-type-op (cursor->rope τ cur) (cursor-source cur))
 
 ;; O(1)
-(define-type-op (cursor-peek _ cur₀)
+(define-type-op (cursor-peek τ cur₀)
   (let ([cur cur₀])
-    (*-chunk-ref (rope-leaf-chunk (cursor-leaf cur)) (cursor-rel-idx cur))))
+    (τ.chunk-ref (rope-leaf-chunk (cursor-leaf cur)) (cursor-rel-idx cur))))
 
 ;; O(depth)
 (define-type-op (cursor-split τ cur₀)
@@ -304,8 +304,8 @@
     (define a (cursor-leaf cur))
     (define i (cursor-rel-idx cur))
     (define c (rope-leaf-chunk a))
-    (let loop ([l (make-rope-leaf τ (*-chunk-slice c 0 i))]
-               [r (make-rope-leaf τ (*-chunk-slice c i (- (rope-length a) i)))]
+    (let loop ([l (make-rope-leaf τ (τ.chunk-slice c 0 i))]
+               [r (make-rope-leaf τ (τ.chunk-slice c i (- (rope-length a) i)))]
                [path (cursor-path cur)])
       (cond [(null? path) (values (rope-ensure-balance τ l)
                                   (rope-ensure-balance τ r))]
@@ -321,9 +321,9 @@
 
 (define-type-op (mutable-cursor->rope τ cur) (mutable-cursor-source cur))
 
-(define-type-op (mutable-cursor-peek _ cur0)
+(define-type-op (mutable-cursor-peek τ cur0)
   (let ([cur cur0])
-    (*-chunk-ref (rope-leaf-chunk (mutable-cursor-leaf cur)) (mutable-cursor-rel-idx cur))))
+    (τ.chunk-ref (rope-leaf-chunk (mutable-cursor-leaf cur)) (mutable-cursor-rel-idx cur))))
 
 ;; -----------------------------------------------------------------------------
 ;; folds

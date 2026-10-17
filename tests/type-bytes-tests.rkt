@@ -23,9 +23,11 @@
         (check-true  (bytes-rope=? (bytes->rope #"same") (bytes->rope #"same")))
         (check-false (bytes-rope=? (bytes->rope #"same") (bytes->rope #"diff"))))
 
-      (test-case "total-order instance agrees with numeric byte order"
-        (check-true  (bytes-rope<? (bytes->rope #"abc") (bytes->rope #"abd")))
-        (check-true  (bytes-rope>? (bytes->rope #"abd") (bytes->rope #"abc")))
-        (check-true  (bytes-rope<? (bytes->rope #"ab") (bytes->rope #"abc"))))))
+      ;; (test-case "total-order instance agrees with numeric byte order"
+      ;;   (check-true  (bytes-rope<? (bytes->rope #"abc") (bytes->rope #"abd")))
+      ;;   (check-true  (bytes-rope>? (bytes->rope #"abd") (bytes->rope #"abc")))
+      ;;   (check-true  (bytes-rope<? (bytes->rope #"ab") (bytes->rope #"abc"))))
+
+      ))
 
   (run-suite! test-suite-bytes))

@@ -1,8 +1,9 @@
 #lang racket/base
 
-(require rope/class/total-order
-         rope/instance
-         rope/type)
+(require rope/type
+         ;; rope/class/total-order
+         ;; rope/instance
+         )
 
 (provide (all-defined-out))
 
@@ -25,4 +26,4 @@
 (define (bytes->rope str) (source->bytes-rope str))
 (define (rope->bytes r) (bytes-rope->source r))
 
-(define-rope-instance total-order bytes ([elem<? <] [elem>? >]))
+;; (define-rope-instance total-order bytes ([elem<? <] [elem>? >]))

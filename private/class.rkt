@@ -2,32 +2,31 @@
 
 (require (for-template racket/base)
          racket/syntax
-         syntax/parse
-         "./error.rkt")
+         syntax/parse)
 
 (provide (all-defined-out))
 
 (struct rope-class (params reqs body) #:transparent)
 
-(define (describe-class κ-stx)
-  (define desc-id
-    (format-id κ-stx "rope:~a" (syntax-e κ-stx) #:source κ-stx #:props κ-stx))
-  (or (syntax-local-value desc-id (λ () #f))
-      (rope-error "expected a rope class name")))
+;; (define (describe-class κ-stx)
+;;   (define desc-id
+;;     (format-id κ-stx "rope:~a" (syntax-e κ-stx) #:source κ-stx #:props κ-stx))
+;;   (or (syntax-local-value desc-id (λ () #f))
+;;       (rope-error "expected a rope class name")))
 
-(define (build-class-args κ-name params bindings)
-  (for/list ([param (in-list params)])
-    (define name (car param))
-    (define dfl (syntax-e (class-param-default (cdr param))))
-    (cond [(assoc name bindings) => values]
-          [(not dfl) (rope-error "expected ~a argument ~a" κ-name name)]
-          [(and (pair? dfl) (null? (cdr dfl))) (cons name (car dfl))]
-          [else
-           ;; This branch should never fire on user input. We only ever reach
-           ;; here if the internal representation of a parameter's
-           ;; default-value declaration is mal-formed, i.e., it is not #f or a
-           ;; singleton list.
-           (rope-error "internal error: ~a / ~a" name κ-name)])))
+;; (define (build-class-args κ-name params bindings)
+;;   (for/list ([param (in-list params)])
+;;     (define name (car param))
+;;     (define dfl (syntax-e (class-param-default (cdr param))))
+;;     (cond [(assoc name bindings) => values]
+;;           [(not dfl) (rope-error "expected ~a argument ~a" κ-name name)]
+;;           [(and (pair? dfl) (null? (cdr dfl))) (cons name (car dfl))]
+;;           [else
+;;            ;; This branch should never fire on user input. We only ever reach
+;;            ;; here if the internal representation of a parameter's
+;;            ;; default-value declaration is mal-formed, i.e., it is not #f or a
+;;            ;; singleton list.
+;;            (rope-error "internal error: ~a / ~a" name κ-name)])))
 
 (define (assert-syntax-class-match! ctx class-stx expr-stx)
   (define validate (generate-temporary 'validate))
